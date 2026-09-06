@@ -1,0 +1,101 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Inject Supabase environment (public values only)
+        run: |
+          cat > .env <<EOF
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GEMINI_API_KEY=not-used-in-release
+          EOF
+
+      - name: Run static analysis
+        run: gradle --no-daemon :app:lintDebug
+
+      - name: Run unit tests
+        run: gradle --no-daemon :app:testDebugUnitTest
+
+      - name: Build release APK
+        run: gradle --no-daemon :app:assembleRelease
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/release-upload.jks
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Verify APK exists
+        run: |
+          ls -la app/build/outputs/apk/release/app-release.apk
+          test -f app/build/outputs/apk/release/app-release.apk
+
+      - name: Prepare release assets
+        id: prep
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          cp app/build/outputs/apk/release/app-release.apk Weekend-v${VERSION}.apk
+          cp app/build/outputs/apk/release/app-release.apk Weekend-latest.apk
+          shasum -a 256 Weekend-v${VERSION}.apk Weekend-latest.apk > SHA256SUMS.txt
+          echo "SHA256SUMS:"
+          cat SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Weekend ${{ steps.prep.outputs.version }}
+          body: |
+            ## Weekend v${{ steps.prep.outputs.version }}
+
+            Production release of Weekend.
+
+            ### Download
+            - **Weekend-v${{ steps.prep.outputs.version }}.apk** - Versioned production APK
+            - **Weekend-latest.apk** - Stable latest download link
+
+            ### Verify
+            SHA-256 checksums are provided in `SHA256SUMS.txt`.
+
+            ### Install
+            1. Download the APK
+            2. Enable "Install from unknown sources" if prompted
+            3. Open the APK to install
+
+            ### Requirements
+            - Android 7.0+ (API 24)
+            - ~5 MB storage
+          files: |
+            Weekend-v${{ steps.prep.outputs.version }}.apk
+            Weekend-latest.apk
+            SHA256SUMS.txt
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

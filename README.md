@@ -24,87 +24,56 @@
 </p>
 
 </div>
+
 ---
 
 ## Download Weekend
 
-> **Download the latest Android release directly from GitHub.**
+> **Latest stable Android APK — no subscription, no account required to try.**
+
+### Android APK
+
+**Latest stable version:** `Weekend-v1.0.0.apk` (1.3 MB)
 
 <p align="center">
-  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v1.0.0.apk">
----
-
-## 📱 Download Weekend
-
-> **Download the latest Android release directly from GitHub.**
-
-<p align="center">
-  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v1.0.0.apk">
-    <img src="https://img.shields.io/badge/Download-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download APK">
+  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-latest.apk">
+    <img src="https://img.shields.io/badge/Download_Latest_APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download Latest APK">
   </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-latest.apk">Download Latest APK</a>
+  &bull;
+  <a href="https://github.com/zypherlabs-bit/Weekend/releases">View All Releases</a>
+  &bull;
+  <a href="https://github.com/zypherlabs-bit/Weekend/issues">Report Issue</a>
 </p>
 
 | Asset | Description |
 |-------|-------------|
-| `Weekend-v1.0.0.apk` | Android Release APK (1.3 MB) |
-| `SHA256SUMS.txt` | SHA-256 checksum for verification |
+| `Weekend-v1.0.0.apk` | Versioned production APK |
+| `Weekend-latest.apk` | Stable "latest" download (always points to newest release) |
+| `SHA256SUMS.txt` | SHA-256 checksums for verification |
 
----
+### Verify your download
 
-## 🖼️ Screenshots
+```bash
+# Windows (PowerShell)
+Get-FileHash Weekend-latest.apk -Algorithm SHA256
 
-<p align="center">
-  <img src="docs/screenshots/welcome.jpg" width="220" alt="Welcome Screen">
-  <img src="docs/screenshots/discovery.jpg" width="220" alt="Discovery Screen">
-  <img src="docs/screenshots/nearby.jpg" width="220" alt="Nearby Screen">
-  <img src="docs/screenshots/match.jpg" width="220" alt="Match Screen">
-</p>
+# macOS / Linux
+sha256sum Weekend-latest.apk
+```
 
-<p align="center">
-  <img src="docs/screenshots/profile.jpg" width="220" alt="Profile Screen">
-  <img src="docs/screenshots/messaging.jpg" width="220" alt="Messaging Screen">
-  <img src="docs/screenshots/plans.jpg" width="220" alt="Plans Screen">
-  <img src="docs/screenshots/settings.jpg" width="220" alt="Settings Screen">
-</p>
+Compare the output against `SHA256SUMS.txt` in the release.
 
----
+### Install
 
-## 🌟 Why Weekend?
+1. Download `Weekend-latest.apk` from the button above.
+2. Open the APK — enable **Install from unknown sources** if prompted.
+3. Launch **Weekend** and sign in or explore in demo mode.
 
-Weekend is a **free and open-source dating and social discovery application** built for people who want to meet others nearby, make real plans, and connect through shared interests.
-
-### Nearby First
-
-Discover people relevant to your location using PostGIS-powered proximity search. Weekend ranks profiles by distance, compatibility, activity, shared interests, and profile quality.
-
-### Real Connections
-
-Go beyond endless swiping. Weekend helps you find people who share your interests and are ready to make real-world plans.
-
-### Make Plans
-
-Turn conversations into real activities. Create and join local plans, date ideas, and weekend activities.
-
-### Free
-
-Core dating and social features are available **without subscriptions, premium memberships, paid likes, or paid matches**. Weekend is completely free to use.
-
-### Open Source
-
-The community can inspect, improve, and contribute to the project. Anyone can review the source code, report vulnerabilities, propose improvements, and contribute to making Weekend better.
-
-### Privacy First
-
-Exact location and sensitive information are protected. Raw GPS coordinates are never exposed to other users and never selected through public queries — only city/locality and computed distances are shared.
-</p>
-    <img src="https://img.shields.io/badge/Download-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download APK">
-  </a>
-</p>
-
-| Asset | Description |
-|-------|-------------|
-| `Weekend-v1.0.0.apk` | Android Release APK (1.3 MB) |
-| `SHA256SUMS.txt` | SHA-256 checksum for verification |
+**Requirements:** Android 7.0+ (API 24) - ARM64 / ARMv7 / x86_64 - ~5 MB storage
 
 ---
 
@@ -129,85 +98,7 @@ Exact location and sensitive information are protected. Raw GPS coordinates are 
 ## Why Weekend?
 
 Weekend is a **free and open-source dating and social discovery application** built for people who want to meet others nearby, make real plans, and connect through shared interests.
-### Nearby First
 
-Discover people relevant to your location using PostGIS-powered proximity search. Weekend ranks profiles by distance, compatibility, activity, shared interests, and profile quality.
-
-### Real Connections
-
-Go beyond endless swiping. Weekend helps you find people who share your interests and are ready to make real-world plans.
-
-### Make Plans
-
-Turn conversations into real activities. Create and join local plans, date ideas, and weekend activities.
-
-### Free
-
-Core dating and social features are available **without subscriptions, premium memberships, paid likes, or paid matches**. Weekend is completely free to use.
-
-### Open Source
-
-The community can inspect, improve, and contribute to the project. Anyone can review the source code, report vulnerabilities, propose improvements, and contribute to making Weekend better.
-
-### Privacy First
-
-Exact location and sensitive information are protected. Raw GPS coordinates are never exposed to other users and never selected through public queries � only city/locality and computed distances are shared.
-
----
-
-## Features
-
-### Discovery
-- **Swipe-based discovery** � Browse profiles with an intuitive swipe interface
-- **Personalized discovery** � Profiles ranked by compatibility and shared interests
-- **Nearby-first profiles** � GPS-based discovery powered by PostGIS
-- **Filters** � Narrow down discovery by age, distance, interests, and more
-- **Interests** � Connect through shared hobbies and activities
-
-### Matching
-- **Unlimited likes** � Like as many profiles as you want, completely free
-- **Unlimited matches** � No restrictions on matching
-- **Mutual matching** � Connect when both people express interest
-- **Shared-interest suggestions** � Discover common ground with matches
-
-### Nearby
-- **GPS-based discovery** � Find people near your current location
-- **City/locality detection** � Automatically detect your area
-- **Approximate distance** � See how far away someone is
-- **Privacy-preserving location** � Exact coordinates never shared
-
-### Messaging
-- **Realtime chat** � Instant messaging with matches
-- **Unread messages** � Track which conversations have new messages
-- **Conversation controls** � Manage your conversations
-- **Smart icebreakers** � AI-generated conversation starters
-
-### Weekend Plans
-- **Create plans** � Organize activities and events
-- **Discover plans** � Find local plans and activities
-- **Activity-based connections** � Meet people through shared activities
-- **Date ideas** � Personalized suggestions based on shared interests
-
-### Safety
-- **Photo verification** � Multi-signal detection for real-human photos
-- **Suspicious-profile detection** � Automated abuse detection
-- **Report** � Report inappropriate behavior
-- **Block** � Block unwanted users
-- **Unmatch** � Remove matches
-- **Account deletion** � Complete server-side data removal
-
-### Image Optimization
-- **Automatic resizing** � Images resized for optimal display
-- **Image compression** � Reduced file sizes with high visual quality
-- **Thumbnail generation** � Fast-loading previews
-- **Reduced storage/network usage** � Efficient data usage
-
-### Referrals
-- **Referral code** � Share your unique code
-- **Referral link** � Direct link for easy sharing
-- **QR code** � Scan-to-refer functionality
-- **Referral tracking** � Monitor your referrals
-- **Anti-abuse protection** � Prevention of referral fraud
 ### Nearby First
 
 Discover people relevant to your location using PostGIS-powered proximity search. Weekend ranks profiles by distance, compatibility, activity, shared interests, and profile quality.
@@ -234,7 +125,7 @@ Exact location and sensitive information are protected. Raw GPS coordinates are 
 
 ---
 
-## ✨ Features
+## Features
 
 ### Discovery
 - **Swipe-based discovery** — Browse profiles with an intuitive swipe interface
@@ -290,7 +181,7 @@ Exact location and sensitive information are protected. Raw GPS coordinates are 
 
 ---
 
-## 🔒 Privacy
+## Privacy
 
 Weekend is designed with privacy as a core principle:
 
@@ -303,7 +194,7 @@ Weekend is designed with privacy as a core principle:
 
 ---
 
-## 🛡️ Safety
+## Safety
 
 Weekend implements multiple layers of safety:
 
@@ -319,28 +210,28 @@ Weekend implements multiple layers of safety:
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
-                    Weekend
-                       │
-                       ▼
-                Native Android App
-                       │
-                       ├── Jetpack Compose (UI)
-                       ├── Kotlin (Logic)
-                       └── Coil (Images)
-                       │
-           ┌───────────┼───────────┐
-           ▼           ▼           ▼
-        Auth       PostgreSQL    Storage
-           │           │           │
-           └───────────┼───────────┘
-                       ▼
-                   Realtime
-                       │
-                       ▼
-                Edge Functions
+                     Weekend
+                        |
+                        v
+                 Native Android App
+                        |
+                        +-- Jetpack Compose (UI)
+                        +-- Kotlin (Logic)
+                        +-- Coil (Images)
+                        |
+            +-----------+-----------+
+            v           v           v
+         Auth       PostgreSQL    Storage
+            |           |           |
+            +-----------+-----------+
+                        v
+                    Realtime
+                        |
+                        v
+                 Edge Functions
 ```
 
 ### Tech Stack
@@ -359,7 +250,7 @@ Weekend implements multiple layers of safety:
 
 ---
 
-## ⚙️ Backend
+## Backend
 
 Weekend uses **Supabase** as its complete backend platform:
 
@@ -373,7 +264,7 @@ Weekend uses **Supabase** as its complete backend platform:
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -410,7 +301,7 @@ Open the project in Android Studio and let it sync. Or use the command line:
    SUPABASE_ANON_KEY=your-public-anon-key
    ```
 
-   These values come from **Supabase Dashboard → Project Settings → API**. The anon key is a public key — it is safe to embed in a mobile app **because Row Level Security protects all data**. Never put the service-role key or database password in `.env`.
+   These values come from **Supabase Dashboard -> Project Settings -> API**. The anon key is a public key — it is safe to embed in a mobile app **because Row Level Security protects all data**. Never put the service-role key or database password in `.env`.
 
 4. Run the database migrations in `supabase/migrations/` through the Supabase Dashboard or CLI.
 
@@ -428,7 +319,7 @@ Without a configured `.env`, the app runs in **offline demo mode** with sample d
 
 ---
 
-## 🗄️ Database Setup
+## Database Setup
 
 The SQL migrations in `supabase/migrations/` define the full schema:
 
@@ -458,7 +349,7 @@ Row Level Security is enabled on every table. See [docs/supabase.md](docs/supaba
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run lint analysis
@@ -467,67 +358,58 @@ Row Level Security is enabled on every table. See [docs/supabase.md](docs/supaba
 # Run unit tests (Robolectric)
 ./gradlew :app:testDebugUnitTest
 
-# Run all checks
-./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
-```
-
----
-
-## 📦 Building for Release
-
-### Build APK
-
-```bash
+# Build release APK
 ./gradlew :app:assembleRelease
 ```
 
-The release APK is generated at `app/build/outputs/apk/release/app-release.apk`.
+---
 
-### Build AAB (Google Play)
+## Releases
 
-```bash
-./gradlew :app:bundleRelease
-```
+Production APK builds are distributed through **GitHub Releases**.
 
-The Android App Bundle is generated at `app/build/outputs/bundle/release/app-release.aab`.
+- Each release contains a **versioned APK** (e.g. `Weekend-v1.0.0.apk`) and a **stable latest APK** (`Weekend-latest.apk`).
+- **SHA-256 checksums** are provided in `SHA256SUMS.txt` for every release.
+- The `Weekend-latest.apk` asset is re-uploaded on every new release, so its download URL always points to the newest build.
+- Download the latest APK from the [Download Latest APK](https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-latest.apk) button above, or browse **[all releases](https://github.com/zypherlabs-bit/Weekend/releases)**.
 
 ---
 
-## 📋 Project Structure
+## Project Structure
 
 ```
 Weekend/
-├── app/                          # Main application module
-│   ├── src/main/
-│   │   ├── java/com/example/
-│   │   │   ├── MainActivity.kt   # Compose shell + navigation
-│   │   │   ├── data/
-│   │   │   │   ├── model/        # Domain models
-│   │   │   │   ├── supabase/    # Supabase client, DTOs
-│   │   │   │   ├── repository/  # Repository layer
-│   │   │   │   └── mock/        # Offline demo data
-│   │   │   └── ui/
-│   │   │       ├── screens/     # Compose screens
-│   │   │       ├── components/  # Reusable components
-│   │   │       └── theme/       # Theme and colors
-│   │   └── res/                 # Android resources
-│   └── build.gradle.kts         # App build config
-├── supabase/
-│   ├── migrations/              # Database migrations
-│   └── functions/               # Edge Functions
-├── docs/
-│   ├── assets/                  # Logo and preview images
-│   └── screenshots/             # App screenshots
-└── .github/
-    ├── workflows/               # CI/CD
-    └── ISSUE_TEMPLATE/          # Issue templates
++-- app/                          # Main application module
+|   +-- src/main/
+|   |   +-- java/com/example/
+|   |   |   +-- MainActivity.kt   # Compose shell + navigation
+|   |   |   +-- data/
+|   |   |   |   +-- model/        # Domain models
+|   |   |   |   +-- supabase/    # Supabase client, DTOs
+|   |   |   |   +-- repository/  # Repository layer
+|   |   |   |   +-- mock/        # Offline demo data
+|   |   |   +-- ui/
+|   |   |       +-- screens/     # Compose screens
+|   |   |       +-- components/  # Reusable components
+|   |   |       +-- theme/       # Theme and colors
+|   |   +-- res/                 # Android resources
+|   +-- build.gradle.kts         # App build config
++-- supabase/
+|   +-- migrations/              # Database migrations
+|   +-- functions/               # Edge Functions
++-- docs/
+|   +-- assets/                  # Logo and preview images
+|   +-- screenshots/             # App screenshots
++-- .github/
+    +-- workflows/               # CI/CD
+    +-- ISSUE_TEMPLATE/          # Issue templates
 ```
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
-### Completed ✅
+### Completed
 
 - [x] Authentication (email/password, Google sign-in)
 - [x] Profile creation and editing
@@ -546,7 +428,7 @@ Weekend/
 - [x] Image optimization
 - [x] Row Level Security on all tables
 
-### Planned 🔜
+### Planned
 
 - [ ] iOS release
 - [ ] Video profiles
@@ -558,7 +440,7 @@ Weekend/
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions from the community! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
@@ -570,7 +452,7 @@ We welcome contributions from the community! Please see [CONTRIBUTING.md](CONTRI
 
 ---
 
-## 🔐 Security
+## Security
 
 See [SECURITY.md](SECURITY.md) for our security policy and vulnerability reporting process.
 
@@ -583,13 +465,13 @@ See [SECURITY.md](SECURITY.md) for our security policy and vulnerability reporti
 
 ---
 
-## 📄 License
+## License
 
 Weekend is open source and available under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-## ⚠️ Important Notices
+## Important Notices
 
 ### Free and Open Source
 
@@ -605,7 +487,7 @@ Weekend is open source and available under the MIT License. See [LICENSE](LICENS
 
 ---
 
-## 📞 Contact & Support
+## Contact & Support
 
 - **Issues:** [GitHub Issues](https://github.com/zypherlabs-bit/Weekend/issues)
 - **Discussions:** [GitHub Discussions](https://github.com/zypherlabs-bit/Weekend/discussions)
@@ -617,7 +499,6 @@ Weekend is open source and available under the MIT License. See [LICENSE](LICENS
 
 **Weekend** — Meet people. Make plans.
 
-Made with ❤️ by the Weekend team and contributors.
+Made with love by the Weekend team and contributors.
 
 </div>
-Exact location and sensitive information are protected. Raw GPS coordinates are never exposed to other users and never selected through public queries � only city/locality and computed distances are shared.

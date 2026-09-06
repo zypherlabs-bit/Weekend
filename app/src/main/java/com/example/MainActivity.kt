@@ -58,6 +58,7 @@ import com.example.ui.screens.LikesAndPlansScreen
 import com.example.ui.screens.MatchesScreen
 import com.example.ui.screens.NearbyScreen
 import com.example.ui.screens.ProfileScreen
+import com.example.ui.screens.StartupErrorScreen
 import com.example.ui.screens.WelcomeScreen
 import com.example.ui.theme.DarkBackground
 import com.example.ui.theme.GoldenPeach
@@ -84,21 +85,35 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        SupabaseClient.init(this)
+
+        // Initialize Supabase safely - never crash on initialization failure.
+        // If init fails, the app degrades to offline/demo mode.
+        var supabaseInitialized = false
+        try {
+            supabaseInitialized = SupabaseClient.init(this)
+        } catch (e: Exception) {
+            // Log but do not crash - app runs in demo mode
+            android.util.Log.w("WeekendMain", "Supabase init failed, running in demo mode: ${e.message}")
+        }
+
         enableEdgeToEdge()
         setContent {
             WeekendTheme {
-                WeekendMainApp(viewModel = viewModel)
+                WeekendMainApp(viewModel = viewModel, supabaseInitialized = supabaseInitialized)
             }
         }
     }
 }
 
 @Composable
-fun WeekendMainApp(viewModel: WeekendViewModel) {
+fun WeekendMainApp(
+    viewModel: WeekendViewModel,
+    supabaseInitialized: Boolean = false
+) {
     val context = LocalContext.current
     var showWelcomeScreen by rememberSaveable { mutableStateOf(false) }
     var currentTabIndex by rememberSaveable { mutableIntStateOf(0) }
+    var startupError by rememberSaveable { mutableStateOf<String?>(null) }
     val activeChatMatch by viewModel.activeChatMatch.collectAsState()
     val celebrationProfile by viewModel.recentMatchCelebration.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
@@ -115,7 +130,15 @@ fun WeekendMainApp(viewModel: WeekendViewModel) {
             .fillMaxSize()
             .background(DarkBackground)
     ) {
-        if (showWelcomeScreen) {
+        // Show startup error screen if initialization failed
+        if (startupError != null) {
+            StartupErrorScreen(
+                message = startupError ?: "Something went wrong while starting Weekend.",
+                onRetry = {
+                    startupError = null
+                }
+            )
+        } else if (showWelcomeScreen) {
             WelcomeScreen(
                 onGetStarted = { showWelcomeScreen = false },
                 onAlreadyHaveAccount = {

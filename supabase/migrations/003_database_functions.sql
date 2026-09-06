@@ -118,7 +118,7 @@ begin
             insert into public.referral_events (referral_id, event_type, created_at)
             select r.id, 'successful', now()
             from public.referrals r
-            where r.referree_id = new.liked_id
+            where r.referee_id = new.liked_id
               and r.status = 'pending'
             on conflict do nothing;
 

@@ -562,7 +562,7 @@ fun ProfileScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Firebase Auth & Firestore Synced",
+                        text = "Supabase Auth & PostgreSQL Synced",
                         color = GoldenPeach,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold

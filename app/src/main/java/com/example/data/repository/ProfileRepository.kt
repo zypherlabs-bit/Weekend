@@ -8,6 +8,7 @@ import com.example.data.supabase.ProfileRow
 import com.example.data.supabase.ProfileUpsert
 import com.example.data.supabase.SupabaseClient
 import com.example.data.supabase.UserParams
+import android.net.Uri
 import io.github.jan.supabase.postgrest.Columns
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
@@ -100,12 +101,14 @@ class ProfileRepository {
             ?: return Result.failure(IllegalStateException("Supabase storage not initialized"))
 
         return try {
-            val path = "$userId/photo_${System.currentTimeMillis()}.jpg"
+            // The photoBytes should already be optimized by ImageProcessor before calling this method.
+            // We store the optimized master image as WebP for best quality/size ratio.
+            val path = "$userId/photo_${System.currentTimeMillis()}.webp"
             val bucket = storage.from("profile-photos")
 
             bucket.upload(path, photoBytes) {
                 upsert = true
-                contentType = ContentType.Image.JPEG
+                contentType = "image/webp"
             }
 
             val publicUrl = bucket.publicUrl(path)
@@ -117,10 +120,10 @@ class ProfileRepository {
                         userId = userId,
                         photoUrl = publicUrl,
                         isPrimary = isPrimary,
-                        width = 800,
-                        height = 800,
+                        width = 0, // Will be updated after optimization
+                        height = 0,
                         fileSizeBytes = photoBytes.size.toLong(),
-                        mimeType = "image/jpeg",
+                        mimeType = "image/webp",
                         // Moderation status is decided by the trusted backend
                         // pipeline, never by the client.
                         moderationStatus = "pending"
@@ -131,6 +134,106 @@ class ProfileRepository {
             Result.success(publicUrl)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to upload photo: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Upload an optimized profile photo with thumbnail variants.
+     * This is the production-grade upload path that stores master, medium, and thumb.
+     */
+    suspend fun uploadOptimizedPhoto(
+        userId: String,
+        optimizedImage: ImageProcessor.OptimizedImage,
+        isPrimary: Boolean
+    ): Result<String> {
+        val storage = SupabaseClient.storage
+            ?: return Result.failure(IllegalStateException("Supabase storage not initialized"))
+
+        return try {
+            val timestamp = System.currentTimeMillis()
+            val bucket = storage.from("profile-photos")
+
+            // Upload master image
+            val masterPath = "$userId/photo_${timestamp}.webp"
+            bucket.upload(masterPath, optimizedImage.masterBytes) {
+                upsert = true
+                contentType = "image/webp"
+            }
+
+            // Upload medium variant
+            val mediumPath = "$userId/photo_${timestamp}-medium.webp"
+            bucket.upload(mediumPath, optimizedImage.mediumBytes) {
+                upsert = true
+                contentType = "image/webp"
+            }
+
+            // Upload thumbnail variant
+            val thumbPath = "$userId/photo_${timestamp}-thumb.webp"
+            bucket.upload(thumbPath, optimizedImage.thumbBytes) {
+                upsert = true
+                contentType = "image/webp"
+            }
+
+            val publicUrl = bucket.publicUrl(masterPath)
+
+            // Store metadata in database
+            val pg = SupabaseClient.postgrest
+            if (pg != null) {
+                pg.from("profile_photos").insert(
+                    ProfilePhotoInsert(
+                        userId = userId,
+                        photoUrl = publicUrl,
+                        isPrimary = isPrimary,
+                        width = optimizedImage.width,
+                        height = optimizedImage.height,
+                        fileSizeBytes = optimizedImage.masterSizeBytes,
+                        mimeType = "image/webp",
+                        moderationStatus = "pending"
+                    )
+                )
+            }
+
+            Log.i(
+                TAG,
+                "Uploaded optimized photo: ${optimizedImage.width}x${optimizedImage.height} " +
+                "(${(optimizedImage.compressionRatio * 100).toInt()}% reduction)"
+            )
+
+            Result.success(publicUrl)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to upload optimized photo: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Process and upload a profile photo from a content URI.
+     * This is the main entry point for profile photo uploads - it validates,
+     * optimizes, and uploads the image with variants.
+     */
+    suspend fun processAndUploadPhoto(
+        context: android.content.Context,
+        userId: String,
+        uri: Uri,
+        isPrimary: Boolean
+    ): Result<String> {
+        return try {
+            // Validate the image
+            val validation = ImageProcessor.validateImage(context, uri)
+            if (!validation.isValid) {
+                return Result.failure(
+                    IllegalArgumentException(validation.errorMessage ?: "Invalid image")
+                )
+            }
+
+            // Process/optimize the image
+            val optimizedImage = ImageProcessor.processImage(context, uri)
+
+            // Upload the optimized image with variants
+            uploadOptimizedPhoto(userId, optimizedImage, isPrimary)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to process and upload photo: ${e.message}")
             Result.failure(e)
         }
     }

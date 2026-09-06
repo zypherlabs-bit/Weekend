@@ -492,6 +492,19 @@ class WeekendRepository(private val context: Context? = null) {
         return profileRepository.uploadProfilePhoto(userId, photoBytes, isPrimary)
     }
 
+    /**
+     * Process and upload a profile photo from a content URI with full optimization.
+     * Images are validated, resized, compressed, and uploaded with thumbnail variants.
+     */
+    suspend fun processAndUploadPhoto(
+        context: android.content.Context,
+        userId: String,
+        uri: android.net.Uri,
+        isPrimary: Boolean
+    ): Result<String> {
+        return profileRepository.processAndUploadPhoto(context, userId, uri, isPrimary)
+    }
+
     fun subscribeToRealtime(userId: String) {
         notificationRepository.subscribeToNotifications(userId)
         matchRepository.fetchMatches(userId)

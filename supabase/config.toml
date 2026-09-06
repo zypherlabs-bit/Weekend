@@ -1,0 +1,9 @@
+# Supabase local development configuration
+# This file is git-ignored. Copy from config.example.toml for local development.
+# Do NOT commit real production credentials.
+
+[github]
+# For Supabase CLI version 2.x
+
+[local]
+project_id = "weekend-local"

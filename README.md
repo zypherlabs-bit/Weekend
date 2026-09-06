@@ -16,11 +16,11 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android">
-  <img src="https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin">
-  <img src="https://img.shields.io/badge/Jetpack%20Compose-2024.09-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose">
-  <img src="https://img.shields.io/badge/Supabase-3.1.0-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase">
+  <img src="https://img.shields.io/badge/Flutter-3.24.0-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter">
+  <img src="https://img.shields.io/badge/Dart-3.5.0-0175C2?style=for-the-badge&logo=dart&logoColor=white" alt="Dart">
+  <img src="https://img.shields.io/badge/Supabase-2.x-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase">
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Version-1.0.0-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Version-2.0.0-blue?style=for-the-badge" alt="Version">
 </p>
 
 </div>
@@ -33,7 +33,7 @@
 
 ### Android APK
 
-**Latest stable version:** `Weekend-v1.0.0.apk` (1.3 MB)
+**Latest stable version:** `Weekend-v2.0.0.apk` (~54 MB)
 
 <p align="center">
   <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-latest.apk">
@@ -51,7 +51,7 @@
 
 | Asset | Description |
 |-------|-------------|
-| `Weekend-v1.0.0.apk` | Versioned production APK |
+| `Weekend-v2.0.0.apk` | Versioned production APK |
 | `Weekend-latest.apk` | Stable "latest" download (always points to newest release) |
 | `SHA256SUMS.txt` | SHA-256 checksums for verification |
 

@@ -1,14 +1,9 @@
-import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.roborazzi)
     alias(libs.plugins.secrets)
-    alias(libs.plugins.google.services)
-    alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -34,7 +29,7 @@ android {
             keyPassword = System.getenv("KEY_PASSWORD")
         }
         create("debugConfig") {
-            storeFile = file("${rootDir}/debug.keystore")
+            storeFile = file("${projectDir}/debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
@@ -51,11 +46,8 @@ android {
         debug { signingConfig = signingConfigs.getByName("debugConfig") }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-    kotlinOptions {
-        jvmTarget = "11"
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
@@ -68,17 +60,22 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
 secrets {
     propertiesFileName = ".env"
     defaultPropertiesFileName = ".env.example"
     ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
 }
 
-googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
-
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(platform(libs.firebase.bom))
+    implementation(platform(libs.supabase.bom))
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.ktx)
@@ -112,6 +109,16 @@ dependencies {
 
     implementation(libs.play.services.location)
 
+    // Supabase SDK
+    implementation(libs.supabase.postgrest)
+    implementation(libs.supabase.auth)
+    implementation(libs.supabase.realtime)
+    implementation(libs.supabase.storage)
+    implementation(libs.supabase.functions)
+    implementation(libs.supabase.serializer.moshi)
+    implementation(libs.ktor.client.android)
+    implementation(libs.ktor.client.okhttp)
+
     implementation(libs.firebase.ai)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
@@ -122,32 +129,9 @@ dependencies {
     implementation(libs.androidx.credentials.play.services)
     implementation(libs.googleid)
 
-    implementation(project(":core:common"))
-    implementation(project(":core:designsystem"))
-    implementation(project(":core:network"))
-    implementation(project(":core:database"))
-    implementation(project(":core:datastore"))
-    implementation(project(":core:security"))
-    implementation(project(":core:analytics"))
-    implementation(project(":core:location"))
-    implementation(project(":core:notifications"))
-    implementation(project(":domain"))
-    implementation(project(":data"))
-    implementation(project(":feature:auth"))
-    implementation(project(":feature:onboarding"))
-    implementation(project(":feature:profile"))
-    implementation(project(":feature:discovery"))
-    implementation(project(":feature:matches"))
-    implementation(project(":feature:chat"))
-    implementation(project(":feature:encounters"))
-    implementation(project(":feature:dates"))
-    implementation(project(":feature:settings"))
-    implementation(project(":feature:subscription"))
-    implementation(project(":feature:safety"))
 
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    implementation(libs.hilt.navigation.compose)
+
+
 
     implementation(libs.kotlinx.serialization.json)
 

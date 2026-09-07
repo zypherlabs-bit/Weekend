@@ -22,28 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ModernDatingApp"
+rootProject.name = "Weekend"
 
 include(":app")
-include(":domain")
-include(":data")
-include(":core:common")
-include(":core:designsystem")
-include(":core:network")
-include(":core:database")
-include(":core:datastore")
-include(":core:security")
-include(":core:analytics")
-include(":core:location")
-include(":core:notifications")
-include(":feature:auth")
-include(":feature:onboarding")
-include(":feature:profile")
-include(":feature:discovery")
-include(":feature:matches")
-include(":feature:chat")
-include(":feature:encounters")
-include(":feature:dates")
-include(":feature:settings")
-include(":feature:subscription")
-include(":feature:safety")

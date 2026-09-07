@@ -1,0 +1,60 @@
+# Gradle
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.properties
+
+# Android
+*.iml
+.idea/
+captures/
+.externalNativeBuild
+.cxx
+local.properties
+debug.keystore
+*.jks
+
+# Environment
+.env
+.env.local
+
+# Secrets
+google-services.json
+firebase-config.json
+app/src/main/res/values/google_maps_api.xml
+
+# Test artifacts
+app/src/test/screenshots/
+*.png
+*.jpg
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+
+# Build outputs
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Keystore
+*.jks
+*.keystore
+
+# Node
+node_modules/
+
+# Supabase
+supabase/.temp

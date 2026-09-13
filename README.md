@@ -33,16 +33,16 @@
 
 ### Android APK
 
-**Latest stable version:** `Weekend-v2.0.0-release.apk` (~54 MB)
+**Latest stable version:** `Weekend-v2.0.1-release.apk` (~54 MB)
 
 <p align="center">
-  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.0.0-release.apk">
+  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.0.1-release.apk">
     <img src="https://img.shields.io/badge/Download_Latest_APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download Latest APK">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.0.0-release.apk">Download Latest APK</a>
+  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.0.1-release.apk">Download Latest APK</a>
   &bull;
   <a href="https://github.com/zypherlabs-bit/Weekend/releases">View All Releases</a>
   &bull;
@@ -51,24 +51,24 @@
 
 | Asset | Description |
 |-------|-------------|
-| `Weekend-v2.0.0-release.apk` | Versioned production APK |
-| `Weekend-v2.0.0-release.apk.sha256` | SHA-256 checksum for verification |
+| `Weekend-v2.0.1-release.apk` | Versioned production APK |
+| `Weekend-v2.0.1-release.apk.sha256` | SHA-256 checksum for verification |
 
 ### Verify your download
 
 ```bash
 # Windows (PowerShell)
-Get-FileHash Weekend-v2.0.0-release.apk -Algorithm SHA256
+Get-FileHash Weekend-v2.0.1-release.apk -Algorithm SHA256
 
 # macOS / Linux
-sha256sum Weekend-v2.0.0-release.apk
+sha256sum Weekend-v2.0.1-release.apk
 ```
 
-Compare the output against `Weekend-v2.0.0-release.apk.sha256` in the release.
+Compare the output against `Weekend-v2.0.1-release.apk.sha256` in the release.
 
 ### Install
 
-1. Download `Weekend-v2.0.0-release.apk` from the button above.
+1. Download `Weekend-v2.0.1-release.apk` from the button above.
 2. Open the APK — enable **Install from unknown sources** if prompted.
 3. Launch **Weekend** and sign in or explore in demo mode.
 

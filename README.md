@@ -7,7 +7,7 @@
 <h1 align="center">Weekend</h1>
 
 <p align="center">
-  <strong>Meet people. Make plans. Make every day feel like the weekend.</strong>
+  <strong>Make Every Weekend Brighter.</strong>
 </p>
 
 <p align="center">
@@ -33,16 +33,16 @@
 
 ### Android APK
 
-**Latest stable version:** `Weekend-v2.0.0.apk` (~54 MB)
+**Latest stable version:** `Weekend-v2.0.0-release.apk` (~54 MB)
 
 <p align="center">
-  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-latest.apk">
+  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.0.0-release.apk">
     <img src="https://img.shields.io/badge/Download_Latest_APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download Latest APK">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-latest.apk">Download Latest APK</a>
+  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.0.0-release.apk">Download Latest APK</a>
   &bull;
   <a href="https://github.com/zypherlabs-bit/Weekend/releases">View All Releases</a>
   &bull;
@@ -51,25 +51,24 @@
 
 | Asset | Description |
 |-------|-------------|
-| `Weekend-v2.0.0.apk` | Versioned production APK |
-| `Weekend-latest.apk` | Stable "latest" download (always points to newest release) |
-| `SHA256SUMS.txt` | SHA-256 checksums for verification |
+| `Weekend-v2.0.0-release.apk` | Versioned production APK |
+| `Weekend-v2.0.0-release.apk.sha256` | SHA-256 checksum for verification |
 
 ### Verify your download
 
 ```bash
 # Windows (PowerShell)
-Get-FileHash Weekend-latest.apk -Algorithm SHA256
+Get-FileHash Weekend-v2.0.0-release.apk -Algorithm SHA256
 
 # macOS / Linux
-sha256sum Weekend-latest.apk
+sha256sum Weekend-v2.0.0-release.apk
 ```
 
-Compare the output against `SHA256SUMS.txt` in the release.
+Compare the output against `Weekend-v2.0.0-release.apk.sha256` in the release.
 
 ### Install
 
-1. Download `Weekend-latest.apk` from the button above.
+1. Download `Weekend-v2.0.0-release.apk` from the button above.
 2. Open the APK — enable **Install from unknown sources** if prompted.
 3. Launch **Weekend** and sign in or explore in demo mode.
 
@@ -95,7 +94,43 @@ Compare the output against `SHA256SUMS.txt` in the release.
 
 ---
 
-## Why Weekend?
+## In-Feed Advertisements
+
+Weekend includes a privacy-preserving, server-validated in-feed advertisement system:
+
+- **Ad placement** — Advertisements appear contextually in the discovery feed via `AdService` (lib/services/ad_service.dart)
+- **Interval timer** — Ads show at a minimum 120-second interval during active discovery; the timer pauses when the app is backgrounded or the user leaves the discovery screen
+- **Server-side validation** — All ad impressions, clicks, reports, and hides are recorded via the `serve-ad` Edge Function and the `record_ad_event` RPC, which validates events server-side
+- **URL validation** — All ad destination URLs are validated (must be `https`) before any interaction is allowed
+- **No tracking** — Ads are served based on discovery context only; no personal data is shared with advertisers
+- **User controls** — Users can report or hide advertisements; hidden ads are not shown again to the same user
+- **Monetization** — The ad system is the sole monetization mechanism; the app remains free and open source with no paywall
+
+### Ad Data Flow
+
+```
+User browses Discover → AdService timer counts active seconds → 
+At 120s threshold, ad becomes eligible → 
+AdService.fetchAd() calls serve-ad Edge Function → 
+get_ad_for_user RPC returns next eligible campaign → 
+AdCard renders with ADVERTISEMENT badge → 
+Impressions/clicks recorded via record_ad_event RPC
+```
+
+---
+
+## Location Discovery & Privacy
+
+Weekend's location discovery is designed with privacy as a core principle:
+
+- **Privacy-safe geohash buckets** — Raw GPS coordinates are converted to geohash buckets at precision 7 (~150m resolution) using the bundled `Geohash` class. This allows crossed-paths detection without exposing exact location
+- **Approximate coordinates** — The `LocationService.toApproximateCoordinates()` method rounds coordinates to a configurable grid, adding noise for additional privacy
+- **Server-side distance computation** — The `get_nearby_profiles` RPC uses PostGIS to compute distances server-side. No raw coordinates are returned to the client
+- **No exact location sharing** — Other users only see your city/locality and approximate distance ("5 km away")
+- **Crossed Paths** — When you and another user are in the same geohash bucket within a time window, a crossed path is recorded. The `compute_crossed_paths` RPC handles this server-side
+- **Location settings** — Users can toggle location discovery, crossed paths, distance display, nearby discovery, and travel mode (for discovering in another city)
+- **Permission-first UX** — A dedicated `LocationPermissionScreen` explains the privacy benefits before requesting permission
+- **App lifecycle awareness** — The `AdService` timer pauses on `AppLifecycleState.paused`/`inactive` and resumes on `resumed`
 
 Weekend is a **free and open-source dating and social discovery application** built for people who want to meet others nearby, make real plans, and connect through shared interests.
 
@@ -131,8 +166,11 @@ Exact location and sensitive information are protected. Raw GPS coordinates are 
 - **Swipe-based discovery** — Browse profiles with an intuitive swipe interface
 - **Personalized discovery** — Profiles ranked by compatibility and shared interests
 - **Nearby-first profiles** — GPS-based discovery powered by PostGIS
+- **Crossed Paths** — Matches based on your historical location overlap using privacy-safe geohash buckets
+- **Mingle-style location discovery** — See who's nearby, available this weekend, or in your city
 - **Filters** — Narrow down discovery by age, distance, interests, and more
 - **Interests** — Connect through shared hobbies and activities
+- **In-feed advertisements** — Contextually placed ads with 120-second interval timer
 
 ### Matching
 - **Unlimited likes** — Like as many profiles as you want, completely free
@@ -213,40 +251,42 @@ Weekend implements multiple layers of safety:
 ## Architecture
 
 ```
-                     Weekend
-                        |
-                        v
-                 Native Android App
-                        |
-                        +-- Jetpack Compose (UI)
-                        +-- Kotlin (Logic)
-                        +-- Coil (Images)
-                        |
-            +-----------+-----------+
-            v           v           v
-         Auth       PostgreSQL    Storage
-            |           |           |
-            +-----------+-----------+
-                        v
-                    Realtime
-                        |
-                        v
-                 Edge Functions
+                   Weekend (Flutter)
+                         |
+         +---------------+---------------+
+         |               |               |
+         v               v               v
+   Flutter UI    Riverpod State     Supabase Client
+         |               |               |
+         |       Geolocation    Edge Functions
+         |               |               |
+         +-------+-------+-------+-------+
+                 |               |
+                 v               v
+            PostgreSQL      Storage
+               |   (PostGIS) |
+               +-------+-------+
+                       |
+                       v
+                   Realtime
+                       |
+                       v
+              Ad System (serve-ad)
 ```
 
 ### Tech Stack
 
 | Layer | Technology |
 |-------|------------|
-| Language | Kotlin 2.0.21 |
-| UI Framework | Jetpack Compose |
-| Build System | Gradle 9.3.1 |
-| Min SDK | 24 (Android 7.0) |
-| Target SDK | 35 |
-| Backend | Supabase |
+| Language | Dart 3.11.5 |
+| UI Framework | Flutter 3.41.9 |
+| State Management | Riverpod 2.6.1 |
+| Navigation | GoRouter 14.8.1 |
+| Backend | Supabase 2.x |
 | Database | PostgreSQL + PostGIS |
-| Image Loading | Coil |
-| Networking | Ktor + Retrofit |
+| Location | geolocator 13.0.4, geocoding 3.0.0 |
+| Image Loading | cached_network_image 3.4.1 |
+| Ads | In-feed advertisements via Supabase Edge Functions |
 
 ---
 
@@ -331,6 +371,8 @@ The SQL migrations in `supabase/migrations/` define the full schema:
 | `004_storage_policies.sql` | Storage bucket policies |
 | `005_security_hardening.sql` | Security hardening |
 | `006_security_fixes.sql` | Additional security fixes |
+| `007_advertisements_and_location.sql` | Advertisement tables, crossed-paths, user location buckets |
+| `008_advertisements_rls_and_functions.sql` | RLS policies and RPCs for ads (`get_ad_for_user`, `record_ad_event`, `compute_crossed_paths`) |
 
 ### Key Tables
 
@@ -344,6 +386,11 @@ The SQL migrations in `supabase/migrations/` define the full schema:
 - `referrals` / `referral_events` — Referral system
 - `verification_requests` — Photo verification
 - `blocks` / `reports` — Safety features
+- `ad_campaigns` — Advertiser campaigns
+- `advertisements` — Individual ad creatives
+- `ad_impressions` / `ad_clicks` / `ad_events` — Ad event tracking
+- `crossed_paths` — Geohash-based crossed-path matches
+- `user_location_buckets` — Privacy-safe location buckets for crossed-paths
 
 Row Level Security is enabled on every table. See [docs/supabase.md](docs/supabase.md) for complete setup instructions.
 
@@ -353,13 +400,13 @@ Row Level Security is enabled on every table. See [docs/supabase.md](docs/supaba
 
 ```bash
 # Run lint analysis
-./gradlew :app:lintDebug
+flutter analyze
 
-# Run unit tests (Robolectric)
-./gradlew :app:testDebugUnitTest
+# Run tests
+flutter test
 
 # Build release APK
-./gradlew :app:assembleRelease
+flutter build apk --release
 ```
 
 ---
@@ -368,10 +415,9 @@ Row Level Security is enabled on every table. See [docs/supabase.md](docs/supaba
 
 Production APK builds are distributed through **GitHub Releases**.
 
-- Each release contains a **versioned APK** (e.g. `Weekend-v1.0.0.apk`) and a **stable latest APK** (`Weekend-latest.apk`).
-- **SHA-256 checksums** are provided in `SHA256SUMS.txt` for every release.
-- The `Weekend-latest.apk` asset is re-uploaded on every new release, so its download URL always points to the newest build.
-- Download the latest APK from the [Download Latest APK](https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-latest.apk) button above, or browse **[all releases](https://github.com/zypherlabs-bit/Weekend/releases)**.
+- Each release contains a **versioned APK** (e.g. `Weekend-v2.0.0-release.apk`) and its **SHA-256 checksum**.
+- **SHA-256 checksums** are provided for verification.
+- Download the latest APK from the [Download Latest APK](#android-apk) button above, or browse **[all releases](https://github.com/zypherlabs-bit/Weekend/releases)**.
 
 ---
 
@@ -379,21 +425,12 @@ Production APK builds are distributed through **GitHub Releases**.
 
 ```
 Weekend/
-+-- app/                          # Main application module
-|   +-- src/main/
-|   |   +-- java/com/example/
-|   |   |   +-- MainActivity.kt   # Compose shell + navigation
-|   |   |   +-- data/
-|   |   |   |   +-- model/        # Domain models
-|   |   |   |   +-- supabase/    # Supabase client, DTOs
-|   |   |   |   +-- repository/  # Repository layer
-|   |   |   |   +-- mock/        # Offline demo data
-|   |   |   +-- ui/
-|   |   |       +-- screens/     # Compose screens
-|   |   |       +-- components/  # Reusable components
-|   |   |       +-- theme/       # Theme and colors
-|   |   +-- res/                 # Android resources
-|   +-- build.gradle.kts         # App build config
++-- app/                          # Main application module (Flutter/Dart)
+|   +-- src/
+|   |   +-- main.dart             # Entry point
+|   +-- features/                 # Screen-level feature modules
+|   +-- lib/                      # Shared libraries
+|   +-- pubspec.yaml              # Dependencies
 +-- supabase/
 |   +-- migrations/              # Database migrations
 |   +-- functions/               # Edge Functions

@@ -19,7 +19,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.41.9'
           channel: 'stable'
 
       - name: Install dependencies
@@ -39,27 +39,25 @@ jobs:
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          cp build/app/outputs/flutter-apk/app-release.apk Weekend-v${VERSION}.apk
-          cp build/app/outputs/flutter-apk/app-release.apk Weekend-latest.apk
-          shasum -a 256 Weekend-v${VERSION}.apk Weekend-latest.apk > SHA256SUMS.txt
-          echo "SHA256SUMS:"
-          cat SHA256SUMS.txt
+          cp build/app/outputs/flutter-apk/app-release.apk Weekend-v${VERSION}-release.apk
+          shasum -a 256 Weekend-v${VERSION}-release.apk > Weekend-v${VERSION}-release.apk.sha256
+          cat Weekend-v${VERSION}-release.apk.sha256
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Weekend ${{ steps.prep.outputs.version }}
+          name: Weekend v${{ steps.prep.outputs.version }}
           body: |
             ## Weekend v${{ steps.prep.outputs.version }}
 
             Production release of Weekend - Flutter Edition.
 
             ### Download
-            - **Weekend-v${{ steps.prep.outputs.version }}.apk** - Versioned production APK
-            - **Weekend-latest.apk** - Stable latest download link
+            - **Weekend-v${{ steps.prep.outputs.version }}-release.apk** - Versioned production APK
+            - **Weekend-v${{ steps.prep.outputs.version }}-release.apk.sha256** - SHA-256 checksum for verification
 
             ### Verify
-            SHA-256 checksums are provided in `SHA256SUMS.txt`.
+            SHA-256 checksum is provided with the APK.
 
             ### Install
             1. Download the APK
@@ -70,9 +68,8 @@ jobs:
             - Android 7.0+ (API 24)
             - ~55 MB storage
           files: |
-            Weekend-v${{ steps.prep.outputs.version }}.apk
-            Weekend-latest.apk
-            SHA256SUMS.txt
+            Weekend-v${{ steps.prep.outputs.version }}-release.apk
+            Weekend-v${{ steps.prep.outputs.version }}-release.apk.sha256
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

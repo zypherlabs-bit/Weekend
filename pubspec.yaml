@@ -65,6 +65,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  mocktail: ^1.0.4
   build_runner: ^2.4.13
   riverpod_generator: ^2.6.2
   json_serializable: ^6.9.3

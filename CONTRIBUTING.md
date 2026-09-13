@@ -46,19 +46,25 @@ Feature requests are welcome! Please provide:
 
 ## Coding Standards
 
-### Kotlin
+### Dart
 
-- Follow [Kotlin Coding Conventions](https://kotlinlang.org/docs/coding-conventions.html)
+- Follow [Dart Style Guide](https://dart.dev/guides/language/effective-dart/style)
 - Use meaningful variable and function names
 - Keep functions small and focused
 - Add comments for complex logic
+- Use camelCase for variables and methods
+- Use PascalCase for types and classes
+- Prefer const constructors where possible
+- Avoid unnecessary nullable types
 
-### Jetpack Compose
+### Flutter
 
-- Follow [Compose API guidelines](https://developer.android.com/jetpack/compose/designsystems/architecture)
+- Follow [Flutter Widget Catalog](https://docs.flutter.dev/development/ui/widgets) guidelines
 - Use Material 3 components where possible
-- Keep composables small and reusable
-- Extract reusable components
+- Keep widgets small and reusable
+- Extract reusable widgets
+- Use Riverpod for state management
+- Follow the project's folder structure (`lib/features/`, `lib/services/`, `lib/repositories/`, `lib/models/`, `lib/widgets/`)
 
 ### Git Commits
 
@@ -81,23 +87,24 @@ Fixes #123
 ## Development Setup
 
 1. Clone the repository
-2. Open in Android Studio
+2. Open in Android Studio or VS Code with Flutter extension
 3. Create `.env` from `.env.example`
-4. Run the app on an emulator or device
+4. Run `flutter pub get`
+5. Run the app on an emulator or device
 
 ## Testing
 
 Before submitting a PR:
 
 ```bash
-# Run lint
-./gradlew :app:lintDebug
+# Run lint analysis
+flutter analyze
 
-# Run unit tests
-./gradlew :app:testDebugUnitTest
+# Run tests
+flutter test
 
 # Build the app
-./gradlew :app:assembleDebug
+flutter build apk --release
 ```
 
 ## Code Review Process

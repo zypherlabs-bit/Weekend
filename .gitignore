@@ -21,7 +21,12 @@ local.properties
 *.aab
 *.jks
 *.keystore
+*.sha256
+SHA256SUMS.txt
 key.properties
 debug.keystore
 supabase/.env
+
+# Generated checksum files for release
+*release.apk.sha256
 

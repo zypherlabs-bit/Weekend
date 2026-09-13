@@ -6,3 +6,4 @@ export 'message_repository.dart';
 export 'plan_repository.dart';
 export 'referral_repository.dart';
 export 'notification_repository.dart';
+export 'ad_repository.dart';

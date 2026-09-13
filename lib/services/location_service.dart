@@ -1,31 +1,195 @@
-import 'package:geolocator/geolocator.dart';
+import 'dart:math';
+import 'package:geolocator/geolocator.dart' as geolocator;
 import 'package:geocoding/geocoding.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+/// Geohash encoding/decoding utilities for privacy-safe location handling.
+/// Geohash at precision 7 gives ~150m x 150m resolution — sufficient for
+/// crossed-paths detection without exposing exact coordinates.
+class Geohash {
+  static const String _base32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+
+  static String encode(double lat, double lon, {int precision = 7}) {
+    final latRange = [-90.0, 90.0];
+    final lonRange = [-180.0, 180.0];
+    final buffer = <bool>[];
+
+    for (var i = 0; i < precision * 5; i++) {
+      if (i % 2 == 0) {
+        final mid = (lonRange[0] + lonRange[1]) / 2;
+        if (lon >= mid) {
+          buffer.add(true);
+          lonRange[0] = mid;
+        } else {
+          buffer.add(false);
+          lonRange[1] = mid;
+        }
+      } else {
+        final mid = (latRange[0] + latRange[1]) / 2;
+        if (lat >= mid) {
+          buffer.add(true);
+          latRange[0] = mid;
+        } else {
+          buffer.add(false);
+          latRange[1] = mid;
+        }
+      }
+    }
+
+    final result = StringBuffer();
+    for (var i = 0; i < buffer.length; i += 5) {
+      var value = 0;
+      for (var j = 0; j < 5; j++) {
+        if (i + j < buffer.length && buffer[i + j]) {
+          value |= (1 << (4 - j));
+        }
+      }
+      result.write(_base32[value]);
+    }
+    return result.toString();
+  }
+
+  static List<double> decode(String geohash) {
+    final latRange = [-90.0, 90.0];
+    final lonRange = [-180.0, 180.0];
+    var isEven = true;
+
+    for (final char in geohash.split('')) {
+      final value = _base32.indexOf(char);
+      if (value == -1) continue;
+
+      for (var bit = 4; bit >= 0; bit--) {
+        final mask = 1 << bit;
+        if (isEven) {
+          final mid = (lonRange[0] + lonRange[1]) / 2;
+          if ((value & mask) != 0) {
+            lonRange[0] = mid;
+          } else {
+            lonRange[1] = mid;
+          }
+        } else {
+          final mid = (latRange[0] + latRange[1]) / 2;
+          if ((value & mask) != 0) {
+            latRange[0] = mid;
+          } else {
+            latRange[1] = mid;
+          }
+        }
+        isEven = !isEven;
+      }
+    }
+
+    final lat = (latRange[0] + latRange[1]) / 2;
+    final lon = (lonRange[0] + lonRange[1]) / 2;
+    return [lat, lon];
+  }
+
+  static String encodeFromPosition(geolocator.Position position, {int precision = 7}) {
+    return encode(position.latitude, position.longitude, precision: precision);
+  }
+}
+
+/// Privacy-preserving location service.
+///
+/// Key privacy principles:
+/// - Uses approximate location (300m-500m accuracy) by default
+/// - Converts to geohash buckets for crossed-paths detection
+/// - Never exposes raw lat/lon to other users
+/// - Geofence-style significant-change updates only
+/// - Server-side distance computation via PostGIS
 class LocationService {
-  static Future<Position?> getCurrentPosition() async {
+  static const List<double> supportedRadii = [
+    0.5, 1, 5, 10, 25, 50, 100
+  ];
+
+  static const geolocator.LocationSettings preciseSettings = geolocator.LocationSettings(
+    accuracy: geolocator.LocationAccuracy.medium,
+    distanceFilter: 100,
+  );
+
+  static const geolocator.LocationSettings backgroundSettings = geolocator.LocationSettings(
+    accuracy: geolocator.LocationAccuracy.low,
+    distanceFilter: 500,
+  );
+
+  /// Request location permission with a context-first approach.
+  /// Returns true if permission is granted.
+  static Future<bool> requestPermission() async {
+    final status = await Permission.locationWhenInUse.request();
+    return status == PermissionStatus.granted ||
+        status == PermissionStatus.limited;
+  }
+
+  /// Check current permission status
+  static Future<bool> hasPermission() async {
+    final status = await Permission.locationWhenInUse.status;
+    return status == PermissionStatus.granted ||
+        status == PermissionStatus.limited;
+  }
+
+  /// Check if location services are enabled on the device
+  static Future<bool> isLocationServiceEnabled() async {
+    return await geolocator.Geolocator.isLocationServiceEnabled();
+  }
+
+  static Future<geolocator.Position?> getCurrentPosition() async {
     try {
-      final permission = await Permission.location.request();
-      
-      if (permission != PermissionStatus.granted) {
+      final hasPerms = await hasPermission();
+      if (!hasPerms) {
         return null;
       }
-      
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+
+      final serviceEnabled = await isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return null;
+      }
+
+      final position = await geolocator.Geolocator.getCurrentPosition(
+        desiredAccuracy: geolocator.LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 10),
       );
-      
+
       return position;
     } catch (e) {
       return null;
     }
   }
 
+  static Future<geolocator.Position?> getLastKnownPosition() async {
+    try {
+      final hasPerms = await hasPermission();
+      if (!hasPerms) return null;
+
+      return await geolocator.Geolocator.getLastKnownPosition();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static String getGeohashBucket(geolocator.Position position) {
+    return Geohash.encodeFromPosition(position, precision: 7);
+  }
+
+  static (double lat, double lon) toApproximateCoordinates(
+    double lat,
+    double lon, [
+    double gridSizeKm = 1.0,
+  ]) {
+    final latDegrees = gridSizeKm / 111.0;
+    final lonDegrees = gridSizeKm / (111.0 * cos(lat * pi / 180));
+
+    final roundedLat = (lat / latDegrees).round() * latDegrees;
+    final roundedLon = (lon / lonDegrees).round() * lonDegrees;
+
+    return (roundedLat, roundedLon);
+  }
+
   static Future<String?> getCityName(double lat, double lon) async {
     try {
       final placemarks = await placemarkFromCoordinates(lat, lon);
       if (placemarks.isNotEmpty) {
-        return placemarks.first.locality ?? placemarks.first.subAdministrativeArea;
+        final p = placemarks.first;
+        return p.locality ?? p.subAdministrativeArea ?? p.administrativeArea;
       }
     } catch (e) {
       // ignore
@@ -33,8 +197,55 @@ class LocationService {
     return null;
   }
 
-  static Future<bool> requestPermission() async {
-    final status = await Permission.location.request();
-    return status == PermissionStatus.granted;
+  static Future<Placemark?> getPlacemark(double lat, double lon) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lon);
+      if (placemarks.isNotEmpty) {
+        return placemarks.first;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  }
+
+  static bool isWithinRadius(
+    double centerLat,
+    double centerLon,
+    double targetLat,
+    double targetLon,
+    double radiusKm,
+  ) {
+    final distance = geolocator.Geolocator.distanceBetween(
+          centerLat, centerLon, targetLat, targetLon,
+        ) /
+        1000;
+    return distance <= radiusKm;
+  }
+
+  static String formatDistance(double distanceKm) {
+    if (distanceKm < 1) {
+      return '${(distanceKm * 1000).round()} m';
+    }
+    if (distanceKm < 10) {
+      return '${distanceKm.toStringAsFixed(1)} km';
+    }
+    return '${distanceKm.round()} km';
+  }
+
+  static String formatDistanceWithAway(double distanceKm) {
+    if (distanceKm < 1) {
+      return '${(distanceKm * 1000).round()} m away';
+    }
+    if (distanceKm < 10) {
+      return '${distanceKm.toStringAsFixed(1)} km away';
+    }
+    return '${distanceKm.round()} km away';
+  }
+
+  static double distanceInKm(
+    double lat1, double lon1, double lat2, double lon2,
+  ) {
+    return geolocator.Geolocator.distanceBetween(lat1, lon1, lat2, lon2) / 1000;
   }
 }

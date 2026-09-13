@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
+import '../services/ad_service.dart';
+import '../services/location_service.dart';
+import '../repositories/ad_repository.dart';
+import 'package:flutter/material.dart';
 
 final supabaseProvider = Provider<Supabase>((ref) {
   return Supabase.instance;
@@ -19,7 +23,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     try {
       final session = Supabase.instance.client.auth.currentSession;
       final user = Supabase.instance.client.auth.currentUser;
-      
+
       if (user != null && session != null) {
         state = WeekendAuthState(
           isAuthenticated: true,
@@ -55,7 +59,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
         password: password,
         data: {'full_name': fullName},
       );
-      
+
       if (response.user != null) {
         state = state.copyWith(
           isLoading: false,
@@ -87,7 +91,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
         email: email,
         password: password,
       );
-      
+
       if (response.user != null) {
         state = state.copyWith(
           isLoading: false,
@@ -103,6 +107,9 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
           session: response.session?.accessToken,
           emailVerified: response.user!.emailConfirmedAt != null,
         );
+
+        // Update location settings from DB
+        await _loadLocationPreferences(response.user!.id);
       }
     } catch (e) {
       state = state.copyWith(
@@ -117,7 +124,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final response = await Supabase.instance.client.auth.signInAnonymously();
-      
+
       if (response.user != null) {
         state = state.copyWith(
           isLoading: false,
@@ -157,6 +164,24 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       await Supabase.instance.client.auth.resetPasswordForEmail(email);
     } catch (e) {
       state = state.copyWith(error: e.toString());
+    }
+  }
+
+  Future<void> _loadLocationPreferences(String userId) async {
+    try {
+      final data = await Supabase.instance.client
+          .from('user_settings')
+          .select('max_distance_km, show_me_in_search')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (data != null) {
+        state = state.copyWith(user: state.user!.copyWith(
+          distanceKm: data['max_distance_km'] as int? ?? 25,
+        ));
+      }
+    } catch (e) {
+      // ignore
     }
   }
 }

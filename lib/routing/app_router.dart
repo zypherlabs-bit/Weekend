@@ -6,29 +6,32 @@ import '../features/onboarding/onboarding_screen.dart';
 import '../features/auth/auth_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/discovery/explore_screen.dart';
+import '../features/discovery/location_permission_screen.dart';
+import '../features/discovery/location_settings_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
-  
+
   return GoRouter(
     initialLocation: '/',
     redirect: (context, state) {
       final isAuthenticated = authState.isAuthenticated;
       final isLoading = authState.isLoading;
-      
+
       if (isLoading) return '/';
-      
+
       final isOnboarding = state.matchedLocation == '/onboarding';
       final isAuth = state.matchedLocation == '/auth';
-      
+
       if (!isAuthenticated && !isOnboarding && !isAuth) {
         return '/onboarding';
       }
-      
+
       if (isAuthenticated && (isOnboarding || isAuth)) {
         return '/home';
       }
-      
+
       return null;
     },
     routes: [
@@ -52,6 +55,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/profile',
         builder: (context, state) => const ProfileScreen(),
       ),
+      GoRoute(
+        path: '/explore',
+        builder: (context, state) => const ExploreScreen(),
+      ),
+      GoRoute(
+        path: '/location-permission',
+        builder: (context, state) => const LocationPermissionScreen(),
+      ),
+      GoRoute(
+        path: '/location-settings',
+        builder: (context, state) => const LocationSettingsScreen(),
+      ),
     ],
   );
 });
@@ -72,11 +87,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   Future<void> _initializeApp() async {
     await Future.delayed(const Duration(seconds: 2));
-    
+
     if (!mounted) return;
-    
+
     final authState = ref.read(authStateProvider);
-    
+
     if (authState.isAuthenticated) {
       context.go('/home');
     } else {
@@ -110,7 +125,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Weekend',
               style: TextStyle(
                 fontSize: 32,
@@ -120,8 +135,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Meet people. Make plans.',
+            Text(
+              'Make every weekend brighter.',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.white60,

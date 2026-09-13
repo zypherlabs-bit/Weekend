@@ -1,0 +1,380 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../models/models.dart';
+import '../../providers/weekend_provider.dart';
+import '../../services/location_service.dart';
+
+class LocationSettingsScreen extends ConsumerStatefulWidget {
+  const LocationSettingsScreen({super.key});
+
+  @override
+  ConsumerState<LocationSettingsScreen> createState() =>
+      _LocationSettingsScreenState();
+}
+
+class _LocationSettingsScreenState
+    extends ConsumerState<LocationSettingsScreen> {
+  late bool _locationDiscovery;
+  late bool _crossedPaths;
+  late bool _showDistance;
+  late bool _nearbyDiscovery;
+  late bool _travelMode;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final prefs = ref.read(weekendProvider).locationPreferences;
+    _locationDiscovery = prefs.locationDiscoveryEnabled;
+    _crossedPaths = prefs.crossedPathsEnabled;
+    _showDistance = prefs.showDistanceEnabled;
+    _nearbyDiscovery = prefs.nearbyDiscoveryEnabled;
+    _travelMode = prefs.travelModeEnabled;
+  }
+
+  Future<void> _saveSettings() async {
+    setState(() => _isSaving = true);
+
+    final prefs = LocationPreferences(
+      locationDiscoveryEnabled: _locationDiscovery,
+      crossedPathsEnabled: _crossedPaths,
+      showDistanceEnabled: _showDistance,
+      nearbyDiscoveryEnabled: _nearbyDiscovery,
+      travelModeEnabled: _travelMode,
+      discoveryRadiusKm:
+          ref.read(weekendProvider).locationPreferences.discoveryRadiusKm,
+    );
+
+    ref.read(weekendProvider.notifier).setLocationPreferences(prefs);
+
+    final userId = Supabase.instance.client.auth.currentUser?.id ?? 'user_me';
+    try {
+      await Supabase.instance.client
+          .from('user_settings')
+          .update({
+            'max_distance_km': prefs.discoveryRadiusKm,
+          })
+          .eq('user_id', userId);
+    } catch (e) {
+      // ignore
+    }
+
+    setState(() => _isSaving = false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Settings saved'),
+          backgroundColor: Color(0xFF4CAF50),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      backgroundColor: colorScheme.background,
+      appBar: AppBar(
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: Icon(Icons.arrow_back_rounded, color: colorScheme.onSurface),
+        ),
+        title: Text(
+          'Location Settings',
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _SettingGroup(
+                    title: 'Discovery',
+                    children: [
+                      _LocationToggle(
+                        title: 'Location Discovery',
+                        subtitle: 'Use your location to find people nearby',
+                        value: _locationDiscovery,
+                        onChanged: (v) =>
+                            setState(() => _locationDiscovery = v!),
+                      ),
+                      _LocationToggle(
+                        title: 'Nearby Discovery',
+                        subtitle: 'Show nearby people in discovery',
+                        value: _nearbyDiscovery,
+                        onChanged: (v) =>
+                            setState(() => _nearbyDiscovery = v!),
+                      ),
+                      _LocationToggle(
+                        title: 'Show Distance',
+                        subtitle: 'Show approximate distance to others',
+                        value: _showDistance,
+                        onChanged: (v) =>
+                            setState(() => _showDistance = v!),
+                      ),
+                      _LocationToggle(
+                        title: 'Travel Mode',
+                        subtitle: 'Discover people in another city',
+                        value: _travelMode,
+                        onChanged: (v) =>
+                            setState(() => _travelMode = v!),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _SettingGroup(
+                    title: 'Privacy',
+                    children: [
+                      _LocationToggle(
+                        title: 'Crossed Paths',
+                        subtitle:
+                            'Match with people you\'ve geographically crossed',
+                        value: _crossedPaths,
+                        onChanged: (v) =>
+                            setState(() => _crossedPaths = v!),
+                      ),
+                      _LocationToggle(
+                        title: 'Exact Location Protection',
+                        subtitle: 'Your exact coordinates are never shared',
+                        value: true,
+                        onChanged: null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _SettingGroup(
+                    title: 'Discovery Radius',
+                    children: [
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final currentRadius = ref
+                              .watch(weekendProvider
+                                  .select((s) => s.locationPreferences))
+                              .discoveryRadiusKm;
+                          return _RadiusSlider(
+                            currentRadiusKm: currentRadius,
+                            onRadiusChanged: (km) {
+                              ref
+                                  .read(weekendProvider.notifier)
+                                  .setDiscoveryRadius(km);
+                            },
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _saveSettings,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF4B72),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Save Settings',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RadiusSlider extends StatelessWidget {
+  final int currentRadiusKm;
+  final Function(int) onRadiusChanged;
+
+  const _RadiusSlider({
+    required this.currentRadiusKm,
+    required this.onRadiusChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Maximum discovery distance: ${currentRadiusKm} km',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            thumbColor: const Color(0xFFFF4B72),
+            overlayColor: const Color(0xFFFF4B72).withOpacity(0.2),
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 24),
+            trackHeight: 4,
+          ),
+          child: Slider(
+            value: currentRadiusKm.toDouble(),
+            min: 1,
+            max: 100,
+            divisions: 20,
+            activeColor: const Color(0xFFFF4B72),
+            inactiveColor: Colors.white.withOpacity(0.2),
+            label: '${currentRadiusKm} km',
+            onChanged: (value) => onRadiusChanged(value.round()),
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '1 km',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.4),
+                fontSize: 11,
+              ),
+            ),
+            Text(
+              '100 km',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.4),
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SettingGroup extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const _SettingGroup({
+    required this.title,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.5),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.03),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: Column(
+            children: children.asMap().entries.map((entry) {
+              final isLast = entry.key == children.length - 1;
+              return Column(
+                children: [
+                  entry.value,
+                  if (!isLast)
+                    Divider(
+                      color: Colors.white.withOpacity(0.05),
+                      height: 1,
+                    ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LocationToggle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool?>? onChanged;
+
+  const _LocationToggle({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.5),
+          fontSize: 12,
+        ),
+      ),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeColor: const Color(0xFFFF4B72),
+        inactiveThumbColor: Colors.white.withOpacity(0.3),
+        inactiveTrackColor: Colors.white.withOpacity(0.1),
+      ),
+    );
+  }
+}

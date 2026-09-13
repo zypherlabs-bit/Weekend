@@ -38,6 +38,11 @@ class UserProfile {
   final String favoriteMusic;
   final String idealWeekend;
   final String referralCode;
+  final List<String> commonInterests;
+  final Map<String, bool> weekendAvailability;
+  final String voiceIntroUrl;
+  final String compatibilityExplanation;
+  final String distanceDisplay;
 
   const UserProfile({
     required this.id,
@@ -61,6 +66,11 @@ class UserProfile {
     this.favoriteMusic = '',
     this.idealWeekend = '',
     this.referralCode = '',
+    this.commonInterests = const [],
+    this.weekendAvailability = const {},
+    this.voiceIntroUrl = '',
+    this.compatibilityExplanation = '',
+    this.distanceDisplay = '',
   });
 
   UserProfile copyWith({
@@ -85,6 +95,11 @@ class UserProfile {
     String? favoriteMusic,
     String? idealWeekend,
     String? referralCode,
+    List<String>? commonInterests,
+    Map<String, bool>? weekendAvailability,
+    String? voiceIntroUrl,
+    String? compatibilityExplanation,
+    String? distanceDisplay,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -108,6 +123,11 @@ class UserProfile {
       favoriteMusic: favoriteMusic ?? this.favoriteMusic,
       idealWeekend: idealWeekend ?? this.idealWeekend,
       referralCode: referralCode ?? this.referralCode,
+      commonInterests: commonInterests ?? this.commonInterests,
+      weekendAvailability: weekendAvailability ?? this.weekendAvailability,
+      voiceIntroUrl: voiceIntroUrl ?? this.voiceIntroUrl,
+      compatibilityExplanation: compatibilityExplanation ?? this.compatibilityExplanation,
+      distanceDisplay: distanceDisplay ?? this.distanceDisplay,
     );
   }
 
@@ -120,6 +140,11 @@ class UserProfile {
     'isPhotoVerified': isPhotoVerified, 'trustScore': trustScore,
     'crossedPathsCount': crossedPathsCount, 'favoriteMusic': favoriteMusic,
     'idealWeekend': idealWeekend, 'referralCode': referralCode,
+    'commonInterests': commonInterests,
+    'weekendAvailability': weekendAvailability,
+    'voiceIntroUrl': voiceIntroUrl,
+    'compatibilityExplanation': compatibilityExplanation,
+    'distanceDisplay': distanceDisplay,
   };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -144,6 +169,12 @@ class UserProfile {
     favoriteMusic: json['favoriteMusic'] as String? ?? '',
     idealWeekend: json['idealWeekend'] as String? ?? '',
     referralCode: json['referralCode'] as String? ?? '',
+    commonInterests: List<String>.from(json['commonInterests'] as List? ?? []),
+    weekendAvailability: Map<String, bool>.from(
+        (json['weekendAvailability'] as Map? ?? {}) as Map),
+    voiceIntroUrl: json['voiceIntroUrl'] as String? ?? '',
+    compatibilityExplanation: json['compatibilityExplanation'] as String? ?? '',
+    distanceDisplay: json['distanceDisplay'] as String? ?? '',
   );
 }
 
@@ -379,10 +410,13 @@ class DateIdea {
 enum DiscoveryMode {
   FOR_YOU('For You'),
   NEARBY('Nearby'),
+  AROUND_ME('Around Me'),
+  CITY('City'),
+  GLOBAL('Global'),
+  TRAVEL_MODE('Travel Mode'),
   CROSSED_PATHS('Crossed Paths'),
   INTERESTS('Interests'),
-  WEEKEND_PLANS('Plans'),
-  GLOBAL('Global');
+  WEEKEND_PLANS('Plans');
 
   final String title;
   const DiscoveryMode(this.title);
@@ -422,4 +456,255 @@ class WeekendAuthState {
       emailVerified: emailVerified ?? this.emailVerified,
     );
   }
+}
+
+class Advertisement {
+  final String id;
+  final String campaignId;
+  final String title;
+  final String description;
+  final String imageUrl;
+  final String ctaText;
+  final String destinationUrl;
+  final String clickAction;
+  final bool isActive;
+  final int? width;
+  final int? height;
+
+  const Advertisement({
+    required this.id,
+    required this.campaignId,
+    required this.title,
+    required this.description,
+    required this.imageUrl,
+    required this.ctaText,
+    required this.destinationUrl,
+    this.clickAction = 'external_url',
+    this.isActive = true,
+    this.width,
+    this.height,
+  });
+
+  Advertisement copyWith({
+    String? id,
+    String? campaignId,
+    String? title,
+    String? description,
+    String? imageUrl,
+    String? ctaText,
+    String? destinationUrl,
+    String? clickAction,
+    bool? isActive,
+    int? width,
+    int? height,
+  }) {
+    return Advertisement(
+      id: id ?? this.id,
+      campaignId: campaignId ?? this.campaignId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      imageUrl: imageUrl ?? this.imageUrl,
+      ctaText: ctaText ?? this.ctaText,
+      destinationUrl: destinationUrl ?? this.destinationUrl,
+      clickAction: clickAction ?? this.clickAction,
+      isActive: isActive ?? this.isActive,
+      width: width ?? this.width,
+      height: height ?? this.height,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'campaign_id': campaignId,
+        'title': title,
+        'description': description,
+        'image_url': imageUrl,
+        'cta_text': ctaText,
+        'destination_url': destinationUrl,
+        'click_action': clickAction,
+        'is_active': isActive,
+        'image_width': width,
+        'image_height': height,
+      };
+
+  factory Advertisement.fromJson(Map<String, dynamic> json) => Advertisement(
+        id: json['ad_id'] as String? ?? json['id'] as String? ?? '',
+        campaignId: json['campaign_id'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        imageUrl: json['image_url'] as String? ?? '',
+        ctaText: json['cta_text'] as String? ?? 'Learn More',
+        destinationUrl: json['destination_url'] as String? ?? '',
+        clickAction: json['click_action'] as String? ?? 'external_url',
+        isActive: json['is_active'] as bool? ?? true,
+        width: json['image_width'] as int?,
+        height: json['image_height'] as int?,
+      );
+}
+
+class AdConfig {
+  final int adIntervalSeconds;
+  final int maxAdsPerHour;
+  final String adPlaceholderText;
+  final bool isAdvertisingEnabled;
+
+  const AdConfig({
+    this.adIntervalSeconds = 120,
+    this.maxAdsPerHour = 10,
+    this.adPlaceholderText = 'Sponsored',
+    this.isAdvertisingEnabled = true,
+  });
+
+  AdConfig copyWith({
+    int? adIntervalSeconds,
+    int? maxAdsPerHour,
+    String? adPlaceholderText,
+    bool? isAdvertisingEnabled,
+  }) {
+    return AdConfig(
+      adIntervalSeconds: adIntervalSeconds ?? this.adIntervalSeconds,
+      maxAdsPerHour: maxAdsPerHour ?? this.maxAdsPerHour,
+      adPlaceholderText: adPlaceholderText ?? this.adPlaceholderText,
+      isAdvertisingEnabled: isAdvertisingEnabled ?? this.isAdvertisingEnabled,
+    );
+  }
+
+  factory AdConfig.fromJson(Map<String, dynamic> json) => AdConfig(
+        adIntervalSeconds: (json['ad_interval_seconds'] as int?) ?? 120,
+        maxAdsPerHour: (json['max_ads_per_hour'] as int?) ?? 10,
+        adPlaceholderText: (json['ad_placeholder_text'] as String?) ?? 'Sponsored',
+        isAdvertisingEnabled: (json['is_advertising_enabled'] as bool?) ?? true,
+      );
+}
+
+class AdState {
+  final bool adTimerStarted;
+  final int activeDiscoverySeconds;
+  final bool adEligible;
+  final bool adDisplayed;
+  final String? adId;
+  final String? adImpressionId;
+  final bool adLoading;
+  final String? adError;
+
+  const AdState({
+    this.adTimerStarted = false,
+    this.activeDiscoverySeconds = 0,
+    this.adEligible = false,
+    this.adDisplayed = false,
+    this.adId,
+    this.adImpressionId,
+    this.adLoading = false,
+    this.adError,
+  });
+
+  AdState copyWith({
+    bool? adTimerStarted,
+    int? activeDiscoverySeconds,
+    bool? adEligible,
+    bool? adDisplayed,
+    String? adId,
+    String? adImpressionId,
+    bool? adLoading,
+    String? adError,
+  }) {
+    return AdState(
+      adTimerStarted: adTimerStarted ?? this.adTimerStarted,
+      activeDiscoverySeconds: activeDiscoverySeconds ?? this.activeDiscoverySeconds,
+      adEligible: adEligible ?? this.adEligible,
+      adDisplayed: adDisplayed ?? this.adDisplayed,
+      adId: adId ?? this.adId,
+      adImpressionId: adImpressionId ?? this.adImpressionId,
+      adLoading: adLoading ?? this.adLoading,
+      adError: adError ?? this.adError,
+    );
+  }
+
+  bool get shouldShowAd => !adDisplayed && adEligible && adTimerStarted;
+}
+
+class CrossedPath {
+  final String userBId;
+  final int crossCount;
+  final DateTime lastCrossedAt;
+  final UserProfile? userProfile;
+
+  const CrossedPath({
+    required this.userBId,
+    required this.crossCount,
+    required this.lastCrossedAt,
+    this.userProfile,
+  });
+}
+
+class LocationPreferences {
+  final bool locationDiscoveryEnabled;
+  final bool crossedPathsEnabled;
+  final bool showDistanceEnabled;
+  final bool nearbyDiscoveryEnabled;
+  final bool travelModeEnabled;
+  final int discoveryRadiusKm;
+  final String? travelModeCity;
+  final double? travelModeLat;
+  final double? travelModeLon;
+
+  const LocationPreferences({
+    this.locationDiscoveryEnabled = true,
+    this.crossedPathsEnabled = true,
+    this.showDistanceEnabled = true,
+    this.nearbyDiscoveryEnabled = true,
+    this.travelModeEnabled = false,
+    this.discoveryRadiusKm = 25,
+    this.travelModeCity,
+    this.travelModeLat,
+    this.travelModeLon,
+  });
+
+  LocationPreferences copyWith({
+    bool? locationDiscoveryEnabled,
+    bool? crossedPathsEnabled,
+    bool? showDistanceEnabled,
+    bool? nearbyDiscoveryEnabled,
+    bool? travelModeEnabled,
+    int? discoveryRadiusKm,
+    String? travelModeCity,
+    double? travelModeLat,
+    double? travelModeLon,
+  }) {
+    return LocationPreferences(
+      locationDiscoveryEnabled: locationDiscoveryEnabled ?? this.locationDiscoveryEnabled,
+      crossedPathsEnabled: crossedPathsEnabled ?? this.crossedPathsEnabled,
+      showDistanceEnabled: showDistanceEnabled ?? this.showDistanceEnabled,
+      nearbyDiscoveryEnabled: nearbyDiscoveryEnabled ?? this.nearbyDiscoveryEnabled,
+      travelModeEnabled: travelModeEnabled ?? this.travelModeEnabled,
+      discoveryRadiusKm: discoveryRadiusKm ?? this.discoveryRadiusKm,
+      travelModeCity: travelModeCity ?? this.travelModeCity,
+      travelModeLat: travelModeLat ?? this.travelModeLat,
+      travelModeLon: travelModeLon ?? this.travelModeLon,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'location_discovery_enabled': locationDiscoveryEnabled,
+        'crossed_paths_enabled': crossedPathsEnabled,
+        'show_distance_enabled': showDistanceEnabled,
+        'nearby_discovery_enabled': nearbyDiscoveryEnabled,
+        'travel_mode_enabled': travelModeEnabled,
+        'discovery_radius_km': discoveryRadiusKm,
+        'travel_mode_city': travelModeCity,
+        'travel_mode_lat': travelModeLat,
+        'travel_mode_lon': travelModeLon,
+      };
+
+  factory LocationPreferences.fromJson(Map<String, dynamic> json) => LocationPreferences(
+        locationDiscoveryEnabled: (json['location_discovery_enabled'] as bool?) ?? true,
+        crossedPathsEnabled: (json['crossed_paths_enabled'] as bool?) ?? true,
+        showDistanceEnabled: (json['show_distance_enabled'] as bool?) ?? true,
+        nearbyDiscoveryEnabled: (json['nearby_discovery_enabled'] as bool?) ?? true,
+        travelModeEnabled: (json['travel_mode_enabled'] as bool?) ?? false,
+        discoveryRadiusKm: (json['discovery_radius_km'] as int?) ?? 25,
+        travelModeCity: json['travel_mode_city'] as String?,
+        travelModeLat: (json['travel_mode_lat'] as num?)?.toDouble(),
+        travelModeLon: (json['travel_mode_lon'] as num?)?.toDouble(),
+      );
 }

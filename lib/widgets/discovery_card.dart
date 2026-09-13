@@ -8,6 +8,7 @@ class DiscoveryCard extends StatelessWidget {
   final VoidCallback onSwipeLeft;
   final VoidCallback onSwipeRight;
   final VoidCallback onStandOut;
+  final bool showDistance;
 
   const DiscoveryCard({
     super.key,
@@ -16,15 +17,20 @@ class DiscoveryCard extends StatelessWidget {
     required this.onSwipeLeft,
     required this.onSwipeRight,
     required this.onStandOut,
+    this.showDistance = true,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onHorizontalDragEnd: (details) {
+        if (!isTop) return;
         if (details.primaryVelocity != null && details.primaryVelocity! > 0) {
           onSwipeLeft();
-        } else if (details.primaryVelocity != null && details.primaryVelocity! < 0) {
+        } else if (details.primaryVelocity != null &&
+            details.primaryVelocity! < 0) {
           onSwipeRight();
         }
       },
@@ -49,27 +55,7 @@ class DiscoveryCard extends StatelessWidget {
           child: Stack(
             children: [
               Positioned.fill(
-                child: profile.photos.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: profile.photos.first,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: const Color(0xFF2E244A),
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF4B72)),
-                            ),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: const Color(0xFF2E244A),
-                          child: const Icon(Icons.person_rounded, size: 80, color: Colors.white38),
-                        ),
-                      )
-                    : Container(
-                        color: const Color(0xFF2E244A),
-                        child: const Icon(Icons.person_rounded, size: 80, color: Colors.white38),
-                      ),
+                child: _buildImage(context),
               ),
               Positioned.fill(
                 child: DecoratedBox(
@@ -87,169 +73,372 @@ class DiscoveryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
-                top: 16,
-                right: 16,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.location_on_rounded, size: 16, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${profile.distanceKm} km',
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
+              _buildVerificationBadge(),
+              if (showDistance &&
+                  (profile.distanceDisplay.isNotEmpty ||
+                      profile.distanceKm > 0))
+                _buildDistanceBadge(),
+              _buildBottomSheet(context),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImage(BuildContext context) {
+    if (profile.photos.isNotEmpty) {
+      return PageView(
+        controller: PageController(viewportFraction: 1.0),
+        physics: const BouncingScrollPhysics(),
+        children: profile.photos
+            .map((url) => CachedNetworkImage(
+                  imageUrl: url,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: const Color(0xFF2E244A),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Color(0xFFFF4B72)),
                       ),
-                    ],
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: const Color(0xFF2E244A),
+                    child: const Icon(Icons.person_rounded,
+                        size: 80, color: Colors.white38),
+                  ),
+                ))
+            .toList(),
+      );
+    }
+
+    return Container(
+      color: const Color(0xFF2E244A),
+      child: const Icon(Icons.person_rounded, size: 80, color: Colors.white38),
+    );
+  }
+
+  Widget _buildVerificationBadge() {
+    if (!profile.isPhotoVerified) return const SizedBox.shrink();
+    return Positioned(
+      top: 16,
+      left: 16,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF4CAF50).withOpacity(0.9),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.verified_rounded, size: 14, color: Colors.white),
+            SizedBox(width: 4),
+            Text(
+              'Verified',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDistanceBadge() {
+    final distanceText = profile.distanceDisplay.isNotEmpty
+        ? profile.distanceDisplay
+        : '${profile.distanceKm} km away';
+
+    return Positioned(
+      top: 16,
+      right: 16,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.location_on_rounded,
+                size: 16, color: Colors.white),
+            const SizedBox(width: 4),
+            Text(
+              distanceText,
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomSheet(BuildContext context) {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Name, age, verification
+            Row(
+              children: [
+                Text(
+                  profile.name,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              Positioned(
-                top: 16,
-                left: 16,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: profile.isPhotoVerified
-                        ? const Color(0xFF4CAF50).withOpacity(0.9)
-                        : Colors.orange.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        profile.isPhotoVerified ? Icons.verified_rounded : Icons.pending_rounded,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        profile.isPhotoVerified ? 'Verified' : 'Pending',
-                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                const SizedBox(width: 8),
+                Text(
+                  '${profile.age}',
+                  style: TextStyle(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.8),
+                    fontSize: 20,
                   ),
                 ),
+                if (profile.isPhotoVerified) ...[
+                  const SizedBox(width: 8),
+                  const Icon(Icons.verified_rounded,
+                      size: 22, color: Color(0xFF4CAF50)),
+                ],
+              ],
+            ),
+
+            // Distance / City
+            if (profile.city.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                profile.distanceDisplay.isNotEmpty
+                    ? '${profile.distanceDisplay} • ${profile.city}'
+                    : profile.city,
+                style: TextStyle(
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  fontSize: 14,
+                ),
               ),
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            profile.name,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${profile.age}',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 20,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        profile.bio.isNotEmpty ? profile.bio : 'No bio yet',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 14,
-                          height: 1.4,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF4B72).withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              profile.relationshipIntent,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          if (profile.trustScore > 0)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFF9966).withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.shield_rounded, size: 12, color: Colors.white),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${profile.trustScore}%',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                      if (profile.interests.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: profile.interests.take(4).map((interest) {
-                              return Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.white.withOpacity(0.2)),
-                                ),
-                                child: Text(
-                                  interest,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
-                    ],
+            ],
+
+            // Relationship intent
+            if (profile.relationshipIntent.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF4B72).withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  profile.relationshipIntent,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
             ],
-          ),
+
+            // Bio
+            if (profile.bio.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                profile.bio,
+                style: TextStyle(
+                  color:
+                      Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+
+            // Interests
+            if (profile.interests.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children:
+                      profile.interests.take(4).map((interest) {
+                    final bool isShared =
+                        profile.commonInterests.contains(interest);
+                    return Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isShared
+                            ? const Color(0xFFFF4B72).withOpacity(0.9)
+                            : Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(16),
+                        border: isShared
+                            ? null
+                            : Border.all(
+                                color: Colors.white.withOpacity(0.2)),
+                      ),
+                      child: Text(
+                        interest,
+                        style: TextStyle(
+                          color: isShared
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.8),
+                          fontSize: 12,
+                          fontWeight: isShared ? FontWeight.bold : null,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+
+            // Common interests
+            if (profile.commonInterests.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: profile.commonInterests.map((interest) {
+                  return Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF9966).withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '~$interest',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+
+            // Trust score + crossed paths indicator
+            Row(
+              children: [
+                if (profile.trustScore > 0) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF9966).withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.shield_rounded,
+                            size: 12, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${profile.trustScore}%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                if (profile.crossedPathsCount > 0) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.place_rounded,
+                            size: 12, color: Color(0xFFFF4B72)),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Crossed paths ${profile.crossedPathsCount}x',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+
+            // Weekend availability indicator
+            if (profile.weekendAvailability.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: profile.weekendAvailability.entries
+                    .where((e) => e.value)
+                    .map((e) => Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            e.key.substring(0,
+                                e.key.length < 3 ? e.key.length : 3),
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 10,
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ],
+
+            // Voice intro indicator
+            if (profile.voiceIntroUrl.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.volume_up_rounded,
+                      size: 14, color: Color(0xFFFF9966)),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Has voice intro',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.6),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
       ),
     );

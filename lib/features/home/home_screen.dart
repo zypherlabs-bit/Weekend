@@ -2,17 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../config/supabase_config.dart';
 import '../../providers/weekend_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../models/models.dart';
 import '../../services/ad_service.dart';
 import '../../repositories/ad_repository.dart';
 import '../../widgets/discovery_card.dart';
-import '../../widgets/ad_card.dart';
-import '../../widgets/match_celebration_dialog.dart';
-import '../../widgets/safety_dialogs.dart';
 import '../../services/location_service.dart';
 import '../chat/chat_screen.dart';
 import '../profile/profile_screen.dart';
@@ -27,7 +22,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
   bool _showLocationBanner = false;
-  bool _isCheckingLocation = true;
   final List<Widget> _screens = [
     const DiscoverScreen(),
     const ExploreScreen(),
@@ -43,7 +37,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    final userId = SupabaseConfig.currentUserId;
     ref.read(weekendProvider.notifier).loadDiscoveryProfiles();
     ref.read(weekendProvider.notifier).loadReferralData();
     ref.read(weekendProvider.notifier).loadCrossedPaths();
@@ -51,7 +44,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (mounted) {
       setState(() {
         _showLocationBanner = !hasPerms;
-        _isCheckingLocation = false;
       });
     }
     if (hasPerms) {
@@ -225,7 +217,7 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   final AdService _adService = AdService(repository: AdRepository());
-  List<Advertisement> _availableAds = [];
+  final List<Advertisement> _availableAds = [];
   bool _isFetchingAd = false;
   bool _adInjected = false;
   @override
@@ -305,16 +297,16 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                           _FilterChip(
                             label: 'For You',
                             isSelected:
-                                state.selectedMode == DiscoveryMode.FOR_YOU,
+                                state.selectedMode == DiscoveryMode.forYou,
                             onTap: () => ref
                                 .read(weekendProvider.notifier)
-                                .selectDiscoveryMode(DiscoveryMode.FOR_YOU),
+                                .selectDiscoveryMode(DiscoveryMode.forYou),
                           ),
                           const SizedBox(width: 8),
                           _FilterChip(
                             label: 'Nearby',
                             isSelected:
-                                state.selectedMode == DiscoveryMode.NEARBY,
+                                state.selectedMode == DiscoveryMode.nearby,
                             onTap: _onNearbyTap,
                           ),
                           const SizedBox(width: 8),
@@ -322,21 +314,21 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                             label: 'Crossed Paths',
                             isSelected:
                                 state.selectedMode ==
-                                DiscoveryMode.CROSSED_PATHS,
+                                DiscoveryMode.crossedPaths,
                             onTap: () => ref
                                 .read(weekendProvider.notifier)
                                 .selectDiscoveryMode(
-                                  DiscoveryMode.CROSSED_PATHS,
+                                  DiscoveryMode.crossedPaths,
                                 ),
                           ),
                           const SizedBox(width: 8),
                           _FilterChip(
                             label: 'Global',
                             isSelected:
-                                state.selectedMode == DiscoveryMode.GLOBAL,
+                                state.selectedMode == DiscoveryMode.global,
                             onTap: () => ref
                                 .read(weekendProvider.notifier)
-                                .selectDiscoveryMode(DiscoveryMode.GLOBAL),
+                                .selectDiscoveryMode(DiscoveryMode.global),
                           ),
                         ],
                       ),
@@ -473,17 +465,22 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     final hasPerms = await LocationService.hasPermission();
     if (!hasPerms) {
       _adService.pauseTimer();
-      context.push('/location-permission').then((_) {
+      if (!context.mounted) return;
+      // Restore discovery state when the user returns from the permission
+      // screen. The ad timer stays paused while the permission UI is shown.
+      // ignore: use_build_context_synchronously - guarded by context.mounted above
+      unawaited(context.push('/location-permission').then((_) {
+        if (!mounted) return;
         _adService.startActiveDiscoveryTimer();
         ref
             .read(weekendProvider.notifier)
-            .selectDiscoveryMode(DiscoveryMode.NEARBY);
+            .selectDiscoveryMode(DiscoveryMode.nearby);
         ref.read(weekendProvider.notifier).updateLocationIfNeeded();
-      });
+      }));
     } else {
       ref
           .read(weekendProvider.notifier)
-          .selectDiscoveryMode(DiscoveryMode.NEARBY);
+          .selectDiscoveryMode(DiscoveryMode.nearby);
     }
   }
 }
@@ -575,28 +572,6 @@ class _FilterSheet extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ReportOption extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  const _ReportOption({required this.label, required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: const Icon(
-        Icons.report_rounded,
-        color: Color(0xFFFF4B72),
-        size: 20,
-      ),
-      title: Text(
-        label,
-        style: const TextStyle(color: Colors.white, fontSize: 14),
-      ),
-      onTap: onTap,
     );
   }
 }

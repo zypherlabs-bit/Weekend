@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/biometric_auth_service.dart';
-import '../../services/secure_storage_service.dart';
-import '../../providers/auth_provider.dart';
 
 class BiometricLockScreen extends ConsumerStatefulWidget {
   final VoidCallback? onAuthenticated;

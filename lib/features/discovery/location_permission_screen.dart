@@ -144,7 +144,7 @@ class _LocationPermissionScreenState
                       onPressed: () {
                         ref
                             .read(weekendProvider.notifier)
-                            .selectDiscoveryMode(DiscoveryMode.GLOBAL);
+                            .selectDiscoveryMode(DiscoveryMode.global);
                         Navigator.pop(context);
                       },
                       child: Text(

@@ -5,10 +5,8 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../services/qr_invitation_service.dart';
 import '../../services/secure_storage_service.dart';
 import '../../providers/auth_provider.dart';
-import '../../config/supabase_config.dart';
 import '../../models/models.dart';
 import '../auth/auth_screen.dart';
-import 'qr_invite_screen.dart';
 
 class QRScannerScreen extends ConsumerStatefulWidget {
   const QRScannerScreen({super.key});
@@ -21,7 +19,6 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
   bool _isScanning = true;
   bool _hasPermission = false;
   String? _errorMessage;
-  QRInvitation? _scannedInvitation;
   bool _isProcessing = false;
   @override
   void initState() {
@@ -68,7 +65,6 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
       }
       final invitation = result.invitation!;
       setState(() {
-        _scannedInvitation = invitation;
         _isProcessing = false;
       });
       _showInvitationDialog(invitation);
@@ -261,7 +257,6 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
   void _resumeScanning() {
     setState(() {
       _isScanning = true;
-      _scannedInvitation = null;
     });
   }
 

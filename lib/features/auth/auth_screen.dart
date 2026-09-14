@@ -232,8 +232,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     await ref
                         .read(authStateProvider.notifier)
                         .signInAnonymously();
-                    if (mounted &&
-                        ref.read(authStateProvider).isAuthenticated) {
+                    if (!context.mounted) return;
+                    if (ref.read(authStateProvider).isAuthenticated) {
                       context.go('/home');
                     }
                   },

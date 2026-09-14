@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
-import 'dart:developer';
+import 'package:flutter/foundation.dart';
 import '../config/supabase_config.dart';
 import '../models/models.dart';
 
@@ -53,12 +53,12 @@ class QRInvitationService {
   }
 
   static QRInvitationResult validateInvitation(String payload) {
+    final QRInvitation invitation;
     try {
-      final invitation = QRInvitation.fromPayload(payload);
+      invitation = QRInvitation.fromPayload(payload);
     } on FormatException catch (e) {
       return QRInvitationResult.invalid('Invalid invitation format: $e');
     }
-    final invitation = QRInvitation.fromPayload(payload);
     if (invitation.version != _currentVersion) {
       return QRInvitationResult.invalid('Unsupported invitation version');
     }

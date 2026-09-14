@@ -1,5 +1,458 @@
-import 'package:flutter/material.dart';import 'package:flutter/services.dart';import 'dart:ui' as ui;import 'package:flutter_riverpod/flutter_riverpod.dart';import 'package:qr_flutter/qr_flutter.dart';import 'package:share_plus/share_plus.dart';import '../../services/qr_invitation_service.dart';import '../../services/secure_storage_service.dart';import '../../providers/auth_provider.dart';import '../../config/supabase_config.dart';import '../../models/models.dart';class QRInviteScreen extends ConsumerStatefulWidget {  const QRInviteScreen({super.key});  @override  ConsumerState<QRInviteScreen> createState() => _QRInviteScreenState();}class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {  String? _qrPayload;  bool _isGenerating = true;  String? _error;  @override  void initState() {    super.initState();    _generateQRCode();  }  Future<void> _generateQRCode() async {    setState(() {      _isGenerating = true;      _error = null;    });    try {      final authState = ref.read(authStateProvider);      final user = authState.user;            if (user == null || user.referralCode.isEmpty) {        setState(() {          _error = 'No referral code available';          _isGenerating = false;        });        return;      }      final invitation = await QRInvitationService.generateInvitation(        referralCode: user.referralCode,        inviterId: user.id,        inviterName: user.name,      );      await SecureStorageService.setQRInvitePayload(invitation.toPayload());      setState(() {        _qrPayload = invitation.toPayload();        _isGenerating = false;      });    } catch (e) {      setState(() {        _error = 'Failed to generate QR code: $e';        _isGenerating = false;      });    }  }  Future<void> _shareQRCode() async {    if (_qrPayload == null) return;        try {      await Share.share(        _qrPayload!,        subject: 'Join me on Weekend!',      );    } catch (e) {      if (mounted) {        ScaffoldMessenger.of(context).showSnackBar(          SnackBar(content: Text('Failed to share: $e')),        );      }    }  }  Future<void> _saveQRImage() async {    if (_qrPayload == null) return;        try {      final qrValidationResult = QrValidator.validate(        data: _qrPayload!,        version: QrVersions.auto,        errorCorrectionLevel: QrErrorCorrectLevel.H,      );            if (qrValidationResult.status == QrValidationStatus.valid) {        final qrCode = qrValidationResult.qrCode!;        final painter = QrPainter.withQr(          qr: qrCode,          color: const Color(0xFF130E20),          emptyColor: Colors.white,          gapless: false,        );                final pictureRecorder = ui.PictureRecorder();        final canvas = Canvas(pictureRecorder);        final size = 512.0;        painter.paint(canvas, Size(size, size));        final picture = pictureRecorder.endRecording();        final image = await picture.toImage(size.toInt(), size.toInt());        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);                if (byteData != null) {          
-// Note: Actual saving to gallery would require additional permissions
-          
-// For now, we'll just show a success message
-          if (mounted) {            ScaffoldMessenger.of(context).showSnackBar(              const SnackBar(                content: Text('QR code image generated. Use share to save.'),                backgroundColor: Color(0xFF4CAF50),              ),            );          }        }      }    } catch (e) {      if (mounted) {        ScaffoldMessenger.of(context).showSnackBar(          SnackBar(content: Text('Failed to save: $e')),        );      }    }  }  @override  Widget build(BuildContext context) {    return Scaffold(      backgroundColor: const Color(0xFF130E20),      appBar: AppBar(        backgroundColor: const Color(0xFF130E20),        elevation: 0,        leading: IconButton(          onPressed: () => Navigator.pop(context),          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),        ),        title: const Text(          'My Weekend QR',          style: TextStyle(            color: Colors.white,            fontSize: 20,            fontWeight: FontWeight.bold,          ),        ),        centerTitle: true,        actions: [          if (_qrPayload != null)            IconButton(              onPressed: _shareQRCode,              icon: const Icon(Icons.share_rounded, color: Colors.white),              tooltip: 'Share Invitation',            ),        ],      ),      body: SafeArea(        child: Padding(          padding: const EdgeInsets.all(24),          child: Column(            children: [              const SizedBox(height: 24),              Container(                width: 100,                height: 100,                decoration: BoxDecoration(                  gradient: const LinearGradient(                    colors: [Color(0xFFFF4B72), Color(0xFFFF9966)],                    begin: Alignment.topLeft,                    end: Alignment.bottomRight,                  ),                  shape: BoxShape.circle,                  boxShadow: [                    BoxShadow(                      color: const Color(0xFFFF4B72).withValues(alpha: 0.3),                      blurRadius: 30,                      spreadRadius: 10,                    ),                  ],                ),                child: const Icon(                  Icons.qr_code_rounded,                  size: 50,                  color: Colors.white,                ),              ),              const SizedBox(height: 24),              Text(                'Your Weekend Invitation',                style: const TextStyle(                  fontSize: 24,                  fontWeight: FontWeight.bold,                  color: Colors.white,                ),                textAlign: TextAlign.center,              ),              const SizedBox(height: 8),              Text(                'Share this QR code to invite friends to Weekend. When they scan it, you\'ll both get referral rewards!',                style: TextStyle(                  fontSize: 14,                  color: Colors.white.withValues(alpha: 0.7),                  height: 1.5,                ),                textAlign: TextAlign.center,              ),              const SizedBox(height: 32),              if (_isGenerating)                const CircularProgressIndicator(                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF4B72)),                )              else if (_error != null)                Container(                  padding: const EdgeInsets.all(24),                  decoration: BoxDecoration(                    color: Colors.red.withValues(alpha: 0.1),                    borderRadius: BorderRadius.circular(16),                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),                  ),                  child: Column(                    children: [                      const Icon(Icons.error_outline_rounded, color: Colors.red, size: 48),                      const SizedBox(height: 16),                      Text(                        _error!,                        style: const TextStyle(color: Colors.red, fontSize: 14),                        textAlign: TextAlign.center,                      ),                      const SizedBox(height: 16),                      ElevatedButton(                        onPressed: _generateQRCode,                        style: ElevatedButton.styleFrom(                          backgroundColor: const Color(0xFFFF4B72),                        ),                        child: const Text('Retry'),                      ),                    ],                  ),                )              else if (_qrPayload != null)                Container(                  padding: const EdgeInsets.all(20),                  decoration: BoxDecoration(                    color: Colors.white,                    borderRadius: BorderRadius.circular(24),                    boxShadow: [                      BoxShadow(                        color: Colors.black.withValues(alpha: 0.2),                        blurRadius: 20,                        spreadRadius: 2,                      ),                    ],                  ),                  child: Column(                    children: [                      QrImageView(                        data: _qrPayload!,                        version: QrVersions.auto,                        size: 240,                        foregroundColor: const Color(0xFF130E20),                        backgroundColor: Colors.white,                        errorCorrectionLevel: QrErrorCorrectLevel.H,                        gapless: false,                      ),                      const SizedBox(height: 16),                      Container(                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),                        decoration: BoxDecoration(                          color: const Color(0xFFFF4B72).withValues(alpha: 0.1),                          borderRadius: BorderRadius.circular(12),                          border: Border.all(color: const Color(0xFFFF4B72).withValues(alpha: 0.3)),                        ),                        child: Row(                          mainAxisSize: MainAxisSize.min,                          children: [                            const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFFF4B72)),                            const SizedBox(width: 8),                            Text(                              'WEEKEND_INVITE',                              style: const TextStyle(                                color: Color(0xFFFF4B72),                                fontSize: 12,                                fontWeight: FontWeight.bold,                                letterSpacing: 1.0,                              ),                            ),                          ],                        ),                      ),                      const SizedBox(height: 20),                      Row(                        children: [                          Expanded(                            child: ElevatedButton.icon(                              onPressed: _shareQRCode,                              icon: const Icon(Icons.share_rounded, size: 20),                              label: const Text('Share'),                              style: ElevatedButton.styleFrom(                                backgroundColor: const Color(0xFFFF4B72),                                foregroundColor: Colors.white,                                padding: const EdgeInsets.symmetric(vertical: 14),                                shape: RoundedRectangleBorder(                                  borderRadius: BorderRadius.circular(16),                                ),                              ),                            ),                          ),                          const SizedBox(width: 12),                          Expanded(                            child: OutlinedButton.icon(                              onPressed: _saveQRImage,                              icon: const Icon(Icons.download_rounded, size: 20),                              label: const Text('Save Image'),                              style: OutlinedButton.styleFrom(                                foregroundColor: const Color(0xFFFF4B72),                                side: const BorderSide(color: Color(0xFFFF4B72)),                                padding: const EdgeInsets.symmetric(vertical: 14),                                shape: RoundedRectangleBorder(                                  borderRadius: BorderRadius.circular(16),                                ),                              ),                            ),                          ),                        ],                      ),                    ],                  ),                ),              const SizedBox(height: 32),              Container(                padding: const EdgeInsets.all(16),                decoration: BoxDecoration(                  color: const Color(0xFF1C162E),                  borderRadius: BorderRadius.circular(16),                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),                ),                child: Column(                  crossAxisAlignment: CrossAxisAlignment.start,                  children: [                    Row(                      children: [                        Container(                          width: 32,                          height: 32,                          decoration: BoxDecoration(                            color: const Color(0xFFFF4B72).withValues(alpha: 0.15),                            borderRadius: BorderRadius.circular(8),                          ),                          child: const Icon(Icons.security_rounded, color: Color(0xFFFF4B72), size: 18),                        ),                        const SizedBox(width: 12),                        const Text(                          'Security & Privacy',                          style: TextStyle(                            color: Colors.white,                            fontSize: 14,                            fontWeight: FontWeight.bold,                          ),                        ),                      ],                    ),                    const SizedBox(height: 12),                    _SecurityPoint(                      text: 'QR codes contain no personal data — only a signed invitation token',                    ),                    _SecurityPoint(                      text: 'Invitations expire after 30 days and cannot be reused',                    ),                    _SecurityPoint(                      text: 'Self-referrals are automatically prevented',                    ),                    _SecurityPoint(                      text: 'All invitations are validated server-side before rewards are granted',                    ),                  ],                ),              ),            ],          ),        ),      ),    );  }}class _SecurityPoint extends StatelessWidget {  final String text;  const _SecurityPoint({required this.text});  @override  Widget build(BuildContext context) {    return Padding(      padding: const EdgeInsets.only(bottom: 8),      child: Row(        crossAxisAlignment: CrossAxisAlignment.start,        children: [          const Icon(Icons.check_circle_rounded, color: Color(0xFF4CAF50), size: 16),          const SizedBox(width: 8),          Expanded(            child: Text(              text,              style: TextStyle(                color: Colors.white.withValues(alpha: 0.7),                fontSize: 12,                height: 1.4,              ),            ),          ),        ],      ),    );  }}
+import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../services/qr_invitation_service.dart';
+import '../../services/secure_storage_service.dart';
+import '../../providers/auth_provider.dart';
+
+class QRInviteScreen extends ConsumerStatefulWidget {
+  const QRInviteScreen({super.key});
+  @override
+  ConsumerState<QRInviteScreen> createState() => _QRInviteScreenState();
+}
+
+class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
+  String? _qrPayload;
+  bool _isGenerating = true;
+  String? _error;
+  @override
+  void initState() {
+    super.initState();
+    _generateQRCode();
+  }
+
+  Future<void> _generateQRCode() async {
+    setState(() {
+      _isGenerating = true;
+      _error = null;
+    });
+    try {
+      final authState = ref.read(authStateProvider);
+      final user = authState.user;
+      if (user == null || user.referralCode.isEmpty) {
+        setState(() {
+          _error = 'No referral code available';
+          _isGenerating = false;
+        });
+        return;
+      }
+      final invitation = await QRInvitationService.generateInvitation(
+        referralCode: user.referralCode,
+        inviterId: user.id,
+        inviterName: user.name,
+      );
+      await SecureStorageService.setQRInvitePayload(invitation.toPayload());
+      setState(() {
+        _qrPayload = invitation.toPayload();
+        _isGenerating = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to generate QR code: $e';
+        _isGenerating = false;
+      });
+    }
+  }
+
+  Future<void> _shareQRCode() async {
+    if (_qrPayload == null) return;
+    try {
+      await Share.share(_qrPayload!, subject: 'Join me on Weekend!');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to share: $e')));
+      }
+    }
+  }
+
+  Future<void> _saveQRImage() async {
+    if (_qrPayload == null) return;
+    try {
+      final qrValidationResult = QrValidator.validate(
+        data: _qrPayload!,
+        version: QrVersions.auto,
+        errorCorrectionLevel: QrErrorCorrectLevel.H,
+      );
+      if (qrValidationResult.status == QrValidationStatus.valid) {
+        final qrCode = qrValidationResult.qrCode!;
+        final pictureRecorder = ui.PictureRecorder();
+        final canvas = Canvas(pictureRecorder);
+        final size = 512.0;
+        canvas.drawRect(
+          Rect.fromLTWH(0, 0, size, size),
+          Paint()..color = Colors.white,
+        );
+        QrPainter.withQr(
+          qr: qrCode,
+          eyeStyle: const QrEyeStyle(
+            eyeShape: QrEyeShape.square,
+            color: Color(0xFF130E20),
+          ),
+          dataModuleStyle: const QrDataModuleStyle(
+            dataModuleShape: QrDataModuleShape.square,
+            color: Color(0xFF130E20),
+          ),
+          gapless: false,
+        ).paint(canvas, Size(size, size));
+        final picture = pictureRecorder.endRecording();
+        final image = await picture.toImage(size.toInt(), size.toInt());
+        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+        if (byteData != null) {
+          // Note: Actual saving to gallery would require additional permissions
+          // For now, we'll just show a success message
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('QR code image generated. Use share to save.'),
+                backgroundColor: Color(0xFF4CAF50),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF130E20),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF130E20),
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+        ),
+        title: const Text(
+          'My Weekend QR',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          if (_qrPayload != null)
+            IconButton(
+              onPressed: _shareQRCode,
+              icon: const Icon(Icons.share_rounded, color: Colors.white),
+              tooltip: 'Share Invitation',
+            ),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              const SizedBox(height: 24),
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF4B72), Color(0xFFFF9966)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF4B72).withValues(alpha: 0.3),
+                      blurRadius: 30,
+                      spreadRadius: 10,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.qr_code_rounded,
+                  size: 50,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Your Weekend Invitation',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Share this QR code to invite friends to Weekend. When they scan it, you\'ll both get referral rewards!',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white.withValues(alpha: 0.7),
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              if (_isGenerating)
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF4B72)),
+                )
+              else if (_error != null)
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.red.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: Colors.red,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _error!,
+                        style: const TextStyle(color: Colors.red, fontSize: 14),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _generateQRCode,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF4B72),
+                        ),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              else if (_qrPayload != null)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 20,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      QrImageView(
+                        data: _qrPayload!,
+                        version: QrVersions.auto,
+                        size: 240,
+                        eyeStyle: const QrEyeStyle(
+                          eyeShape: QrEyeShape.square,
+                          color: Color(0xFF130E20),
+                        ),
+                        dataModuleStyle: const QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.square,
+                          color: Color(0xFF130E20),
+                        ),
+                        backgroundColor: Colors.white,
+                        errorCorrectionLevel: QrErrorCorrectLevel.H,
+                        gapless: false,
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF4B72).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(
+                              0xFFFF4B72,
+                            ).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              size: 16,
+                              color: Color(0xFFFF4B72),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'WEEKEND_INVITE',
+                              style: const TextStyle(
+                                color: Color(0xFFFF4B72),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _shareQRCode,
+                              icon: const Icon(Icons.share_rounded, size: 20),
+                              label: const Text('Share'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFF4B72),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _saveQRImage,
+                              icon: const Icon(
+                                Icons.download_rounded,
+                                size: 20,
+                              ),
+                              label: const Text('Save Image'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFFF4B72),
+                                side: const BorderSide(
+                                  color: Color(0xFFFF4B72),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1C162E),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFFFF4B72,
+                            ).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.security_rounded,
+                            color: Color(0xFFFF4B72),
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Security & Privacy',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _SecurityPoint(
+                      text:
+                          'QR codes contain no personal data — only a signed invitation token',
+                    ),
+                    _SecurityPoint(
+                      text:
+                          'Invitations expire after 30 days and cannot be reused',
+                    ),
+                    _SecurityPoint(
+                      text: 'Self-referrals are automatically prevented',
+                    ),
+                    _SecurityPoint(
+                      text:
+                          'All invitations are validated server-side before rewards are granted',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SecurityPoint extends StatelessWidget {
+  final String text;
+  const _SecurityPoint({required this.text});
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.check_circle_rounded,
+            color: Color(0xFF4CAF50),
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

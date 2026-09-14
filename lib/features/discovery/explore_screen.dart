@@ -76,7 +76,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: colorScheme.onBackground,
+              color: colorScheme.onSurface,
             ),
           ),
           Row(
@@ -178,7 +178,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onBackground,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           Text(

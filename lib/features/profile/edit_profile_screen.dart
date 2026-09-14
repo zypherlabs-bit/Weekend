@@ -1,17 +1,553 @@
-import 'package:flutter/material.dart';import 'package:flutter_riverpod/flutter_riverpod.dart';import 'package:image_picker/image_picker.dart';import 'package:go_router/go_router.dart';import '../../providers/weekend_provider.dart';import '../../providers/auth_provider.dart';import '../../services/image_optimizer.dart';import '../../repositories/profile_repository.dart';import '../../models/models.dart';class EditProfileScreen extends ConsumerStatefulWidget {  const EditProfileScreen({super.key});  @override  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();}class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {  final _formKey = GlobalKey<FormState>();  final _nameController = TextEditingController();  final _bioController = TextEditingController();  final _cityController = TextEditingController();  final _occupationController = TextEditingController();  final _educationController = TextEditingController();  final _favoriteMusicController = TextEditingController();  final _idealWeekendController = TextEditingController();  String _selectedGender = 'Man';  String _selectedRelationshipIntent = 'Dating & Weekend Plans';  List<String> _selectedInterests = [];  Map<String, bool> _weekendAvailability = {};  bool _isLoading = false;  bool _isSaving = false;  final List<String> _availableGenders = ['Man', 'Woman', 'Non-binary', 'Prefer not to say'];  final List<String> _availableRelationshipIntents = [    'Dating',    'Long-term relationship',    'New people & Friendships',    'Dating & Weekend Plans',  ];  final List<String> _availableInterests = [    'Specialty Coffee', 'Hiking', 'Indie Music', 'Cycling', 'Travel', 'F1',    'Photography', 'Plant Parenting', 'Matcha', 'Coffee Roasting', 'Jazz',    'Baking', 'Books', 'Vintage Shopping', 'Fusion Cooking', 'Gallery Hopping',    'Acoustic Gigs', 'Hill Climbs', 'Brunch Spots', 'Waterfall Treks',  ];  final List<String> _weekendDays = ['Saturday', 'Sunday'];  @override  void initState() {    super.initState();    _loadCurrentProfile();  }  void _loadCurrentProfile() {    final user = ref.read(weekendProvider).currentUser;    _nameController.text = user.name;    _bioController.text = user.bio;    _cityController.text = user.city;    _occupationController.text = user.occupation;    _educationController.text = user.education;    _favoriteMusicController.text = user.favoriteMusic;    _idealWeekendController.text = user.idealWeekend;    _selectedGender = user.gender;    _selectedRelationshipIntent = user.relationshipIntent;    _selectedInterests = List.from(user.interests);    _weekendAvailability = Map.from(user.weekendAvailability);    if (_weekendAvailability.isEmpty) {      _weekendAvailability = {'Saturday': false, 'Sunday': false};    }  }  Future<void> _saveProfile() async {    if (!_formKey.currentState!.validate()) return;    setState(() => _isSaving = true);    try {      final user = ref.read(weekendProvider).currentUser;      final updatedProfile = user.copyWith(        name: _nameController.text.trim(),        bio: _bioController.text.trim(),        city: _cityController.text.trim(),        occupation: _occupationController.text.trim(),        education: _educationController.text.trim(),        favoriteMusic: _favoriteMusicController.text.trim(),        idealWeekend: _idealWeekendController.text.trim(),        gender: _selectedGender,        relationshipIntent: _selectedRelationshipIntent,        interests: _selectedInterests,        weekendAvailability: _weekendAvailability,      );      await ref.read(weekendProvider.notifier).updateProfile(updatedProfile);      if (mounted) {        ScaffoldMessenger.of(context).showSnackBar(          const SnackBar(            content: Text('Profile updated successfully!'),            backgroundColor: Color(0xFF4CAF50),          ),        );        context.pop();      }    } catch (e) {      if (mounted) {        ScaffoldMessenger.of(context).showSnackBar(          SnackBar(            content: Text('Failed to update profile: $e'),            backgroundColor: Colors.red,          ),        );      }    } finally {      if (mounted) {        setState(() => _isSaving = false);      }    }  }  Future<void> _pickAndUploadPhoto() async {    final file = await ImageOptimizer.pickAndOptimizeImage();    if (file == null) return;    setState(() => _isLoading = true);    try {      final bytes = await file.readAsBytes();      final userId = ref.read(weekendProvider).currentUser.id;      final repo = ProfileRepository();      await repo.uploadProfilePhoto(userId, bytes, true);      if (mounted) {        ScaffoldMessenger.of(context).showSnackBar(          const SnackBar(            content: Text('Photo uploaded! Pending verification.'),            backgroundColor: Color(0xFF4CAF50),          ),        );        
-// Refresh the profile
-        ref.read(weekendProvider.notifier).refreshProfile();      }    } catch (e) {      if (mounted) {        ScaffoldMessenger.of(context).showSnackBar(          SnackBar(            content: Text('Failed to upload photo: $e'),            backgroundColor: Colors.red,          ),        );      }    } finally {      if (mounted) {        setState(() => _isLoading = false);      }    }  }  @override  void dispose() {    _nameController.dispose();    _bioController.dispose();    _cityController.dispose();    _occupationController.dispose();    _educationController.dispose();    _favoriteMusicController.dispose();    _idealWeekendController.dispose();    super.dispose();  }  @override  Widget build(BuildContext context) {    final user = ref.watch(weekendProvider).currentUser;    return Scaffold(      backgroundColor: const Color(0xFF130E20),      appBar: AppBar(        backgroundColor: const Color(0xFF130E20),        elevation: 0,        leading: IconButton(          onPressed: () => context.pop(),          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),        ),        title: const Text(          'Edit Profile',          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),        ),        centerTitle: true,        actions: [          TextButton(            onPressed: _isSaving ? null : _saveProfile,            child: _isSaving                ? const SizedBox(                    width: 20,                    height: 20,                    child: CircularProgressIndicator(                      color: Color(0xFFFF4B72),                      strokeWidth: 2,                    ),                  )                : const Text(                    'Save',                    style: TextStyle(                      color: Color(0xFFFF4B72),                      fontWeight: FontWeight.bold,                    ),                  ),          ),        ],      ),      body: SafeArea(        child: Form(          key: _formKey,          child: SingleChildScrollView(            padding: const EdgeInsets.all(20),            child: Column(              crossAxisAlignment: CrossAxisAlignment.start,              children: [                
-// Profile Photo
-                Center(                  child: Stack(                    alignment: Alignment.bottomRight,                    children: [                      Container(                        width: 120,                        height: 120,                        decoration: BoxDecoration(                          shape: BoxShape.circle,                          border: Border.all(color: const Color(0xFFFF4B72), width: 3),                        ),                        child: CircleAvatar(                          radius: 58,                          backgroundImage: user.photos.isNotEmpty                              ? NetworkImage(user.photos.first)                              : null,                          backgroundColor: const Color(0xFF2E244A),                          child: user.photos.isEmpty                              ? const Icon(Icons.person_rounded, size: 60, color: Colors.white38)                              : null,                        ),                      ),                      Positioned(                        bottom: 8,                        right: 8,                        child: GestureDetector(                          onTap: _pickAndUploadPhoto,                          child: Container(                            width: 36,                            height: 36,                            decoration: const BoxDecoration(                              color: Color(0xFFFF4B72),                              shape: BoxShape.circle,                            ),                            child: const Icon(Icons.camera_alt_rounded, size: 18, color: Colors.white),                          ),                        ),                      ),                    ],                  ),                ),                const SizedBox(height: 32),                
-// Basic Info Section
-                _buildSectionTitle('Basic Information'),                const SizedBox(height: 16),                _buildTextField(                  controller: _nameController,                  label: 'Full Name',                  icon: Icons.person_outline,                  validator: (value) {                    if (value == null || value.trim().isEmpty) {                      return 'Please enter your name';                    }                    if (value.trim().length < 2) {                      return 'Name must be at least 2 characters';                    }                    return null;                  },                ),                const SizedBox(height: 16),                _buildDropdownField(                  label: 'Gender',                  value: _selectedGender,                  items: _availableGenders,                  onChanged: (value) => setState(() => _selectedGender = value!),                  icon: Icons.transgender_rounded,                ),                const SizedBox(height: 16),                _buildDropdownField(                  label: 'Relationship Intent',                  value: _selectedRelationshipIntent,                  items: _availableRelationshipIntents,                  onChanged: (value) => setState(() => _selectedRelationshipIntent = value!),                  icon: Icons.favorite_rounded,                ),                const SizedBox(height: 24),                
-// Location & Work
-                _buildSectionTitle('Location & Work'),                const SizedBox(height: 16),                _buildTextField(                  controller: _cityController,                  label: 'City',                  icon: Icons.location_city_rounded,                  validator: (value) {                    if (value == null || value.trim().isEmpty) {                      return 'Please enter your city';                    }                    return null;                  },                ),                const SizedBox(height: 16),                _buildTextField(                  controller: _occupationController,                  label: 'Occupation',                  icon: Icons.work_outline,                ),                const SizedBox(height: 16),                _buildTextField(                  controller: _educationController,                  label: 'Education',                  icon: Icons.school_outlined,                ),                const SizedBox(height: 24),                
-// Bio
-                _buildSectionTitle('About Me'),                const SizedBox(height: 16),                _buildTextField(                  controller: _bioController,                  label: 'Bio',                  icon: Icons.info_outline,                  maxLines: 4,                  maxLength: 500,                ),                const SizedBox(height: 24),                
-// Interests
-                _buildSectionTitle('Interests'),                const SizedBox(height: 8),                Text(                  'Select up to 10 interests',                  style: TextStyle(                    color: Colors.white.withValues(alpha: 0.6),                    fontSize: 12,                  ),                ),                const SizedBox(height: 12),                Wrap(                  spacing: 8,                  runSpacing: 8,                  children: _availableInterests.map((interest) {                    final isSelected = _selectedInterests.contains(interest);                    return FilterChip(                      label: Text(interest),                      selected: isSelected,                      onSelected: (selected) {                        setState(() {                          if (selected) {                            if (_selectedInterests.length < 10) {                              _selectedInterests.add(interest);                            }                          } else {                            _selectedInterests.remove(interest);                          }                        });                      },                      selectedColor: const Color(0xFFFF4B72).withValues(alpha: 0.3),                      backgroundColor: const Color(0xFF2E244A),                      checkmarkColor: const Color(0xFFFF4B72),                      labelStyle: TextStyle(                        color: isSelected ? const Color(0xFFFF9966) : Colors.white.withValues(alpha: 0.8),                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,                      ),                      side: BorderSide(                        color: isSelected                            ? const Color(0xFFFF4B72)                            : Colors.white.withValues(alpha: 0.1),                      ),                    );                  }).toList(),                ),                const SizedBox(height: 24),                
-// Weekend Availability
-                _buildSectionTitle('Weekend Availability'),                const SizedBox(height: 8),                Text(                  'When are you usually free for weekend plans?',                  style: TextStyle(                    color: Colors.white.withValues(alpha: 0.6),                    fontSize: 12,                  ),                ),                const SizedBox(height: 12),                Wrap(                  spacing: 12,                  runSpacing: 12,                  children: _weekendDays.map((day) {                    final isSelected = _weekendAvailability[day] ?? false;                    return FilterChip(                      label: Text(day),                      selected: isSelected,                      onSelected: (selected) {                        setState(() {                          _weekendAvailability[day] = selected;                        });                      },                      selectedColor: const Color(0xFFFF4B72).withValues(alpha: 0.3),                      backgroundColor: const Color(0xFF2E244A),                      checkmarkColor: const Color(0xFFFF4B72),                      labelStyle: TextStyle(                        color: isSelected ? const Color(0xFFFF9966) : Colors.white.withValues(alpha: 0.8),                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,                      ),                      side: BorderSide(                        color: isSelected                            ? const Color(0xFFFF4B72)                            : Colors.white.withValues(alpha: 0.1),                      ),                    );                  }).toList(),                ),                const SizedBox(height: 24),                
-// Personal Details
-                _buildSectionTitle('Personal Details (Optional)'),                const SizedBox(height: 16),                _buildTextField(                  controller: _favoriteMusicController,                  label: 'Favorite Music',                  icon: Icons.music_note_rounded,                ),                const SizedBox(height: 16),                _buildTextField(                  controller: _idealWeekendController,                  label: 'Ideal Weekend',                  icon: Icons.weekend_rounded,                ),                const SizedBox(height: 40),              ],            ),          ),        ),      ),    );  }  Widget _buildSectionTitle(String title) {    return Text(      title,      style: TextStyle(        color: Colors.white.withValues(alpha: 0.6),        fontSize: 12,        fontWeight: FontWeight.w500,        letterSpacing: 0.5,      ),    );  }  Widget _buildTextField({    required TextEditingController controller,    required String label,    required IconData icon,    String? Function(String?)? validator,    int maxLines = 1,    int? maxLength,  }) {    return TextFormField(      controller: controller,      style: const TextStyle(color: Colors.white),      maxLines: maxLines,      maxLength: maxLength,      decoration: _inputDecoration(label, icon),      validator: validator,    );  }  Widget _buildDropdownField({    required String label,    required String value,    required List<String> items,    required ValueChanged<String?> onChanged,    required IconData icon,  }) {    return DropdownButtonFormField<String>(      value: value,      style: const TextStyle(color: Colors.white),      decoration: _inputDecoration(label, icon),      dropdownColor: const Color(0xFF1C162E),      items: items.map((item) => DropdownMenuItem(        value: item,        child: Text(item, style: const TextStyle(color: Colors.white)),      )).toList(),      onChanged: onChanged,      validator: (value) => value == null ? 'Please select $label' : null,    );  }  InputDecoration _inputDecoration(String label, IconData icon) {    return InputDecoration(      labelText: label,      labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),      prefixIcon: Icon(icon, color: Colors.white60),      filled: true,      fillColor: const Color(0xFF1C162E),      border: OutlineInputBorder(        borderRadius: BorderRadius.circular(16),        borderSide: BorderSide.none,      ),      enabledBorder: OutlineInputBorder(        borderRadius: BorderRadius.circular(16),        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),      ),      focusedBorder: OutlineInputBorder(        borderRadius: BorderRadius.circular(16),        borderSide: const BorderSide(color: Color(0xFFFF4B72)),      ),      counterStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),    );  }}
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../providers/weekend_provider.dart';
+import '../../services/image_optimizer.dart';
+import '../../repositories/profile_repository.dart';
+
+class EditProfileScreen extends ConsumerStatefulWidget {
+  const EditProfileScreen({super.key});
+  @override
+  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _bioController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _occupationController = TextEditingController();
+  final _educationController = TextEditingController();
+  final _favoriteMusicController = TextEditingController();
+  final _idealWeekendController = TextEditingController();
+  String _selectedGender = 'Man';
+  String _selectedRelationshipIntent = 'Dating & Weekend Plans';
+  List<String> _selectedInterests = [];
+  Map<String, bool> _weekendAvailability = {};
+  bool _isSaving = false;
+  final List<String> _availableGenders = [
+    'Man',
+    'Woman',
+    'Non-binary',
+    'Prefer not to say',
+  ];
+  final List<String> _availableRelationshipIntents = [
+    'Dating',
+    'Long-term relationship',
+    'New people & Friendships',
+    'Dating & Weekend Plans',
+  ];
+  final List<String> _availableInterests = [
+    'Specialty Coffee',
+    'Hiking',
+    'Indie Music',
+    'Cycling',
+    'Travel',
+    'F1',
+    'Photography',
+    'Plant Parenting',
+    'Matcha',
+    'Coffee Roasting',
+    'Jazz',
+    'Baking',
+    'Books',
+    'Vintage Shopping',
+    'Fusion Cooking',
+    'Gallery Hopping',
+    'Acoustic Gigs',
+    'Hill Climbs',
+    'Brunch Spots',
+    'Waterfall Treks',
+  ];
+  final List<String> _weekendDays = ['Saturday', 'Sunday'];
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentProfile();
+  }
+
+  void _loadCurrentProfile() {
+    final user = ref.read(weekendProvider).currentUser;
+    _nameController.text = user.name;
+    _bioController.text = user.bio;
+    _cityController.text = user.city;
+    _occupationController.text = user.occupation;
+    _educationController.text = user.education;
+    _favoriteMusicController.text = user.favoriteMusic;
+    _idealWeekendController.text = user.idealWeekend;
+    _selectedGender = user.gender;
+    _selectedRelationshipIntent = user.relationshipIntent;
+    _selectedInterests = List.from(user.interests);
+    _weekendAvailability = Map.from(user.weekendAvailability);
+    if (_weekendAvailability.isEmpty) {
+      _weekendAvailability = {'Saturday': false, 'Sunday': false};
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isSaving = true);
+    try {
+      final user = ref.read(weekendProvider).currentUser;
+      final updatedProfile = user.copyWith(
+        name: _nameController.text.trim(),
+        bio: _bioController.text.trim(),
+        city: _cityController.text.trim(),
+        occupation: _occupationController.text.trim(),
+        education: _educationController.text.trim(),
+        favoriteMusic: _favoriteMusicController.text.trim(),
+        idealWeekend: _idealWeekendController.text.trim(),
+        gender: _selectedGender,
+        relationshipIntent: _selectedRelationshipIntent,
+        interests: _selectedInterests,
+        weekendAvailability: _weekendAvailability,
+      );
+      await ref.read(weekendProvider.notifier).updateProfile(updatedProfile);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: Color(0xFF4CAF50),
+          ),
+        );
+        context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    final file = await ImageOptimizer.pickAndOptimizeImage();
+    if (file == null) return;
+    try {
+      final bytes = await file.readAsBytes();
+      final userId = ref.read(weekendProvider).currentUser.id;
+      final repo = ProfileRepository();
+      await repo.uploadProfilePhoto(userId, bytes, true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Photo uploaded! Pending verification.'),
+            backgroundColor: Color(0xFF4CAF50),
+          ),
+        );
+
+        // Refresh the profile
+        ref.read(weekendProvider.notifier).refreshProfile();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload photo: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _bioController.dispose();
+    _cityController.dispose();
+    _occupationController.dispose();
+    _educationController.dispose();
+    _favoriteMusicController.dispose();
+    _idealWeekendController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(weekendProvider).currentUser;
+    return Scaffold(
+      backgroundColor: const Color(0xFF130E20),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF130E20),
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+        ),
+        title: const Text(
+          'Edit Profile',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        actions: [
+          TextButton(
+            onPressed: _isSaving ? null : _saveProfile,
+            child: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFFF4B72),
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    'Save',
+                    style: TextStyle(
+                      color: Color(0xFFFF4B72),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Profile Photo
+                Center(
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFFF4B72),
+                            width: 3,
+                          ),
+                        ),
+                        child: CircleAvatar(
+                          radius: 58,
+                          backgroundImage: user.photos.isNotEmpty
+                              ? NetworkImage(user.photos.first)
+                              : null,
+                          backgroundColor: const Color(0xFF2E244A),
+                          child: user.photos.isEmpty
+                              ? const Icon(
+                                  Icons.person_rounded,
+                                  size: 60,
+                                  color: Colors.white38,
+                                )
+                              : null,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: _pickAndUploadPhoto,
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFF4B72),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Basic Info Section
+                _buildSectionTitle('Basic Information'),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: _nameController,
+                  label: 'Full Name',
+                  icon: Icons.person_outline,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your name';
+                    }
+                    if (value.trim().length < 2) {
+                      return 'Name must be at least 2 characters';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                _buildDropdownField(
+                  label: 'Gender',
+                  value: _selectedGender,
+                  items: _availableGenders,
+                  onChanged: (value) =>
+                      setState(() => _selectedGender = value!),
+                  icon: Icons.transgender_rounded,
+                ),
+                const SizedBox(height: 16),
+                _buildDropdownField(
+                  label: 'Relationship Intent',
+                  value: _selectedRelationshipIntent,
+                  items: _availableRelationshipIntents,
+                  onChanged: (value) =>
+                      setState(() => _selectedRelationshipIntent = value!),
+                  icon: Icons.favorite_rounded,
+                ),
+                const SizedBox(height: 24),
+
+                // Location & Work
+                _buildSectionTitle('Location & Work'),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: _cityController,
+                  label: 'City',
+                  icon: Icons.location_city_rounded,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your city';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: _occupationController,
+                  label: 'Occupation',
+                  icon: Icons.work_outline,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: _educationController,
+                  label: 'Education',
+                  icon: Icons.school_outlined,
+                ),
+                const SizedBox(height: 24),
+
+                // Bio
+                _buildSectionTitle('About Me'),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: _bioController,
+                  label: 'Bio',
+                  icon: Icons.info_outline,
+                  maxLines: 4,
+                  maxLength: 500,
+                ),
+                const SizedBox(height: 24),
+
+                // Interests
+                _buildSectionTitle('Interests'),
+                const SizedBox(height: 8),
+                Text(
+                  'Select up to 10 interests',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _availableInterests.map((interest) {
+                    final isSelected = _selectedInterests.contains(interest);
+                    return FilterChip(
+                      label: Text(interest),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            if (_selectedInterests.length < 10) {
+                              _selectedInterests.add(interest);
+                            }
+                          } else {
+                            _selectedInterests.remove(interest);
+                          }
+                        });
+                      },
+                      selectedColor: const Color(
+                        0xFFFF4B72,
+                      ).withValues(alpha: 0.3),
+                      backgroundColor: const Color(0xFF2E244A),
+                      checkmarkColor: const Color(0xFFFF4B72),
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? const Color(0xFFFF9966)
+                            : Colors.white.withValues(alpha: 0.8),
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                      side: BorderSide(
+                        color: isSelected
+                            ? const Color(0xFFFF4B72)
+                            : Colors.white.withValues(alpha: 0.1),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+
+                // Weekend Availability
+                _buildSectionTitle('Weekend Availability'),
+                const SizedBox(height: 8),
+                Text(
+                  'When are you usually free for weekend plans?',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: _weekendDays.map((day) {
+                    final isSelected = _weekendAvailability[day] ?? false;
+                    return FilterChip(
+                      label: Text(day),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          _weekendAvailability[day] = selected;
+                        });
+                      },
+                      selectedColor: const Color(
+                        0xFFFF4B72,
+                      ).withValues(alpha: 0.3),
+                      backgroundColor: const Color(0xFF2E244A),
+                      checkmarkColor: const Color(0xFFFF4B72),
+                      labelStyle: TextStyle(
+                        color: isSelected
+                            ? const Color(0xFFFF9966)
+                            : Colors.white.withValues(alpha: 0.8),
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                      side: BorderSide(
+                        color: isSelected
+                            ? const Color(0xFFFF4B72)
+                            : Colors.white.withValues(alpha: 0.1),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+
+                // Personal Details
+                _buildSectionTitle('Personal Details (Optional)'),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: _favoriteMusicController,
+                  label: 'Favorite Music',
+                  icon: Icons.music_note_rounded,
+                ),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  controller: _idealWeekendController,
+                  label: 'Ideal Weekend',
+                  icon: Icons.weekend_rounded,
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: TextStyle(
+        color: Colors.white.withValues(alpha: 0.6),
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.5,
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? Function(String?)? validator,
+    int maxLines = 1,
+    int? maxLength,
+  }) {
+    return TextFormField(
+      controller: controller,
+      style: const TextStyle(color: Colors.white),
+      maxLines: maxLines,
+      maxLength: maxLength,
+      decoration: _inputDecoration(label, icon),
+      validator: validator,
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+    required IconData icon,
+  }) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      style: const TextStyle(color: Colors.white),
+      decoration: _inputDecoration(label, icon),
+      dropdownColor: const Color(0xFF1C162E),
+      items: items
+          .map(
+            (item) => DropdownMenuItem(
+              value: item,
+              child: Text(item, style: const TextStyle(color: Colors.white)),
+            ),
+          )
+          .toList(),
+      onChanged: onChanged,
+      validator: (value) => value == null ? 'Please select $label' : null,
+    );
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+      prefixIcon: Icon(icon, color: Colors.white60),
+      filled: true,
+      fillColor: const Color(0xFF1C162E),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFFF4B72)),
+      ),
+      counterStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
+    );
+  }
+}

@@ -184,7 +184,7 @@ class UserProfile {
     referralCode: json['referralCode'] as String? ?? '',
     commonInterests: List<String>.from(json['commonInterests'] as List? ?? []),
     weekendAvailability: Map<String, bool>.from(
-      (json['weekendAvailability'] as Map? ?? {}) as Map,
+      json['weekendAvailability'] as Map? ?? {},
     ),
     voiceIntroUrl: json['voiceIntroUrl'] as String? ?? '',
     compatibilityExplanation: json['compatibilityExplanation'] as String? ?? '',
@@ -418,15 +418,15 @@ class DateIdea {
 }
 
 enum DiscoveryMode {
-  FOR_YOU('For You'),
-  NEARBY('Nearby'),
-  AROUND_ME('Around Me'),
-  CITY('City'),
-  GLOBAL('Global'),
-  TRAVEL_MODE('Travel Mode'),
-  CROSSED_PATHS('Crossed Paths'),
-  INTERESTS('Interests'),
-  WEEKEND_PLANS('Plans');
+  forYou('For You'),
+  nearby('Nearby'),
+  aroundMe('Around Me'),
+  city('City'),
+  global('Global'),
+  travelMode('Travel Mode'),
+  crossedPaths('Crossed Paths'),
+  interests('Interests'),
+  weekendPlans('Plans');
 
   final String title;
   const DiscoveryMode(this.title);

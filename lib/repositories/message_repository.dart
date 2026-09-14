@@ -1,5 +1,174 @@
-import 'package:supabase_flutter/supabase_flutter.dart';import '../config/supabase_config.dart';import '../models/models.dart';import 'dart:async';class MessageRepository {  SupabaseClient? get _client => SupabaseConfig.client;  Future<List<ChatMessage>> loadMessages(String matchId) async {    final client = _client;    if (client == null) return const [];    try {      final conversation = await client          .from('conversations')          .select()          .eq('match_id', matchId)          .single();      final messages = await client          .from('messages')          .select()          .eq('conversation_id', conversation['id'])          .order('created_at', ascending: true);      return (messages as List).map((msg) {        return ChatMessage(          id: msg['id'],          senderId: msg['sender_id'],          text: msg['text'] ?? '',          timestamp: DateTime.parse(msg['created_at']).millisecondsSinceEpoch,          translatedText: msg['translated_text'],          isTranslated: msg['is_translated'] ?? false,          isRead: msg['is_read'] ?? false,        );      }).toList();    } catch (e) {      return [];    }  }  Future<ChatMessage> sendMessage(String matchId, String text) async {    final client = _client;    if (client == null) {      final userId = SupabaseConfig.currentUserId;      return ChatMessage(        id: 'msg_${DateTime.now().millisecondsSinceEpoch}',        senderId: userId,        text: text,        timestamp: DateTime.now().millisecondsSinceEpoch,      );    }    final userId = SupabaseConfig.currentUserId;    final conversation = await client        .from('conversations')        .select()        .eq('match_id', matchId)        .maybeSingle();    String conversationId;    if (conversation != null) {      conversationId = conversation['id'];    } else {      final newConv = await client          .from('conversations')          .insert({'match_id': matchId})          .select()          .single();      conversationId = newConv['id'];    }    final message = await client        .from('messages')        .insert({          'conversation_id': conversationId,          'sender_id': userId,          'text': text,        })        .select()        .single();    return ChatMessage(      id: message['id'],      senderId: message['sender_id'],      text: message['text'] ?? '',      timestamp: DateTime.parse(message['created_at']).millisecondsSinceEpoch,      isRead: message['is_read'] ?? false,    );  }  Stream<List<ChatMessage>> subscribeToMessages(String matchId) {    final client = _client;    if (client == null) {      return const Stream.empty();    }    final controller = StreamController<List<ChatMessage>>.broadcast();        client        .from('conversations')        .stream(primaryKey: ['id'])        .eq('match_id', matchId)        .listen((conversationData) {          if (conversationData.isEmpty) return;                    final conversationId = conversationData.first['id'];                    client              .from('messages')              .stream(primaryKey: ['id'])              .eq('conversation_id', conversationId)              .order('created_at', ascending: true)              .listen((messagesData) {                final messages = messagesData.map((msg) {                  return ChatMessage(                    id: msg['id'],                    senderId: msg['sender_id'],                    text: msg['text'] ?? '',                    timestamp: DateTime.parse(msg['created_at']).millisecondsSinceEpoch,                    translatedText: msg['translated_text'],                    isTranslated: msg['is_translated'] ?? false,                    isRead: msg['is_read'] ?? false,                  );                }).toList();                controller.add(messages);              });        });    return controller.stream;  }  Future<void> translateMessage(String matchId, String messageId) async {    final client = _client;    if (client == null) return;    try {      await client.functions.invoke(        'translate-message',        body: {'messageId': messageId},      );    } catch (e) {      
-// ignore
-    }  }    Future<void> markMessagesAsRead(String matchId) async {    final client = _client;    if (client == null) return;    try {      final conversation = await client          .from('conversations')          .select()          .eq('match_id', matchId)          .maybeSingle();            if (conversation != null) {        final userId = SupabaseConfig.currentUserId;        await client            .from('conversation_members')            .update({'last_read_at': DateTime.now().toIso8601String()})            .eq('conversation_id', conversation['id'])            .eq('user_id', userId);      }    } catch (e) {      
-// ignore
-    }  }}
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../config/supabase_config.dart';
+import '../models/models.dart';
+import 'dart:async';
+
+class MessageRepository {
+  SupabaseClient? get _client => SupabaseConfig.client;
+  Future<List<ChatMessage>> loadMessages(String matchId) async {
+    final client = _client;
+
+    if (client == null) return const [];
+
+    try {
+      final conversation = await client
+          .from('conversations')
+          .select()
+          .eq('match_id', matchId)
+          .single();
+
+      final messages = await client
+          .from('messages')
+          .select()
+          .eq('conversation_id', conversation['id'])
+          .order('created_at', ascending: true);
+
+      return (messages as List).map((msg) {
+        return ChatMessage(
+          id: msg['id'],
+          senderId: msg['sender_id'],
+          text: msg['text'] ?? '',
+          timestamp: DateTime.parse(msg['created_at']).millisecondsSinceEpoch,
+          translatedText: msg['translated_text'],
+          isTranslated: msg['is_translated'] ?? false,
+          isRead: msg['is_read'] ?? false,
+        );
+      }).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<ChatMessage> sendMessage(String matchId, String text) async {
+    final client = _client;
+
+    if (client == null) {
+      final userId = SupabaseConfig.currentUserId;
+
+      return ChatMessage(
+        id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
+        senderId: userId,
+        text: text,
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+      );
+    }
+    final userId = SupabaseConfig.currentUserId;
+
+    final conversation = await client
+        .from('conversations')
+        .select()
+        .eq('match_id', matchId)
+        .maybeSingle();
+
+    String conversationId;
+    if (conversation != null) {
+      conversationId = conversation['id'];
+    } else {
+      final newConv = await client
+          .from('conversations')
+          .insert({'match_id': matchId})
+          .select()
+          .single();
+      conversationId = newConv['id'];
+    }
+
+    final message = await client
+        .from('messages')
+        .insert({
+          'conversation_id': conversationId,
+          'sender_id': userId,
+          'text': text,
+        })
+        .select()
+        .single();
+
+    return ChatMessage(
+      id: message['id'],
+      senderId: message['sender_id'],
+      text: message['text'] ?? '',
+      timestamp: DateTime.parse(message['created_at']).millisecondsSinceEpoch,
+      isRead: message['is_read'] ?? false,
+    );
+  }
+
+  Stream<List<ChatMessage>> subscribeToMessages(String matchId) {
+    final client = _client;
+    if (client == null) {
+      return const Stream.empty();
+    }
+    final controller = StreamController<List<ChatMessage>>.broadcast();
+
+    client
+        .from('conversations')
+        .stream(primaryKey: ['id'])
+        .eq('match_id', matchId)
+        .listen((conversationData) {
+          if (conversationData.isEmpty) return;
+
+          final conversationId = conversationData.first['id'];
+
+          client
+              .from('messages')
+              .stream(primaryKey: ['id'])
+              .eq('conversation_id', conversationId)
+              .order('created_at', ascending: true)
+              .listen((messagesData) {
+                final messages = messagesData.map((msg) {
+                  return ChatMessage(
+                    id: msg['id'],
+                    senderId: msg['sender_id'],
+                    text: msg['text'] ?? '',
+                    timestamp: DateTime.parse(
+                      msg['created_at'],
+                    ).millisecondsSinceEpoch,
+                    translatedText: msg['translated_text'],
+                    isTranslated: msg['is_translated'] ?? false,
+                    isRead: msg['is_read'] ?? false,
+                  );
+                }).toList();
+
+                controller.add(messages);
+              });
+        });
+
+    return controller.stream;
+  }
+
+  Future<void> translateMessage(String matchId, String messageId) async {
+    final client = _client;
+
+    if (client == null) return;
+
+    try {
+      await client.functions.invoke(
+        'translate-message',
+        body: {'messageId': messageId},
+      );
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  Future<void> markMessagesAsRead(String matchId) async {
+    final client = _client;
+    if (client == null) return;
+    try {
+      final conversation = await client
+          .from('conversations')
+          .select()
+          .eq('match_id', matchId)
+          .maybeSingle();
+      if (conversation != null) {
+        final userId = SupabaseConfig.currentUserId;
+        await client
+            .from('conversation_members')
+            .update({'last_read_at': DateTime.now().toIso8601String()})
+            .eq('conversation_id', conversation['id'])
+            .eq('user_id', userId);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+}

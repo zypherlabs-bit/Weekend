@@ -1,7 +1,56 @@
-import 'package:supabase_flutter/supabase_flutter.dart';import '../config/supabase_config.dart';class NotificationRepository {  SupabaseClient? get _client => SupabaseConfig.client;  Future<List<dynamic>> fetchNotifications(String userId) async {    final client = _client;    if (client == null) return const [];    try {      final response = await client          .from('notifications')          .select()          .eq('user_id', userId)          .order('created_at', ascending: false);      return response as List;    } catch (e) {      return [];    }  }  Future<void> subscribeToNotifications(String userId) async {    final client = _client;    if (client == null) return;    try {      client          .from('notifications')          .stream(primaryKey: ['id'])          .eq('user_id', userId)          .listen((data) {            
-// Handle realtime notifications
-          });    } catch (e) {      
-// ignore
-    }  }  Future<void> markNotificationAsRead(String notificationId) async {    final client = _client;    if (client == null) return;    try {      await client          .from('notifications')          .update({'is_read': true})          .eq('id', notificationId);    } catch (e) {      
-// ignore
-    }  }}
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/supabase_config.dart';
+
+class NotificationRepository {
+  SupabaseClient? get _client => SupabaseConfig.client;
+  Future<List<dynamic>> fetchNotifications(String userId) async {
+    final client = _client;
+
+    if (client == null) return const [];
+
+    try {
+      final response = await client
+          .from('notifications')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      return response as List;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<void> subscribeToNotifications(String userId) async {
+    final client = _client;
+
+    if (client == null) return;
+
+    try {
+      client
+          .from('notifications')
+          .stream(primaryKey: ['id'])
+          .eq('user_id', userId)
+          .listen((data) {
+            // Handle realtime notifications
+          });
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  Future<void> markNotificationAsRead(String notificationId) async {
+    final client = _client;
+
+    if (client == null) return;
+
+    try {
+      await client
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('id', notificationId);
+    } catch (e) {
+      // ignore
+    }
+  }
+}

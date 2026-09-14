@@ -1,3 +1,116 @@
-import 'package:supabase_flutter/supabase_flutter.dart';import '../config/supabase_config.dart';import '../models/models.dart';class MatchRepository {  SupabaseClient? get _client => SupabaseConfig.client;  Future<List<MatchItem>> fetchMatches(String userId) async {    final client = _client;    if (client == null) return const [];    try {      final matches = await client          .from('matches')          .select()          .or('user_a_id.eq.$userId,user_b_id.eq.$userId')          .order('created_at', ascending: false);      final matchItems = <MatchItem>[];      for (final match in (matches as List)) {        final otherUserId = match['user_a_id'] == userId            ? match['user_b_id']            : match['user_a_id'];        final profileResponse = await client            .from('profiles')            .select()            .eq('id', otherUserId)            .single();        final user = UserProfile(          id: profileResponse['id'] ?? otherUserId,          name: profileResponse['display_name'] ?? 'User',          age: 25,          gender: profileResponse['gender'] ?? 'Prefer not to say',          photos: const [],          city: profileResponse['city'] ?? '',          distanceKm: 0,          bio: profileResponse['bio'] ?? '',          relationshipIntent: profileResponse['relationship_intent'] ?? 'Dating',          isPhotoVerified: profileResponse['verification_status'] == 'verified',          trustScore: profileResponse['trust_score'] ?? 50,        );        matchItems.add(MatchItem(          id: match['id'],          user: user,          matchedAt: DateTime.parse(match['created_at']).millisecondsSinceEpoch,        ));      }      return matchItems;    } catch (e) {      return [];    }  }  Future<bool> swipeRight(String userId, String targetId, bool isStandOut) async {    final client = _client;    if (client == null) return false;    try {      await client.from('likes').insert({        'liker_id': userId,        'liked_id': targetId,        'is_stand_out': isStandOut,      });      final existingLike = await client          .from('likes')          .select()          .eq('liker_id', targetId)          .eq('liked_id', userId)          .maybeSingle();      if (existingLike != null) {        await client.from('matches').insert({          'user_a_id': userId,          'user_b_id': targetId,        });        return true;      }      return false;    } catch (e) {      return false;    }  }  Future<void> swipeLeft(String userId, String targetId) async {    final client = _client;    if (client == null) return;    try {      await client.from('passes').insert({        'user_id': userId,        'target_id': targetId,      });    } catch (e) {      
-// ignore
-    }  }}
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../config/supabase_config.dart';
+import '../models/models.dart';
+
+class MatchRepository {
+  SupabaseClient? get _client => SupabaseConfig.client;
+  Future<List<MatchItem>> fetchMatches(String userId) async {
+    final client = _client;
+
+    if (client == null) return const [];
+
+    try {
+      final matches = await client
+          .from('matches')
+          .select()
+          .or('user_a_id.eq.$userId,user_b_id.eq.$userId')
+          .order('created_at', ascending: false);
+
+      final matchItems = <MatchItem>[];
+
+      for (final match in (matches as List)) {
+        final otherUserId = match['user_a_id'] == userId
+            ? match['user_b_id']
+            : match['user_a_id'];
+
+        final profileResponse = await client
+            .from('profiles')
+            .select()
+            .eq('id', otherUserId)
+            .single();
+
+        final user = UserProfile(
+          id: profileResponse['id'] ?? otherUserId,
+          name: profileResponse['display_name'] ?? 'User',
+          age: 25,
+          gender: profileResponse['gender'] ?? 'Prefer not to say',
+          photos: const [],
+          city: profileResponse['city'] ?? '',
+          distanceKm: 0,
+          bio: profileResponse['bio'] ?? '',
+          relationshipIntent:
+              profileResponse['relationship_intent'] ?? 'Dating',
+          isPhotoVerified: profileResponse['verification_status'] == 'verified',
+          trustScore: profileResponse['trust_score'] ?? 50,
+        );
+
+        matchItems.add(
+          MatchItem(
+            id: match['id'],
+            user: user,
+            matchedAt: DateTime.parse(
+              match['created_at'],
+            ).millisecondsSinceEpoch,
+          ),
+        );
+      }
+
+      return matchItems;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> swipeRight(
+    String userId,
+    String targetId,
+    bool isStandOut,
+  ) async {
+    final client = _client;
+
+    if (client == null) return false;
+
+    try {
+      await client.from('likes').insert({
+        'liker_id': userId,
+        'liked_id': targetId,
+        'is_stand_out': isStandOut,
+      });
+
+      final existingLike = await client
+          .from('likes')
+          .select()
+          .eq('liker_id', targetId)
+          .eq('liked_id', userId)
+          .maybeSingle();
+
+      if (existingLike != null) {
+        await client.from('matches').insert({
+          'user_a_id': userId,
+          'user_b_id': targetId,
+        });
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> swipeLeft(String userId, String targetId) async {
+    final client = _client;
+
+    if (client == null) return;
+
+    try {
+      await client.from('passes').insert({
+        'user_id': userId,
+        'target_id': targetId,
+      });
+    } catch (e) {
+      // ignore
+    }
+  }
+}

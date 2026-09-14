@@ -1,9 +1,16 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/models.dart';
+import '../config/supabase_config.dart';
 
 class AuthRepository {
-  Future<void> signUpWithEmail(String email, String password, String fullName) async {
-    await Supabase.instance.client.auth.signUp(
+  SupabaseClient? get _client => SupabaseConfig.client;
+  Future<void> signUpWithEmail(
+    String email,
+    String password,
+    String fullName,
+  ) async {
+    final client = _client;
+    if (client == null) return;
+    await client.auth.signUp(
       email: email,
       password: password,
       data: {'full_name': fullName},
@@ -11,21 +18,26 @@ class AuthRepository {
   }
 
   Future<void> signInWithEmail(String email, String password) async {
-    await Supabase.instance.client.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
+    final client = _client;
+    if (client == null) return;
+    await client.auth.signInWithPassword(email: email, password: password);
   }
 
   Future<void> signInAnonymously() async {
-    await Supabase.instance.client.auth.signInAnonymously();
+    final client = _client;
+    if (client == null) return;
+    await client.auth.signInAnonymously();
   }
 
   Future<void> signOut() async {
-    await Supabase.instance.client.auth.signOut();
+    final client = _client;
+    if (client == null) return;
+    await client.auth.signOut();
   }
 
   Future<void> resetPassword(String email) async {
-    await Supabase.instance.client.auth.resetPasswordForEmail(email);
+    final client = _client;
+    if (client == null) return;
+    await client.auth.resetPasswordForEmail(email);
   }
 }

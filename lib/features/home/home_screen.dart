@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../config/supabase_config.dart';
 import '../../providers/weekend_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/models.dart';
@@ -20,7 +20,6 @@ import '../discovery/explore_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
-
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
@@ -29,14 +28,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
   bool _showLocationBanner = false;
   bool _isCheckingLocation = true;
-
   final List<Widget> _screens = [
     const DiscoverScreen(),
     const ExploreScreen(),
     const MatchesScreen(),
     const ProfileTabScreen(),
   ];
-
   @override
   void initState() {
     super.initState();
@@ -46,12 +43,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    final userId =
-        Supabase.instance.client.auth.currentUser?.id ?? 'user_me';
+    final userId = SupabaseConfig.currentUserId;
     ref.read(weekendProvider.notifier).loadDiscoveryProfiles();
     ref.read(weekendProvider.notifier).loadReferralData();
     ref.read(weekendProvider.notifier).loadCrossedPaths();
-
     final hasPerms = await LocationService.hasPermission();
     if (mounted) {
       setState(() {
@@ -59,7 +54,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _isCheckingLocation = false;
       });
     }
-
     if (hasPerms) {
       ref.read(weekendProvider.notifier).updateLocationIfNeeded();
     }
@@ -68,15 +62,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(weekendProvider);
-
     return Scaffold(
       backgroundColor: const Color(0xFF130E20),
       body: Stack(
         children: [
-          IndexedStack(
-            index: _currentIndex,
-            children: _screens,
-          ),
+          IndexedStack(index: _currentIndex, children: _screens),
           if (_showLocationBanner) _buildLocationBanner(),
         ],
       ),
@@ -96,19 +86,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           decoration: BoxDecoration(
             color: const Color(0xFF2E244A),
             borderRadius: BorderRadius.circular(16),
-            border:
-                Border.all(color: const Color(0xFFFF4B72).withOpacity(0.5)),
+            border: Border.all(
+              color: const Color(0xFFFF4B72).withValues(alpha: 0.5),
+            ),
           ),
           child: Row(
             children: [
-              const Icon(Icons.location_on_rounded,
-                  color: Color(0xFFFF9966), size: 20),
+              const Icon(
+                Icons.location_on_rounded,
+                color: Color(0xFFFF9966),
+                size: 20,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Enable location to discover people nearby',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withValues(alpha: 0.85),
                     fontSize: 13,
                   ),
                 ),
@@ -118,15 +112,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   final granted = await LocationService.requestPermission();
                   if (granted) {
                     setState(() => _showLocationBanner = false);
-                    ref
-                        .read(weekendProvider.notifier)
-                        .updateLocationIfNeeded();
+                    ref.read(weekendProvider.notifier).updateLocationIfNeeded();
                   }
                 },
                 style: TextButton.styleFrom(
                   backgroundColor: const Color(0xFFFF4B72),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                 ),
                 child: const Text(
                   'Allow',
@@ -135,9 +129,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(width: 4),
               GestureDetector(
-                onTap: () => Navigator.pushNamed(context, '/location-settings'),
-                child: const Icon(Icons.chevron_right_rounded,
-                    color: Colors.white54, size: 20),
+                onTap: () => context.go('/location-settings'),
+                child: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white54,
+                  size: 20,
+                ),
               ),
             ],
           ),
@@ -155,26 +152,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       backgroundColor: const Color(0xFF2E244A),
       type: BottomNavigationBarType.fixed,
       selectedItemColor: const Color(0xFFFF4B72),
-      unselectedItemColor: Colors.white.withOpacity(0.55),
+      unselectedItemColor: Colors.white.withValues(alpha: 0.55),
       items: [
         BottomNavigationBarItem(
-          icon: Icon(_currentIndex == 0
-              ? Icons.weekend_rounded
-              : Icons.weekend_outlined),
+          icon: Icon(
+            _currentIndex == 0 ? Icons.weekend_rounded : Icons.weekend_outlined,
+          ),
           label: 'Discover',
         ),
         BottomNavigationBarItem(
-          icon: Icon(_currentIndex == 1
-              ? Icons.explore_rounded
-              : Icons.explore_outlined),
+          icon: Icon(
+            _currentIndex == 1 ? Icons.explore_rounded : Icons.explore_outlined,
+          ),
           label: 'Explore',
         ),
         BottomNavigationBarItem(
           icon: Stack(
             children: [
-              Icon(_currentIndex == 2
-                  ? Icons.chat_bubble_rounded
-                  : Icons.chat_bubble_outline_rounded),
+              Icon(
+                _currentIndex == 2
+                    ? Icons.chat_bubble_rounded
+                    : Icons.chat_bubble_outline_rounded,
+              ),
               if (state.matches.any((m) => m.unreadCount > 0))
                 Positioned(
                   right: 0,
@@ -185,8 +184,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       color: Color(0xFFFF4B72),
                       shape: BoxShape.circle,
                     ),
-                    constraints:
-                        const BoxConstraints(minWidth: 16, minHeight: 16),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
                     child: Text(
                       '${state.matches.fold(0, (sum, m) => sum + m.unreadCount)}',
                       style: const TextStyle(
@@ -203,9 +204,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           label: 'Chat',
         ),
         BottomNavigationBarItem(
-          icon: Icon(_currentIndex == 3
-              ? Icons.person_rounded
-              : Icons.person_outline_rounded),
+          icon: Icon(
+            _currentIndex == 3
+                ? Icons.person_rounded
+                : Icons.person_outline_rounded,
+          ),
           label: 'Profile',
         ),
       ],
@@ -215,7 +218,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key});
-
   @override
   ConsumerState<DiscoverScreen> createState() => _DiscoverScreenState();
 }
@@ -226,7 +228,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
   List<Advertisement> _availableAds = [];
   bool _isFetchingAd = false;
   bool _adInjected = false;
-
   @override
   void initState() {
     super.initState();
@@ -267,11 +268,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
 
   Future<void> _fetchAdAndInsert() async {
     setState(() => _isFetchingAd = true);
-
-    final userId =
-        Supabase.instance.client.auth.currentUser?.id ?? 'user_me';
+    final userId = SupabaseConfig.currentUserId;
     final ad = await _adService.fetchAd(userId);
-
     if (ad != null && mounted) {
       setState(() {
         _availableAds.add(ad);
@@ -286,20 +284,17 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
 
   @override
   bool wantKeepAlive = true;
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final state = ref.watch(weekendProvider);
-
     return Scaffold(
       backgroundColor: const Color(0xFF130E20),
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
                 children: [
                   Expanded(
@@ -325,12 +320,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                           const SizedBox(width: 8),
                           _FilterChip(
                             label: 'Crossed Paths',
-                            isSelected: state.selectedMode ==
+                            isSelected:
+                                state.selectedMode ==
                                 DiscoveryMode.CROSSED_PATHS,
                             onTap: () => ref
                                 .read(weekendProvider.notifier)
                                 .selectDiscoveryMode(
-                                    DiscoveryMode.CROSSED_PATHS),
+                                  DiscoveryMode.CROSSED_PATHS,
+                                ),
                           ),
                           const SizedBox(width: 8),
                           _FilterChip(
@@ -348,9 +345,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                   if (_availableAds.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF4B72).withOpacity(0.2),
+                        color: const Color(0xFFFF4B72).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
@@ -414,18 +413,22 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                                   .swipeRight(state.deckProfiles[i]),
                               onStandOut: () => ref
                                   .read(weekendProvider.notifier)
-                                  .swipeRight(state.deckProfiles[i],
-                                      isStandOut: true),
-                              showDistance: state
-                                  .locationPreferences.showDistanceEnabled,
+                                  .swipeRight(
+                                    state.deckProfiles[i],
+                                    isStandOut: true,
+                                  ),
+                              showDistance:
+                                  state.locationPreferences.showDistanceEnabled,
                             ),
                       ],
                     ),
             ),
             if (state.deckProfiles.isNotEmpty) ...[
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 16,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -443,7 +446,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                       iconColor: const Color(0xFFFF9966),
                       onPressed: () => ref
                           .read(weekendProvider.notifier)
-                          .swipeRight(state.deckProfiles.last, isStandOut: true),
+                          .swipeRight(
+                            state.deckProfiles.last,
+                            isStandOut: true,
+                          ),
                     ),
                     _ActionButton(
                       icon: Icons.favorite_rounded,
@@ -467,14 +473,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     final hasPerms = await LocationService.hasPermission();
     if (!hasPerms) {
       _adService.pauseTimer();
-      Navigator.pushNamed(context, '/location-permission').then((_) {
+      context.push('/location-permission').then((_) {
         _adService.startActiveDiscoveryTimer();
         ref
             .read(weekendProvider.notifier)
             .selectDiscoveryMode(DiscoveryMode.NEARBY);
-        ref
-            .read(weekendProvider.notifier)
-            .updateLocationIfNeeded();
+        ref.read(weekendProvider.notifier).updateLocationIfNeeded();
       });
     } else {
       ref
@@ -486,17 +490,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
 
 class _FilterSheet extends ConsumerWidget {
   final int currentRadius;
-
   const _FilterSheet({required this.currentRadius});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       height: 300,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -505,7 +506,7 @@ class _FilterSheet extends ConsumerWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -522,27 +523,27 @@ class _FilterSheet extends ConsumerWidget {
           Text(
             'Discovery radius: $currentRadius km',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               fontSize: 14,
             ),
           ),
           const SizedBox(height: 12),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                thumbColor: const Color(0xFFFF4B72),
-                overlayColor: const Color(0xFFFF4B72).withOpacity(0.2),
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 24),
-                trackHeight: 4,
-              ),
-              child: Slider(
-                value: currentRadius.toDouble(),
-                min: 1,
-                max: 100,
-                divisions: 20,
-                activeColor: const Color(0xFFFF4B72),
-                inactiveColor: Colors.white.withOpacity(0.2),
-                label: '$currentRadius km',
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              thumbColor: const Color(0xFFFF4B72),
+              overlayColor: const Color(0xFFFF4B72).withValues(alpha: 0.2),
+              activeTrackColor: const Color(0xFFFF4B72),
+              inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 24),
+              trackHeight: 4,
+            ),
+            child: Slider(
+              value: currentRadius.toDouble(),
+              min: 1,
+              max: 100,
+              divisions: 20,
+              label: '$currentRadius km',
               onChanged: (value) {
                 ref
                     .read(weekendProvider.notifier)
@@ -556,9 +557,7 @@ class _FilterSheet extends ConsumerWidget {
             height: 56,
             child: ElevatedButton(
               onPressed: () {
-                ref
-                    .read(weekendProvider.notifier)
-                    .saveLocationPreferences();
+                ref.read(weekendProvider.notifier).saveLocationPreferences();
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
@@ -570,10 +569,7 @@ class _FilterSheet extends ConsumerWidget {
               ),
               child: const Text(
                 'Apply Filters',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -586,15 +582,16 @@ class _FilterSheet extends ConsumerWidget {
 class _ReportOption extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
-
   const _ReportOption({required this.label, required this.onTap});
-
   @override
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.report_rounded,
-          color: Color(0xFFFF4B72), size: 20),
+      leading: const Icon(
+        Icons.report_rounded,
+        color: Color(0xFFFF4B72),
+        size: 20,
+      ),
       title: Text(
         label,
         style: const TextStyle(color: Colors.white, fontSize: 14),
@@ -608,13 +605,11 @@ class _FilterChip extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
-
   const _FilterChip({
     required this.label,
     required this.isSelected,
     required this.onTap,
   });
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -627,13 +622,15 @@ class _FilterChip extends StatelessWidget {
           border: Border.all(
             color: isSelected
                 ? Colors.transparent
-                : Colors.white.withOpacity(0.2),
+                : Colors.white.withValues(alpha: 0.2),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.black : Colors.white.withOpacity(0.7),
+            color: isSelected
+                ? Colors.black
+                : Colors.white.withValues(alpha: 0.7),
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             fontSize: 14,
           ),
@@ -649,7 +646,6 @@ class _ActionButton extends StatelessWidget {
   final Color iconColor;
   final double size;
   final VoidCallback onPressed;
-
   const _ActionButton({
     required this.icon,
     required this.color,
@@ -657,16 +653,12 @@ class _ActionButton extends StatelessWidget {
     this.size = 54,
     required this.onPressed,
   });
-
   @override
   Widget build(BuildContext context) {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       child: IconButton(
         onPressed: onPressed,
         icon: Icon(icon, color: iconColor, size: size * 0.4),
@@ -681,7 +673,6 @@ class _EmptyState extends StatelessWidget {
   final String subtitle;
   final String actionLabel;
   final VoidCallback onAction;
-
   const _EmptyState({
     required this.icon,
     required this.title,
@@ -689,7 +680,6 @@ class _EmptyState extends StatelessWidget {
     required this.actionLabel,
     required this.onAction,
   });
-
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -702,7 +692,7 @@ class _EmptyState extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF4B72).withOpacity(0.15),
+                color: const Color(0xFFFF4B72).withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, size: 40, color: const Color(0xFFFF4B72)),
@@ -722,7 +712,7 @@ class _EmptyState extends StatelessWidget {
               subtitle,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
@@ -733,8 +723,10 @@ class _EmptyState extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF4B72),
                 foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
@@ -750,11 +742,9 @@ class _EmptyState extends StatelessWidget {
 
 class MatchesScreen extends ConsumerWidget {
   const MatchesScreen({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(weekendProvider);
-
     return Scaffold(
       backgroundColor: const Color(0xFF130E20),
       body: SafeArea(
@@ -762,8 +752,7 @@ class MatchesScreen extends ConsumerWidget {
             ? _EmptyState(
                 icon: Icons.chat_bubble_outline_rounded,
                 title: 'No Matches Yet',
-                subtitle:
-                    'Start discovering profiles to find your matches!',
+                subtitle: 'Start discovering profiles to find your matches!',
                 actionLabel: 'Discover',
                 onAction: () {},
               )
@@ -782,7 +771,6 @@ class MatchesScreen extends ConsumerWidget {
 
 class ProfileTabScreen extends StatelessWidget {
   const ProfileTabScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
     return const ProfileScreen();
@@ -791,18 +779,14 @@ class ProfileTabScreen extends StatelessWidget {
 
 class MatchCard extends StatelessWidget {
   final MatchItem match;
-
   const MatchCard({super.key, required this.match});
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => ChatScreen(match: match),
-          ),
+          MaterialPageRoute(builder: (context) => ChatScreen(match: match)),
         );
       },
       child: Container(
@@ -816,8 +800,9 @@ class MatchCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 28,
-              backgroundImage:
-                  NetworkImage(match.user.photos.firstOrNull ?? ''),
+              backgroundImage: NetworkImage(
+                match.user.photos.firstOrNull ?? '',
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -838,7 +823,7 @@ class MatchCard extends StatelessWidget {
                         ? 'Start chatting!'
                         : match.lastMessage,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 14,
                     ),
                     maxLines: 1,
@@ -849,8 +834,7 @@ class MatchCard extends StatelessWidget {
             ),
             if (match.unreadCount > 0)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: const BoxDecoration(
                   color: Color(0xFFFF4B72),
                   borderRadius: BorderRadius.all(Radius.circular(12)),

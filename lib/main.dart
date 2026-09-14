@@ -4,39 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'theme/app_theme.dart';
 import 'routing/app_router.dart';
+import 'services/biometric_auth_service.dart';
+import 'features/auth/biometric_lock_screen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  const supabaseUrl = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
-  const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
-  
-  if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty &&
-      supabaseUrl != 'https://your-project-ref.supabase.co' &&
-      supabaseAnonKey != 'public-anon-key-here') {
-    await Supabase.initialize(
-      url: supabaseUrl,
-      anonKey: supabaseAnonKey,
-    );
-  }
-  
-  runApp(const ProviderScope(child: WeekendApp()));
-}
-
-class WeekendApp extends ConsumerWidget {
-  const WeekendApp({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(appRouterProvider);
-    
-    return MaterialApp.router(
-      title: 'Weekend',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      routerConfig: router,
-    );
-  }
-}
+/// Number of milliseconds the branded splash screen stays visible so the/// app never flashes between routes during the (usually near-instant)/// auth-state resolution.const _splashMinMillis = 1500;Future<void> main() async {  WidgetsFlutterBinding.ensureInitialized();  // Supabase is only initialized when real credentials are supplied via  // `--dart-define`. A failure here must never freeze the app — the rest of  // the startup simply continues in offline demo mode.  if (SupabaseConfig.isConfigured) {    try {      await Supabase.initialize(        url: SupabaseConfig.url,        anonKey: SupabaseConfig.anonKey,      );    } catch (e) {      debugPrint('Supabase initialization failed; running in demo mode: $e');    }  }  runApp(const ProviderScope(child: WeekendApp()));}class WeekendApp extends ConsumerStatefulWidget {  const WeekendApp({super.key});  @override  ConsumerState<WeekendApp> createState() => _WeekendAppState();}class _WeekendAppState extends ConsumerState<WeekendApp> with WidgetsBindingObserver {  bool _needsBiometricUnlock = false;  OverlayEntry? _biometricOverlay;  @override  void initState() {    super.initState();    WidgetsBinding.instance.addObserver(this);  }  @override  void didChangeAppLifecycleState(AppLifecycleState state) {    switch (state) {      case AppLifecycleState.resumed:        _onAppResumed();        break;      case AppLifecycleState.paused:      case AppLifecycleState.inactive:      case AppLifecycleState.detached:      case AppLifecycleState.hidden:        _needsBiometricUnlock = true;        break;    }  }  Future<void> _onAppResumed() async {    final biometricEnabled = await BiometricAuthService.isBiometricEnabled();    if (biometricEnabled && _needsBiometricUnlock) {      _showBiometricLockScreen();    }    _needsBiometricUnlock = false;  }  void _showBiometricLockScreen() {    _removeBiometricOverlay();        _biometricOverlay = OverlayEntry(      builder: (context) => Material(        color: Colors.transparent,        child: BiometricLockScreen(          onAuthenticated: _removeBiometricOverlay,        ),      ),    );        if (mounted) {      Overlay.of(context, rootOverlay: true).insert(_biometricOverlay!);    }  }  void _removeBiometricOverlay() {    _biometricOverlay?.remove();    _biometricOverlay = null;  }  @override  void dispose() {    WidgetsBinding.instance.removeObserver(this);    _removeBiometricOverlay();    super.dispose();  }  @override  Widget build(BuildContext context) {    final router = ref.watch(appRouterProvider);    return MaterialApp.router(      title: 'Weekend',      debugShowCheckedModeBanner: false,      theme: AppTheme.lightTheme,      darkTheme: AppTheme.darkTheme,      themeMode: ThemeMode.system,      routerConfig: router,    );  }}

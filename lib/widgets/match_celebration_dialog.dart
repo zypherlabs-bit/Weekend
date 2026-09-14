@@ -7,7 +7,6 @@ class MatchCelebrationDialog extends StatelessWidget {
   final UserProfile matchedUser;
   final VoidCallback onStartChat;
   final VoidCallback onDismiss;
-
   const MatchCelebrationDialog({
     super.key,
     required this.currentUser,
@@ -15,7 +14,6 @@ class MatchCelebrationDialog extends StatelessWidget {
     required this.onStartChat,
     required this.onDismiss,
   });
-
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -48,7 +46,7 @@ class MatchCelebrationDialog extends StatelessWidget {
                 Text(
                   'You and ${matchedUser.name} liked each other',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 16,
                   ),
                   textAlign: TextAlign.center,
@@ -59,7 +57,9 @@ class MatchCelebrationDialog extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 40,
-                      backgroundImage: CachedNetworkImageProvider(currentUser.photos.firstOrNull ?? ''),
+                      backgroundImage: CachedNetworkImageProvider(
+                        currentUser.photos.firstOrNull ?? '',
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Container(
@@ -69,12 +69,17 @@ class MatchCelebrationDialog extends StatelessWidget {
                         color: Colors.white,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.favorite_rounded, color: Color(0xFFFF4B72)),
+                      child: const Icon(
+                        Icons.favorite_rounded,
+                        color: Color(0xFFFF4B72),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     CircleAvatar(
                       radius: 40,
-                      backgroundImage: CachedNetworkImageProvider(matchedUser.photos.firstOrNull ?? ''),
+                      backgroundImage: CachedNetworkImageProvider(
+                        matchedUser.photos.firstOrNull ?? '',
+                      ),
                     ),
                   ],
                 ),
@@ -93,7 +98,10 @@ class MatchCelebrationDialog extends StatelessWidget {
                     ),
                     child: const Text(
                       'Start Chatting',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -102,7 +110,9 @@ class MatchCelebrationDialog extends StatelessWidget {
                   onPressed: onDismiss,
                   child: Text(
                     'Keep Swiping',
-                    style: TextStyle(color: Colors.white.withOpacity(0.8)),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
                   ),
                 ),
               ],

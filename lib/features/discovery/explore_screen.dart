@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:go_router/go_router.dart';
+import '../../config/supabase_config.dart';
 import '../../providers/weekend_provider.dart';
 import '../../models/models.dart';
 import '../../services/ad_service.dart';
@@ -10,7 +11,6 @@ import '../../widgets/location_radius_filter.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
-
   @override
   ConsumerState<ExploreScreen> createState() => _ExploreScreenState();
 }
@@ -18,7 +18,6 @@ class ExploreScreen extends ConsumerStatefulWidget {
 class _ExploreScreenState extends ConsumerState<ExploreScreen>
     with TickerProviderStateMixin {
   late final AdService _adService;
-
   @override
   void initState() {
     super.initState();
@@ -28,8 +27,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
   void _onAdStateChanged() {
     if (_adService.shouldShowAd && _adService.adId != null) {
-      final userId =
-          Supabase.instance.client.auth.currentUser?.id ?? 'user_me';
+      final userId = SupabaseConfig.currentUserId;
       _adService.fetchAd(userId);
     }
   }
@@ -50,21 +48,16 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF130E20) : const Color(0xFFFCF8F7),
+      backgroundColor: isDark
+          ? const Color(0xFF130E20)
+          : const Color(0xFFFCF8F7),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(
-              child: _buildHeader(context),
-            ),
-            SliverToBoxAdapter(
-              child: _buildModeChips(context),
-            ),
-            SliverToBoxAdapter(
-              child: _buildSections(context),
-            ),
+            SliverToBoxAdapter(child: _buildHeader(context)),
+            SliverToBoxAdapter(child: _buildModeChips(context)),
+            SliverToBoxAdapter(child: _buildSections(context)),
           ],
         ),
       ),
@@ -111,7 +104,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   Widget _buildModeChips(BuildContext context) {
     final state = ref.watch(weekendProvider);
     final modes = DiscoveryMode.values;
-
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -124,13 +116,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               label: Text(mode.title),
               selected: isSelected,
               onSelected: (_) {
-                ref
-                    .read(weekendProvider.notifier)
-                    .selectDiscoveryMode(mode);
+                ref.read(weekendProvider.notifier).selectDiscoveryMode(mode);
                 _loadProfilesForMode(mode);
               },
               selectedColor: const Color(0xFFFF4B72),
-              backgroundColor: Colors.white.withOpacity(0.08),
+              backgroundColor: Colors.white.withValues(alpha: 0.08),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -138,7 +128,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               side: BorderSide(
                 color: isSelected
                     ? const Color(0xFFFF4B72)
-                    : Colors.white.withOpacity(0.2),
+                    : Colors.white.withValues(alpha: 0.2),
               ),
             ),
           );
@@ -161,10 +151,16 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
         _buildSectionHeader('Weekend Nearby', 'People available this weekend'),
         _buildWeekendNearbyPreview(context),
         const SizedBox(height: 24),
-        _buildSectionHeader('Crossed Paths', 'People you\'ve crossed paths with'),
+        _buildSectionHeader(
+          'Crossed Paths',
+          'People you\'ve crossed paths with',
+        ),
         _buildCrossedPathsPreview(context),
         const SizedBox(height: 24),
-        _buildSectionHeader('Explore Your City', 'People and plans in your area'),
+        _buildSectionHeader(
+          'Explore Your City',
+          'People and plans in your area',
+        ),
         _buildCityPreview(context),
         const SizedBox(height: 32),
       ],
@@ -189,10 +185,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
             subtitle,
             style: TextStyle(
               fontSize: 13,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withOpacity(0.5),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -203,47 +198,43 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   Widget _buildNearbyPreview(BuildContext context) {
     final state = ref.watch(weekendProvider);
     final nearbyProfiles = state.deckProfiles.take(3).toList();
-
     if (nearbyProfiles.isEmpty) {
       return const _EmptyPreview(
         icon: Icons.place_rounded,
         message: 'Enable location to discover people nearby',
       );
     }
-
     return _ProfileHorizontalList(profiles: nearbyProfiles);
   }
 
   Widget _buildWeekendNearbyPreview(BuildContext context) {
     final state = ref.watch(weekendProvider);
     final weekendProfiles = state.deckProfiles
-        .where((p) =>
-            p.weekendAvailability.isNotEmpty &&
-            p.weekendAvailability.values.any((v) => v))
+        .where(
+          (p) =>
+              p.weekendAvailability.isNotEmpty &&
+              p.weekendAvailability.values.any((v) => v),
+        )
         .take(3)
         .toList();
-
     if (weekendProfiles.isEmpty) {
       return const _EmptyPreview(
         icon: Icons.calendar_today_rounded,
         message: 'No plans yet. Be the first to set your weekend availability!',
       );
     }
-
     return _ProfileHorizontalList(profiles: weekendProfiles);
   }
 
   Widget _buildCrossedPathsPreview(BuildContext context) {
     final state = ref.watch(weekendProvider);
     final crossed = state.crossedPaths.take(3).toList();
-
     if (crossed.isEmpty) {
       return _EmptyPreview(
         icon: Icons.directions_walk_rounded,
         message: 'Crossed paths will appear here as you explore',
       );
     }
-
     return SizedBox(
       height: 220,
       child: ListView.builder(
@@ -261,8 +252,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               image: const DecorationImage(
                 image: AssetImage('assets/images/placeholder_avatar.png'),
                 fit: BoxFit.cover,
-                colorFilter:
-                    ColorFilter.mode(Colors.black45, BlendMode.darken),
+                colorFilter: ColorFilter.mode(Colors.black45, BlendMode.darken),
               ),
             ),
             child: Align(
@@ -272,7 +262,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.black.withOpacity(0.7),
+                      Colors.black.withValues(alpha: 0.7),
                       Colors.transparent,
                     ],
                     begin: Alignment.bottomCenter,
@@ -293,7 +283,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                     Text(
                       'crossed',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white.withValues(alpha: 0.6),
                         fontSize: 10,
                       ),
                     ),
@@ -310,14 +300,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   Widget _buildCityPreview(BuildContext context) {
     final state = ref.watch(weekendProvider);
     final cityProfiles = state.deckProfiles.take(3).toList();
-
     if (cityProfiles.isEmpty) {
       return const _EmptyPreview(
         icon: Icons.location_city_rounded,
         message: 'No profiles in your city yet',
       );
     }
-
     return _ProfileHorizontalList(profiles: cityProfiles);
   }
 
@@ -339,7 +327,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -354,11 +342,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
             ),
             const SizedBox(height: 24),
             LocationRadiusFilter(
-              currentRadiusKm: ref.watch(weekendProvider).locationPreferences.discoveryRadiusKm,
+              currentRadiusKm: ref
+                  .watch(weekendProvider)
+                  .locationPreferences
+                  .discoveryRadiusKm,
               onRadiusChanged: (km) {
-                ref
-                    .read(weekendProvider.notifier)
-                    .setDiscoveryRadius(km);
+                ref.read(weekendProvider.notifier).setDiscoveryRadius(km);
                 Navigator.pop(context);
               },
             ),
@@ -386,15 +375,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   }
 
   void _showLocationSettings(BuildContext context) {
-    Navigator.pushNamed(context, '/location-settings');
+    context.go('/location-settings');
   }
 }
 
 class _ProfileHorizontalList extends StatelessWidget {
   final List<UserProfile> profiles;
-
   const _ProfileHorizontalList({required this.profiles});
-
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -425,13 +412,15 @@ class _ProfileHorizontalList extends StatelessWidget {
                   left: 0,
                   right: 0,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.black.withOpacity(0.8),
-                          Colors.black.withOpacity(0.3),
+                          Colors.black.withValues(alpha: 0.8),
+                          Colors.black.withValues(alpha: 0.3),
                         ],
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
@@ -471,9 +460,7 @@ class _ProfileHorizontalList extends StatelessWidget {
 class _EmptyPreview extends StatelessWidget {
   final IconData icon;
   final String message;
-
   const _EmptyPreview({required this.icon, required this.message});
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -481,9 +468,9 @@ class _EmptyPreview extends StatelessWidget {
       child: Container(
         height: 120,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
+          color: Colors.white.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
         child: Center(
           child: Column(
@@ -494,7 +481,7 @@ class _EmptyPreview extends StatelessWidget {
               Text(
                 message,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: Colors.white.withValues(alpha: 0.6),
                   fontSize: 13,
                 ),
                 textAlign: TextAlign.center,

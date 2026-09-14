@@ -18,7 +18,6 @@ class AppTheme {
   static const Color lightSurfaceVariant = Color(0xFFF6ECE9);
   static const Color lightOnBackground = Color(0xFF211A20);
   static const Color lightOnSurface = Color(0xFF211A20);
-
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
@@ -31,11 +30,9 @@ class AppTheme {
         onSecondary: Colors.white,
         secondaryContainer: const Color(0xFFE9DEFF),
         tertiary: const Color(0xFFB55416),
-        background: lightBackground,
-        onBackground: lightOnBackground,
         surface: lightSurface,
         onSurface: lightOnSurface,
-        surfaceVariant: lightSurfaceVariant,
+        surfaceContainerHighest: lightSurfaceVariant,
         onSurfaceVariant: lightOnBackground,
       ),
       scaffoldBackgroundColor: lightBackground,
@@ -56,11 +53,9 @@ class AppTheme {
         secondaryContainer: midnightVioletSurface,
         onSecondaryContainer: goldenPeachLight,
         tertiary: goldenPeachLight,
-        background: darkBackground,
-        onBackground: darkOnBackground,
         surface: darkSurface,
         onSurface: darkOnSurface,
-        surfaceVariant: darkSurfaceVariant,
+        surfaceContainerHighest: darkSurfaceVariant,
         onSurfaceVariant: darkOnBackground,
       ),
       scaffoldBackgroundColor: darkBackground,

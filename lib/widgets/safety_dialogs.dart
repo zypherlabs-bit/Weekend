@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class SafetyCenterDialog extends StatelessWidget {
   const SafetyCenterDialog({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -36,14 +36,20 @@ class SafetyCenterDialog extends StatelessWidget {
                 icon: Icons.block_rounded,
                 title: 'Blocked Users',
                 subtitle: 'Manage your blocked users',
-                onTap: () {},
+                onTap: () {
+                  Navigator.pop(context);
+                  _showBlockedUsers(context);
+                },
               ),
               const SizedBox(height: 12),
               _SafetyOption(
                 icon: Icons.flag_rounded,
                 title: 'Report a User',
                 subtitle: 'Report inappropriate behavior',
-                onTap: () {},
+                onTap: () {
+                  Navigator.pop(context);
+                  _showReportDialog(context);
+                },
               ),
               const SizedBox(height: 12),
               _SafetyOption(
@@ -70,7 +76,10 @@ class SafetyCenterDialog extends StatelessWidget {
                 icon: Icons.help_outline_rounded,
                 title: 'Safety Tips',
                 subtitle: 'Learn how to stay safe',
-                onTap: () {},
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/safety-center');
+                },
               ),
             ],
           ),
@@ -79,13 +88,91 @@ class SafetyCenterDialog extends StatelessWidget {
     );
   }
 
+  void _showBlockedUsers(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1C162E),
+        title: const Text(
+          'Blocked Users',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Your blocked users list will appear here.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Close',
+              style: TextStyle(color: Color(0xFFFF4B72)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReportDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1C162E),
+        title: const Text(
+          'Report a User',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Select a reason for reporting:',
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            ..._reportReasons.map(
+              (reason) => ListTile(
+                title: Text(
+                  reason,
+                  style: const TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Report submitted: $reason'),
+                      backgroundColor: const Color(0xFF4CAF50),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static const List<String> _reportReasons = [
+    'Inappropriate photos',
+    'Harassment or bullying',
+    'Spam or scam',
+    'Fake profile',
+    'Inappropriate messages',
+    'Underage user',
+    'Other',
+  ];
   void _showShareDateDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1C162E),
-        title: const Text('Share My Date', style: TextStyle(color: Colors.white)),
-        content: const Column(
+        title: const Text(
+          'Share My Date',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
@@ -95,9 +182,9 @@ class SafetyCenterDialog extends StatelessWidget {
                 hintText: 'Who are you meeting?',
                 hintStyle: TextStyle(color: Colors.white38),
               ),
-              style: TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.white),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextField(
               decoration: InputDecoration(
                 labelText: 'Venue',
@@ -105,9 +192,9 @@ class SafetyCenterDialog extends StatelessWidget {
                 hintText: 'Where are you meeting?',
                 hintStyle: TextStyle(color: Colors.white38),
               ),
-              style: TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.white),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextField(
               decoration: InputDecoration(
                 labelText: 'Time',
@@ -115,18 +202,23 @@ class SafetyCenterDialog extends StatelessWidget {
                 hintText: 'When?',
                 hintStyle: TextStyle(color: Colors.white38),
               ),
-              style: TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.white),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white70),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF4B72)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF4B72),
+            ),
             child: const Text('Share', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -139,7 +231,10 @@ class SafetyCenterDialog extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1C162E),
-        title: const Text('Photo Verification', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Photo Verification',
+          style: TextStyle(color: Colors.white),
+        ),
         content: const Text(
           'Upload a selfie to verify your profile. This helps ensure a safe community.',
           style: TextStyle(color: Colors.white70),
@@ -147,12 +242,20 @@ class SafetyCenterDialog extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white70),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF4B72)),
-            child: const Text('Upload Photo', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF4B72),
+            ),
+            child: const Text(
+              'Upload Photo',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -165,14 +268,12 @@ class _SafetyOption extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-
   const _SafetyOption({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.onTap,
   });
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -189,7 +290,7 @@ class _SafetyOption extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF4B72).withOpacity(0.15),
+                color: const Color(0xFFFF4B72).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: const Color(0xFFFF4B72), size: 22),
@@ -211,7 +312,7 @@ class _SafetyOption extends StatelessWidget {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 12,
                     ),
                   ),

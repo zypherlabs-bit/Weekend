@@ -8,4 +8,39 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: WeekendApp()));
     expect(find.byType(MaterialApp), findsOneWidget);
   });
+
+  testWidgets('Demo mode: splash redirects to onboarding after session check',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const ProviderScope(child: WeekendApp()));
+    await tester.pump();
+
+    // In demo mode the auth check resolves near-instantly, so the GoRouter
+    // redirect moves us from splash to onboarding quickly.
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Welcome to Weekend'), findsOneWidget);
+  });
+
+  testWidgets('Get Started button navigates to auth screen',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const ProviderScope(child: WeekendApp()));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Welcome to Weekend'), findsOneWidget);
+
+    // Swipe through all onboarding pages.
+    await tester.drag(find.byType(PageView), const Offset(-500, 0));
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+
+    await tester.drag(find.byType(PageView), const Offset(-500, 0));
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+
+    expect(find.text('Get Started'), findsOneWidget);
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+
+    expect(find.text('Welcome Back'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
+  });
 }

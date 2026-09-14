@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
-
   @override
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
@@ -16,7 +16,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _nameController = TextEditingController();
   bool _isLogin = true;
   bool _obscurePassword = true;
-
   @override
   void dispose() {
     _emailController.dispose();
@@ -27,20 +26,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
-    
     try {
       if (_isLogin) {
-        await ref.read(authStateProvider.notifier).signInWithEmail(email, password);
+        await ref
+            .read(authStateProvider.notifier)
+            .signInWithEmail(email, password);
       } else {
         final name = _nameController.text.trim();
-        await ref.read(authStateProvider.notifier).signUpWithEmail(email, password, name);
+        await ref
+            .read(authStateProvider.notifier)
+            .signUpWithEmail(email, password, name);
       }
-      
       if (mounted && ref.read(authStateProvider).isAuthenticated) {
-        Navigator.pushReplacementNamed(context, '/home');
+        context.go('/home');
       }
     } catch (e) {
       if (mounted) {
@@ -57,7 +57,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
-    
     return Scaffold(
       backgroundColor: const Color(0xFF130E20),
       body: SafeArea(
@@ -103,7 +102,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       : 'Join Weekend and meet people nearby',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -112,7 +111,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   TextFormField(
                     controller: _nameController,
                     style: const TextStyle(color: Colors.white),
-                    decoration: _inputDecoration('Full Name', Icons.person_outline),
+                    decoration: _inputDecoration(
+                      'Full Name',
+                      Icons.person_outline,
+                    ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your name';
@@ -146,7 +148,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     Icons.lock_outline,
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                         color: Colors.white60,
                       ),
                       onPressed: () {
@@ -170,9 +174,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      border: Border.all(
+                        color: Colors.red.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Text(
                       authState.error!,
@@ -223,9 +229,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 const SizedBox(height: 24),
                 TextButton.icon(
                   onPressed: () async {
-                    await ref.read(authStateProvider.notifier).signInAnonymously();
-                    if (mounted && ref.read(authStateProvider).isAuthenticated) {
-                      Navigator.pushReplacementNamed(context, '/home');
+                    await ref
+                        .read(authStateProvider.notifier)
+                        .signInAnonymously();
+                    if (mounted &&
+                        ref.read(authStateProvider).isAuthenticated) {
+                      context.go('/home');
                     }
                   },
                   icon: const Icon(Icons.explore, color: Color(0xFFFF9966)),
@@ -242,10 +251,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon, {Widget? suffixIcon}) {
+  InputDecoration _inputDecoration(
+    String label,
+    IconData icon, {
+    Widget? suffixIcon,
+  }) {
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+      labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
       prefixIcon: Icon(icon, color: Colors.white60),
       suffixIcon: suffixIcon,
       filled: true,
@@ -256,7 +269,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),

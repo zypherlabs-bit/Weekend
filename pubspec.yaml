@@ -60,6 +60,10 @@ dependencies:
 
   # JSON serialization
   json_annotation: ^4.9.0
+  local_auth: ^3.0.2
+  crypto: ^3.0.7
+  mobile_scanner: ^7.4.1
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +73,7 @@ dev_dependencies:
   build_runner: ^2.4.13
   riverpod_generator: ^2.6.2
   json_serializable: ^6.9.3
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true

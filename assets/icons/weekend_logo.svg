@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF4B72"/>
+      <stop offset="100%" style="stop-color:#FF9966"/>
+    </linearGradient>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF"/>
+      <stop offset="100%" style="stop-color:#FFE8D6"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background circle with gradient -->
+  <circle cx="256" cy="256" r="250" fill="url(#bgGrad)" filter="url(#glow)"/>
+  
+  <!-- Inner ring -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="url(#iconGrad)" stroke-width="4" opacity="0.3"/>
+  
+  <!-- Weekend "W" icon - stylized as interconnected paths -->
+  <g transform="translate(256, 256)">
+    <!-- Left peak -->
+    <path d="M-90 -60 L-90 60" stroke="url(#iconGrad)" stroke-width="24" stroke-linecap="round" opacity="0.9"/>
+    <!-- Left valley to center peak -->
+    <path d="M-90 60 Q-45 60 -45 0 Q-45 -60 0 -60" stroke="url(#iconGrad)" stroke-width="24" stroke-linecap="round" fill="none" opacity="0.9"/>
+    <!-- Center peak to right valley -->
+    <path d="M0 -60 Q45 -60 45 0 Q45 60 90 60" stroke="url(#iconGrad)" stroke-width="24" stroke-linecap="round" fill="none" opacity="0.9"/>
+    <!-- Right peak -->
+    <path d="M90 60 L90 -60" stroke="url(#iconGrad)" stroke-width="24" stroke-linecap="round" opacity="0.9"/>
+    
+    <!-- Small connecting dots for "connection" feel -->
+    <circle cx="-90" cy="-60" r="8" fill="#FF4B72"/>
+    <circle cx="0" cy="-60" r="10" fill="#FF9966"/>
+    <circle cx="90" cy="-60" r="8" fill="#FF4B72"/>
+    <circle cx="-90" cy="60" r="6" fill="#FF9966" opacity="0.6"/>
+    <circle cx="90" cy="60" r="6" fill="#FF9966" opacity="0.6"/>
+  </g>
+  
+  <!-- Subtle sparkle accents -->
+  <circle cx="140" cy="140" r="4" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="380" cy="380" r="3" fill="#FFFFFF" opacity="0.6"/>
+  <circle cx="120" cy="390" r="3" fill="#FFFFFF" opacity="0.5"/>
+  <circle cx="390" cy="120" r="4" fill="#FFFFFF" opacity="0.7"/>
+</svg>

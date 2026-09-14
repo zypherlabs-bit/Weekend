@@ -1,9 +1,7 @@
 class ProfilePrompt {
   final String prompt;
   final String answer;
-
   const ProfilePrompt({required this.prompt, required this.answer});
-
   ProfilePrompt copyWith({String? prompt, String? answer}) {
     return ProfilePrompt(
       prompt: prompt ?? this.prompt,
@@ -12,8 +10,10 @@ class ProfilePrompt {
   }
 
   Map<String, dynamic> toJson() => {'prompt': prompt, 'answer': answer};
-  factory ProfilePrompt.fromJson(Map<String, dynamic> json) =>
-      ProfilePrompt(prompt: json['prompt'] as String, answer: json['answer'] as String);
+  factory ProfilePrompt.fromJson(Map<String, dynamic> json) => ProfilePrompt(
+    prompt: json['prompt'] as String,
+    answer: json['answer'] as String,
+  );
 }
 
 class UserProfile {
@@ -43,7 +43,6 @@ class UserProfile {
   final String voiceIntroUrl;
   final String compatibilityExplanation;
   final String distanceDisplay;
-
   const UserProfile({
     required this.id,
     required this.name,
@@ -72,7 +71,6 @@ class UserProfile {
     this.compatibilityExplanation = '',
     this.distanceDisplay = '',
   });
-
   UserProfile copyWith({
     String? id,
     String? name,
@@ -126,27 +124,40 @@ class UserProfile {
       commonInterests: commonInterests ?? this.commonInterests,
       weekendAvailability: weekendAvailability ?? this.weekendAvailability,
       voiceIntroUrl: voiceIntroUrl ?? this.voiceIntroUrl,
-      compatibilityExplanation: compatibilityExplanation ?? this.compatibilityExplanation,
+      compatibilityExplanation:
+          compatibilityExplanation ?? this.compatibilityExplanation,
       distanceDisplay: distanceDisplay ?? this.distanceDisplay,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id, 'name': name, 'age': age, 'gender': gender, 'photos': photos,
-    'city': city, 'distanceKm': distanceKm, 'bio': bio, 'occupation': occupation,
-    'education': education, 'relationshipIntent': relationshipIntent,
-    'interests': interests, 'favoritePlaces': favoritePlaces, 'languages': languages,
+    'id': id,
+    'name': name,
+    'age': age,
+    'gender': gender,
+    'photos': photos,
+    'city': city,
+    'distanceKm': distanceKm,
+    'bio': bio,
+    'occupation': occupation,
+    'education': education,
+    'relationshipIntent': relationshipIntent,
+    'interests': interests,
+    'favoritePlaces': favoritePlaces,
+    'languages': languages,
     'prompts': prompts.map((p) => p.toJson()).toList(),
-    'isPhotoVerified': isPhotoVerified, 'trustScore': trustScore,
-    'crossedPathsCount': crossedPathsCount, 'favoriteMusic': favoriteMusic,
-    'idealWeekend': idealWeekend, 'referralCode': referralCode,
+    'isPhotoVerified': isPhotoVerified,
+    'trustScore': trustScore,
+    'crossedPathsCount': crossedPathsCount,
+    'favoriteMusic': favoriteMusic,
+    'idealWeekend': idealWeekend,
+    'referralCode': referralCode,
     'commonInterests': commonInterests,
     'weekendAvailability': weekendAvailability,
     'voiceIntroUrl': voiceIntroUrl,
     'compatibilityExplanation': compatibilityExplanation,
     'distanceDisplay': distanceDisplay,
   };
-
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
     id: json['id'] as String,
     name: json['name'] as String,
@@ -162,7 +173,9 @@ class UserProfile {
     interests: List<String>.from(json['interests'] as List? ?? []),
     favoritePlaces: List<String>.from(json['favoritePlaces'] as List? ?? []),
     languages: List<String>.from(json['languages'] as List? ?? []),
-    prompts: (json['prompts'] as List? ?? []).map((p) => ProfilePrompt.fromJson(p)).toList(),
+    prompts: (json['prompts'] as List? ?? [])
+        .map((p) => ProfilePrompt.fromJson(p))
+        .toList(),
     isPhotoVerified: json['isPhotoVerified'] as bool? ?? true,
     trustScore: json['trustScore'] as int? ?? 96,
     crossedPathsCount: json['crossedPathsCount'] as int? ?? 0,
@@ -171,7 +184,8 @@ class UserProfile {
     referralCode: json['referralCode'] as String? ?? '',
     commonInterests: List<String>.from(json['commonInterests'] as List? ?? []),
     weekendAvailability: Map<String, bool>.from(
-        (json['weekendAvailability'] as Map? ?? {}) as Map),
+      (json['weekendAvailability'] as Map? ?? {}) as Map,
+    ),
     voiceIntroUrl: json['voiceIntroUrl'] as String? ?? '',
     compatibilityExplanation: json['compatibilityExplanation'] as String? ?? '',
     distanceDisplay: json['distanceDisplay'] as String? ?? '',
@@ -190,7 +204,6 @@ class WeekendPlan {
   final String description;
   final List<String> participants;
   final bool isJoined;
-
   const WeekendPlan({
     required this.id,
     required this.creatorId,
@@ -204,7 +217,6 @@ class WeekendPlan {
     this.participants = const [],
     this.isJoined = false,
   });
-
   WeekendPlan copyWith({
     String? id,
     String? creatorId,
@@ -234,12 +246,18 @@ class WeekendPlan {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id, 'creatorId': creatorId, 'creatorName': creatorName,
-    'creatorPhoto': creatorPhoto, 'title': title, 'category': category,
-    'venue': venue, 'time': time, 'description': description,
-    'participants': participants, 'isJoined': isJoined,
+    'id': id,
+    'creatorId': creatorId,
+    'creatorName': creatorName,
+    'creatorPhoto': creatorPhoto,
+    'title': title,
+    'category': category,
+    'venue': venue,
+    'time': time,
+    'description': description,
+    'participants': participants,
+    'isJoined': isJoined,
   };
-
   factory WeekendPlan.fromJson(Map<String, dynamic> json) => WeekendPlan(
     id: json['id'] as String,
     creatorId: json['creatorId'] as String,
@@ -264,7 +282,6 @@ class MatchItem {
   final int unreadCount;
   final List<String> sharedInterests;
   final String suggestedStarter;
-
   const MatchItem({
     required this.id,
     required this.user,
@@ -275,7 +292,6 @@ class MatchItem {
     this.sharedInterests = const [],
     this.suggestedStarter = '',
   });
-
   MatchItem copyWith({
     String? id,
     UserProfile? user,
@@ -307,7 +323,6 @@ class ChatMessage {
   final String? translatedText;
   final bool isTranslated;
   final bool isRead;
-
   const ChatMessage({
     required this.id,
     required this.senderId,
@@ -317,7 +332,6 @@ class ChatMessage {
     this.isTranslated = false,
     this.isRead = true,
   });
-
   ChatMessage copyWith({
     String? id,
     String? senderId,
@@ -346,7 +360,6 @@ class ReferralData {
   final String badgeTitle;
   final String achievementTier;
   final String linkUrl;
-
   const ReferralData({
     required this.code,
     this.invitedCount = 7,
@@ -355,7 +368,6 @@ class ReferralData {
     this.achievementTier = 'Silver Ambassador',
     this.linkUrl = 'https://weekend.app/invite/',
   });
-
   ReferralData copyWith({
     String? code,
     int? invitedCount,
@@ -381,7 +393,6 @@ class DateIdea {
   final String description;
   final String estimatedBudget;
   final String conversationTip;
-
   const DateIdea({
     required this.title,
     required this.venueType,
@@ -389,7 +400,6 @@ class DateIdea {
     required this.estimatedBudget,
     required this.conversationTip,
   });
-
   DateIdea copyWith({
     String? title,
     String? venueType,
@@ -429,7 +439,6 @@ class WeekendAuthState {
   final String? session;
   final String? error;
   final bool emailVerified;
-
   const WeekendAuthState({
     this.isAuthenticated = false,
     this.isLoading = false,
@@ -438,7 +447,6 @@ class WeekendAuthState {
     this.error,
     this.emailVerified = false,
   });
-
   WeekendAuthState copyWith({
     bool? isAuthenticated,
     bool? isLoading,
@@ -470,7 +478,6 @@ class Advertisement {
   final bool isActive;
   final int? width;
   final int? height;
-
   const Advertisement({
     required this.id,
     required this.campaignId,
@@ -484,7 +491,6 @@ class Advertisement {
     this.width,
     this.height,
   });
-
   Advertisement copyWith({
     String? id,
     String? campaignId,
@@ -514,32 +520,31 @@ class Advertisement {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'campaign_id': campaignId,
-        'title': title,
-        'description': description,
-        'image_url': imageUrl,
-        'cta_text': ctaText,
-        'destination_url': destinationUrl,
-        'click_action': clickAction,
-        'is_active': isActive,
-        'image_width': width,
-        'image_height': height,
-      };
-
+    'id': id,
+    'campaign_id': campaignId,
+    'title': title,
+    'description': description,
+    'image_url': imageUrl,
+    'cta_text': ctaText,
+    'destination_url': destinationUrl,
+    'click_action': clickAction,
+    'is_active': isActive,
+    'image_width': width,
+    'image_height': height,
+  };
   factory Advertisement.fromJson(Map<String, dynamic> json) => Advertisement(
-        id: json['ad_id'] as String? ?? json['id'] as String? ?? '',
-        campaignId: json['campaign_id'] as String? ?? '',
-        title: json['title'] as String? ?? '',
-        description: json['description'] as String? ?? '',
-        imageUrl: json['image_url'] as String? ?? '',
-        ctaText: json['cta_text'] as String? ?? 'Learn More',
-        destinationUrl: json['destination_url'] as String? ?? '',
-        clickAction: json['click_action'] as String? ?? 'external_url',
-        isActive: json['is_active'] as bool? ?? true,
-        width: json['image_width'] as int?,
-        height: json['image_height'] as int?,
-      );
+    id: json['ad_id'] as String? ?? json['id'] as String? ?? '',
+    campaignId: json['campaign_id'] as String? ?? '',
+    title: json['title'] as String? ?? '',
+    description: json['description'] as String? ?? '',
+    imageUrl: json['image_url'] as String? ?? '',
+    ctaText: json['cta_text'] as String? ?? 'Learn More',
+    destinationUrl: json['destination_url'] as String? ?? '',
+    clickAction: json['click_action'] as String? ?? 'external_url',
+    isActive: json['is_active'] as bool? ?? true,
+    width: json['image_width'] as int?,
+    height: json['image_height'] as int?,
+  );
 }
 
 class AdConfig {
@@ -547,14 +552,12 @@ class AdConfig {
   final int maxAdsPerHour;
   final String adPlaceholderText;
   final bool isAdvertisingEnabled;
-
   const AdConfig({
     this.adIntervalSeconds = 120,
     this.maxAdsPerHour = 10,
     this.adPlaceholderText = 'Sponsored',
     this.isAdvertisingEnabled = true,
   });
-
   AdConfig copyWith({
     int? adIntervalSeconds,
     int? maxAdsPerHour,
@@ -570,11 +573,11 @@ class AdConfig {
   }
 
   factory AdConfig.fromJson(Map<String, dynamic> json) => AdConfig(
-        adIntervalSeconds: (json['ad_interval_seconds'] as int?) ?? 120,
-        maxAdsPerHour: (json['max_ads_per_hour'] as int?) ?? 10,
-        adPlaceholderText: (json['ad_placeholder_text'] as String?) ?? 'Sponsored',
-        isAdvertisingEnabled: (json['is_advertising_enabled'] as bool?) ?? true,
-      );
+    adIntervalSeconds: (json['ad_interval_seconds'] as int?) ?? 120,
+    maxAdsPerHour: (json['max_ads_per_hour'] as int?) ?? 10,
+    adPlaceholderText: (json['ad_placeholder_text'] as String?) ?? 'Sponsored',
+    isAdvertisingEnabled: (json['is_advertising_enabled'] as bool?) ?? true,
+  );
 }
 
 class AdState {
@@ -586,7 +589,6 @@ class AdState {
   final String? adImpressionId;
   final bool adLoading;
   final String? adError;
-
   const AdState({
     this.adTimerStarted = false,
     this.activeDiscoverySeconds = 0,
@@ -597,7 +599,6 @@ class AdState {
     this.adLoading = false,
     this.adError,
   });
-
   AdState copyWith({
     bool? adTimerStarted,
     int? activeDiscoverySeconds,
@@ -610,7 +611,8 @@ class AdState {
   }) {
     return AdState(
       adTimerStarted: adTimerStarted ?? this.adTimerStarted,
-      activeDiscoverySeconds: activeDiscoverySeconds ?? this.activeDiscoverySeconds,
+      activeDiscoverySeconds:
+          activeDiscoverySeconds ?? this.activeDiscoverySeconds,
       adEligible: adEligible ?? this.adEligible,
       adDisplayed: adDisplayed ?? this.adDisplayed,
       adId: adId ?? this.adId,
@@ -628,7 +630,6 @@ class CrossedPath {
   final int crossCount;
   final DateTime lastCrossedAt;
   final UserProfile? userProfile;
-
   const CrossedPath({
     required this.userBId,
     required this.crossCount,
@@ -647,7 +648,6 @@ class LocationPreferences {
   final String? travelModeCity;
   final double? travelModeLat;
   final double? travelModeLon;
-
   const LocationPreferences({
     this.locationDiscoveryEnabled = true,
     this.crossedPathsEnabled = true,
@@ -659,7 +659,6 @@ class LocationPreferences {
     this.travelModeLat,
     this.travelModeLon,
   });
-
   LocationPreferences copyWith({
     bool? locationDiscoveryEnabled,
     bool? crossedPathsEnabled,
@@ -672,10 +671,12 @@ class LocationPreferences {
     double? travelModeLon,
   }) {
     return LocationPreferences(
-      locationDiscoveryEnabled: locationDiscoveryEnabled ?? this.locationDiscoveryEnabled,
+      locationDiscoveryEnabled:
+          locationDiscoveryEnabled ?? this.locationDiscoveryEnabled,
       crossedPathsEnabled: crossedPathsEnabled ?? this.crossedPathsEnabled,
       showDistanceEnabled: showDistanceEnabled ?? this.showDistanceEnabled,
-      nearbyDiscoveryEnabled: nearbyDiscoveryEnabled ?? this.nearbyDiscoveryEnabled,
+      nearbyDiscoveryEnabled:
+          nearbyDiscoveryEnabled ?? this.nearbyDiscoveryEnabled,
       travelModeEnabled: travelModeEnabled ?? this.travelModeEnabled,
       discoveryRadiusKm: discoveryRadiusKm ?? this.discoveryRadiusKm,
       travelModeCity: travelModeCity ?? this.travelModeCity,
@@ -685,26 +686,109 @@ class LocationPreferences {
   }
 
   Map<String, dynamic> toJson() => {
-        'location_discovery_enabled': locationDiscoveryEnabled,
-        'crossed_paths_enabled': crossedPathsEnabled,
-        'show_distance_enabled': showDistanceEnabled,
-        'nearby_discovery_enabled': nearbyDiscoveryEnabled,
-        'travel_mode_enabled': travelModeEnabled,
-        'discovery_radius_km': discoveryRadiusKm,
-        'travel_mode_city': travelModeCity,
-        'travel_mode_lat': travelModeLat,
-        'travel_mode_lon': travelModeLon,
-      };
-
-  factory LocationPreferences.fromJson(Map<String, dynamic> json) => LocationPreferences(
-        locationDiscoveryEnabled: (json['location_discovery_enabled'] as bool?) ?? true,
+    'location_discovery_enabled': locationDiscoveryEnabled,
+    'crossed_paths_enabled': crossedPathsEnabled,
+    'show_distance_enabled': showDistanceEnabled,
+    'nearby_discovery_enabled': nearbyDiscoveryEnabled,
+    'travel_mode_enabled': travelModeEnabled,
+    'discovery_radius_km': discoveryRadiusKm,
+    'travel_mode_city': travelModeCity,
+    'travel_mode_lat': travelModeLat,
+    'travel_mode_lon': travelModeLon,
+  };
+  factory LocationPreferences.fromJson(Map<String, dynamic> json) =>
+      LocationPreferences(
+        locationDiscoveryEnabled:
+            (json['location_discovery_enabled'] as bool?) ?? true,
         crossedPathsEnabled: (json['crossed_paths_enabled'] as bool?) ?? true,
         showDistanceEnabled: (json['show_distance_enabled'] as bool?) ?? true,
-        nearbyDiscoveryEnabled: (json['nearby_discovery_enabled'] as bool?) ?? true,
+        nearbyDiscoveryEnabled:
+            (json['nearby_discovery_enabled'] as bool?) ?? true,
         travelModeEnabled: (json['travel_mode_enabled'] as bool?) ?? false,
         discoveryRadiusKm: (json['discovery_radius_km'] as int?) ?? 25,
         travelModeCity: json['travel_mode_city'] as String?,
         travelModeLat: (json['travel_mode_lat'] as num?)?.toDouble(),
         travelModeLon: (json['travel_mode_lon'] as num?)?.toDouble(),
       );
+}
+
+class QRInvitation {
+  final String inviteId;
+  final String referralCode;
+  final String inviterId;
+  final String inviterName;
+  final int version;
+  final DateTime createdAt;
+  final DateTime expiresAt;
+  final String signature;
+  const QRInvitation({
+    required this.inviteId,
+    required this.referralCode,
+    required this.inviterId,
+    required this.inviterName,
+    required this.version,
+    required this.createdAt,
+    required this.expiresAt,
+    required this.signature,
+  });
+  String toPayload() {
+    return 'WEEKEND_INVITE|$inviteId|$referralCode|$inviterId|$inviterName|$version|${createdAt.millisecondsSinceEpoch}|${expiresAt.millisecondsSinceEpoch}|$signature';
+  }
+
+  factory QRInvitation.fromPayload(String payload) {
+    try {
+      final parts = payload.split('|');
+      if (parts.length != 9 || parts[0] != 'WEEKEND_INVITE') {
+        throw FormatException('Invalid QR invitation payload');
+      }
+      return QRInvitation(
+        inviteId: parts[1],
+        referralCode: parts[2],
+        inviterId: parts[3],
+        inviterName: parts[4],
+        version: int.parse(parts[5]),
+        createdAt: DateTime.fromMillisecondsSinceEpoch(int.parse(parts[6])),
+        expiresAt: DateTime.fromMillisecondsSinceEpoch(int.parse(parts[7])),
+        signature: parts[8],
+      );
+    } catch (e) {
+      throw FormatException('Failed to parse QR invitation: $e');
+    }
+  }
+  bool get isExpired => DateTime.now().isAfter(expiresAt);
+  Map<String, dynamic> toJson() => {
+    'invite_id': inviteId,
+    'referral_code': referralCode,
+    'inviter_id': inviterId,
+    'inviter_name': inviterName,
+    'version': version,
+    'created_at': createdAt.toIso8601String(),
+    'expires_at': expiresAt.toIso8601String(),
+    'signature': signature,
+  };
+  factory QRInvitation.fromJson(Map<String, dynamic> json) => QRInvitation(
+    inviteId: json['invite_id'] as String,
+    referralCode: json['referral_code'] as String,
+    inviterId: json['inviter_id'] as String,
+    inviterName: json['inviter_name'] as String,
+    version: json['version'] as int,
+    createdAt: DateTime.parse(json['created_at'] as String),
+    expiresAt: DateTime.parse(json['expires_at'] as String),
+    signature: json['signature'] as String,
+  );
+}
+
+class QRInvitationResult {
+  final bool isValid;
+  final QRInvitation? invitation;
+  final String? errorMessage;
+  const QRInvitationResult({
+    required this.isValid,
+    this.invitation,
+    this.errorMessage,
+  });
+  factory QRInvitationResult.valid(QRInvitation invitation) =>
+      QRInvitationResult(isValid: true, invitation: invitation);
+  factory QRInvitationResult.invalid(String errorMessage) =>
+      QRInvitationResult(isValid: false, errorMessage: errorMessage);
 }

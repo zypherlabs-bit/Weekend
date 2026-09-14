@@ -11,16 +11,15 @@ class ImageOptimizer {
   static const int thumbnailDimension = 400;
   static const int mediumDimension = 800;
   static const int maxFileSizeBytes = 2 * 1024 * 1024;
-
-  static Future<Uint8List> optimizeImage(Uint8List bytes, {int? maxDimension}) async {
+  static Future<Uint8List> optimizeImage(
+    Uint8List bytes, {
+    int? maxDimension,
+  }) async {
     final maxDim = maxDimension ?? ImageOptimizer.maxDimension;
-    
     final image = img.decodeImage(bytes);
     if (image == null) return bytes;
-    
     int width = image.width;
     int height = image.height;
-    
     if (width > maxDim || height > maxDim) {
       if (width > height) {
         height = (height * maxDim / width).round();
@@ -30,20 +29,16 @@ class ImageOptimizer {
         height = maxDim;
       }
     }
-    
     final resized = img.copyResize(image, width: width, height: height);
     final optimized = img.encodeJpg(resized, quality: 85);
-    
     return Uint8List.fromList(optimized);
   }
 
   static Future<Uint8List> createThumbnail(Uint8List bytes) async {
     final image = img.decodeImage(bytes);
     if (image == null) return bytes;
-    
     int width = image.width;
     int height = image.height;
-    
     if (width > height) {
       height = (height * thumbnailDimension / width).round();
       width = thumbnailDimension;
@@ -51,7 +46,6 @@ class ImageOptimizer {
       width = (width * thumbnailDimension / height).round();
       height = thumbnailDimension;
     }
-    
     final resized = img.copyResize(image, width: width, height: height);
     final result = img.encodeJpg(resized, quality: 80);
     return Uint8List.fromList(result);
@@ -60,10 +54,8 @@ class ImageOptimizer {
   static Future<Uint8List> createMedium(Uint8List bytes) async {
     final image = img.decodeImage(bytes);
     if (image == null) return bytes;
-    
     int width = image.width;
     int height = image.height;
-    
     if (width > height) {
       height = (height * mediumDimension / width).round();
       width = mediumDimension;
@@ -71,7 +63,6 @@ class ImageOptimizer {
       width = (width * mediumDimension / height).round();
       height = mediumDimension;
     }
-    
     final resized = img.copyResize(image, width: width, height: height);
     final result = img.encodeJpg(resized, quality: 85);
     return Uint8List.fromList(result);
@@ -86,16 +77,14 @@ class ImageOptimizer {
         maxHeight: 4096,
         imageQuality: 100,
       );
-      
       if (image == null) return null;
-      
       final bytes = await image.readAsBytes();
       final optimized = await optimizeImage(bytes);
-      
       final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/optimized_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final file = File(
+        '${tempDir.path}/optimized_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
       await file.writeAsBytes(optimized);
-      
       return file;
     } on PlatformException catch (e) {
       debugPrint('Image picker error: $e');

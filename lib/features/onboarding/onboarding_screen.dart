@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
-
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
@@ -11,7 +11,6 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-
   final List<OnboardingPage> _pages = [
     OnboardingPage(
       icon: Icons.weekend_rounded,
@@ -22,17 +21,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     OnboardingPage(
       icon: Icons.favorite_rounded,
       title: 'Discover & Connect',
-      subtitle: 'Swipe through profiles, find shared interests, and match with people who share your vibe.',
+      subtitle:
+          'Swipe through profiles, find shared interests, and match with people who share your vibe.',
       gradient: [Color(0xFFFF9966), Color(0xFFFFB38A)],
     ),
     OnboardingPage(
       icon: Icons.calendar_today_rounded,
       title: 'Make Weekend Plans',
-      subtitle: 'Turn matches into real meetups. Coffee, hikes, concerts, and more.',
+      subtitle:
+          'Turn matches into real meetups. Coffee, hikes, concerts, and more.',
       gradient: [Color(0xFFFF4B72), Color(0xFFFFB38A)],
     ),
   ];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,17 +66,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: page.gradient[0].withOpacity(0.3),
+                                color: page.gradient[0].withValues(alpha: 0.3),
                                 blurRadius: 30,
                                 spreadRadius: 10,
                               ),
                             ],
                           ),
-                          child: Icon(
-                            page.icon,
-                            size: 80,
-                            color: Colors.white,
-                          ),
+                          child: Icon(page.icon, size: 80, color: Colors.white),
                         ),
                         const SizedBox(height: 48),
                         Text(
@@ -94,7 +90,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           page.subtitle,
                           style: TextStyle(
                             fontSize: 16,
-                            color: Colors.white.withOpacity(0.7),
+                            color: Colors.white.withValues(alpha: 0.7),
                             height: 1.5,
                           ),
                           textAlign: TextAlign.center,
@@ -117,7 +113,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   decoration: BoxDecoration(
                     color: _currentPage == index
                         ? const Color(0xFFFF4B72)
-                        : Colors.white.withOpacity(0.3),
+                        : Colors.white.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -136,7 +132,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         curve: Curves.easeInOut,
                       );
                     } else {
-                      Navigator.pushReplacementNamed(context, '/auth');
+                      context.go('/auth');
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -170,7 +166,6 @@ class OnboardingPage {
   final String title;
   final String subtitle;
   final List<Color> gradient;
-
   OnboardingPage({
     required this.icon,
     required this.title,

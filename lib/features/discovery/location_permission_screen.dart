@@ -7,7 +7,6 @@ import '../../models/models.dart';
 
 class LocationPermissionScreen extends ConsumerStatefulWidget {
   const LocationPermissionScreen({super.key});
-
   @override
   ConsumerState<LocationPermissionScreen> createState() =>
       _LocationPermissionScreenState();
@@ -17,7 +16,6 @@ class _LocationPermissionScreenState
     extends ConsumerState<LocationPermissionScreen> {
   bool _isRequesting = false;
   String? _errorMessage;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,7 +38,7 @@ class _LocationPermissionScreenState
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFFF4B72).withOpacity(0.3),
+                      color: const Color(0xFFFF4B72).withValues(alpha: 0.3),
                       blurRadius: 30,
                       spreadRadius: 10,
                     ),
@@ -71,8 +69,9 @@ class _LocationPermissionScreenState
                 style: TextStyle(
                   fontSize: 15,
                   height: 1.6,
-                  color:
-                      Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -84,23 +83,26 @@ class _LocationPermissionScreenState
                 style: TextStyle(
                   fontSize: 13,
                   height: 1.5,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withOpacity(0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
               if (_errorMessage != null) ...[
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    border: Border.all(
+                      color: Colors.red.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Text(
                     _errorMessage!,
@@ -140,14 +142,15 @@ class _LocationPermissionScreenState
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: () {
-                        ref.read(weekendProvider.notifier).selectDiscoveryMode(
-                            DiscoveryMode.GLOBAL);
+                        ref
+                            .read(weekendProvider.notifier)
+                            .selectDiscoveryMode(DiscoveryMode.GLOBAL);
                         Navigator.pop(context);
                       },
                       child: Text(
                         'Not Now',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.6),
+                          color: Colors.white.withValues(alpha: 0.6),
                           fontSize: 15,
                         ),
                       ),
@@ -160,7 +163,7 @@ class _LocationPermissionScreenState
                 child: Text(
                   'Enable location in app settings',
                   style: TextStyle(
-                    color: const Color(0xFFFF4B72).withOpacity(0.9),
+                    color: const Color(0xFFFF4B72).withValues(alpha: 0.9),
                     fontSize: 13,
                     decoration: TextDecoration.underline,
                   ),
@@ -178,14 +181,16 @@ class _LocationPermissionScreenState
       _isRequesting = true;
       _errorMessage = null;
     });
-
     final granted = await LocationService.requestPermission();
-
     if (!mounted) return;
-
     if (granted) {
-      ref.read(weekendProvider.notifier).setLocationPreferences(
-            ref.read(weekendProvider).locationPreferences.copyWith(
+      ref
+          .read(weekendProvider.notifier)
+          .setLocationPreferences(
+            ref
+                .read(weekendProvider)
+                .locationPreferences
+                .copyWith(
                   locationDiscoveryEnabled: true,
                   nearbyDiscoveryEnabled: true,
                 ),

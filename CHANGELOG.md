@@ -14,7 +14,7 @@
 
 ### Features
 
-- **Authentication** — Email/password, Google sign-in, anonymous sign-in
+- **Authentication** — Email/password
 - **Profile creation and editing** — Full profile management with photos, prompts, interests
 - **Profile display** — Detailed profile view with compatibility explanation
 - **Discovery** — Swipe-based discovery with nearby, crossed-paths, and global modes

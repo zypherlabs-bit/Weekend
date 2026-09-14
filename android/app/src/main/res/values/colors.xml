@@ -5,4 +5,5 @@
     <color name="weekend_secondary">#FF9966</color>
     <color name="weekend_surface">#1C162E</color>
     <color name="weekend_on_surface">#FFFFFF</color>
+	<color name="ic_launcher_background">#FF6C5C</color>
 </resources>

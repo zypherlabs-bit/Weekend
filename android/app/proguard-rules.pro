@@ -70,3 +70,8 @@
 -keepclasseswithmembernames class * {
     native <methods>;
 }
+
+# Flutter embedding references Play Core split classes only when using
+# deferred components; Weekend ships a monolithic APK, so silence R8.
+-dontwarn com.google.android.play.**
+-dontnote com.google.android.play.**

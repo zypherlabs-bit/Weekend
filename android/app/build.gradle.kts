@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -6,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.aistudio.weekend.appwk.weekend"
+    namespace = "com.weekend.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,44 +24,42 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.aistudio.weekend.appwk.weekend"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.weekend.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
-    // Release signing configuration
+    // Release signing is provided via an untracked key.properties file
+    // (see key.properties.example). Builds without it fall back to debug
+    // signing so CI and local development remain friction-free.
     val keyPropsFile = rootProject.file("key.properties")
-    val keyProps = java.util.Properties()
-    val storeFile: File?
-    val storePassword: String?
-    val keyAlias: String?
-    val keyPassword: String?
+    val keyProps = Properties()
+    var keyStoreFile: File? = null
+    var keyStorePassword: String? = null
+    var keyKeyAlias: String? = null
+    var keyKeyPassword: String? = null
 
     if (keyPropsFile.exists()) {
         keyProps.load(FileInputStream(keyPropsFile))
-        storeFile = File(keyProps["storeFile"] as String?)
-        storePassword = keyProps["storePassword"] as String?
-        keyAlias = keyProps["keyAlias"] as String?
-        keyPassword = keyProps["keyPassword"] as String?
-    } else {
-        storeFile = null
-        storePassword = null
-        keyAlias = null
-        keyPassword = null
+        val rawStoreFile = keyProps["storeFile"] as String?
+        if (!rawStoreFile.isNullOrBlank()) {
+            val candidate = File(rawStoreFile)
+            keyStoreFile = if (candidate.isAbsolute) candidate else File(rootDir, rawStoreFile)
+        }
+        keyStorePassword = keyProps["storePassword"] as String?
+        keyKeyAlias = keyProps["keyAlias"] as String?
+        keyKeyPassword = keyProps["keyPassword"] as String?
     }
 
     signingConfigs {
         create("release") {
-            if (storeFile != null && storePassword != null && keyAlias != null && keyPassword != null) {
-                storeFile = storeFile
-                storePassword = storePassword
-                keyAlias = keyAlias
-                keyPassword = keyPassword
+            if (keyStoreFile != null && keyStorePassword != null && keyKeyAlias != null && keyKeyPassword != null) {
+                storeFile = keyStoreFile
+                storePassword = keyStorePassword
+                keyAlias = keyKeyAlias
+                keyPassword = keyKeyPassword
             } else {
                 // Fallback to debug signing if release config not found
                 println("WARNING: key.properties not found or incomplete. Using debug signing for release.")
@@ -72,8 +73,6 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true

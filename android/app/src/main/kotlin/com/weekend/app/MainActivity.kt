@@ -1,4 +1,4 @@
-package com.aistudio.weekend.appwk.weekend
+package com.weekend.app
 
 import io.flutter.embedding.android.FlutterActivity
 

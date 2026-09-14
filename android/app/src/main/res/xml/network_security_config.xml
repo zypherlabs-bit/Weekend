@@ -6,9 +6,9 @@
         </trust-anchors>
     </base-config>
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains=true>supabase.co</domain>
-        <domain includeSubdomains=true>unsplash.com</domain>
-        <domain includeSubdomains=true>images.unsplash.com</domain>
+        <domain includeSubdomains="true">supabase.co</domain>
+        <domain includeSubdomains="true">unsplash.com</domain>
+        <domain includeSubdomains="true">images.unsplash.com</domain>
     </domain-config>
     <debug-overrides>
         <trust-anchors>

@@ -16,11 +16,11 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android">
-  <img src="https://img.shields.io/badge/Flutter-3.24.0-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter">
-  <img src="https://img.shields.io/badge/Dart-3.5.0-0175C2?style=for-the-badge&logo=dart&logoColor=white" alt="Dart">
+  <img src="https://img.shields.io/badge/Flutter-3.41.9-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter">
+  <img src="https://img.shields.io/badge/Dart-3.11.5-0175C2?style=for-the-badge&logo=dart&logoColor=white" alt="Dart">
   <img src="https://img.shields.io/badge/Supabase-2.x-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase">
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Version-2.0.0-blue?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Version-2.0.1-blue?style=for-the-badge" alt="Version">
 </p>
 
 </div>
@@ -33,7 +33,7 @@
 
 ### Android APK
 
-**Latest stable version:** `Weekend-v2.0.1-release.apk` (~54 MB)
+**Latest stable version:** `Weekend-v2.0.1-release.apk` (~74 MB)
 
 <p align="center">
   <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.0.1-release.apk">
@@ -72,7 +72,7 @@ Compare the output against `Weekend-v2.0.1-release.apk.sha256` in the release.
 2. Open the APK — enable **Install from unknown sources** if prompted.
 3. Launch **Weekend** and sign in or explore in demo mode.
 
-**Requirements:** Android 7.0+ (API 24) - ARM64 / ARMv7 / x86_64 - ~5 MB storage
+**Requirements:** Android 7.0+ (API 24) - ARM64 / ARMv7 / x86_64
 
 ---
 
@@ -296,7 +296,7 @@ Weekend uses **Supabase** as its complete backend platform:
 
 | Capability | Supabase Service |
 |------------|------------------|
-| Authentication (email/password, email verification, password reset, Google sign-in) | **Supabase Auth** |
+| Authentication (email/password, email verification, password reset) | **Supabase Auth** |
 | PostgreSQL database with Row Level Security on every table | **Supabase Database (PostgreSQL + PostGIS)** |
 | Private `profile-photos` storage bucket with per-user folder policies | **Supabase Storage** |
 | Realtime chat and notification streams | **Supabase Realtime** |
@@ -325,17 +325,17 @@ cd Weekend
 Open the project in Android Studio and let it sync. Or use the command line:
 
 ```bash
-./gradlew build
+flutter pub get
 ```
 
 ### Configure Supabase
 
 1. Create a Supabase project at [supabase.com](https://supabase.com/)
-2. Copy `.env.example` to `.env`:
+2. Copy `.env.example` to `.env` (reference only — the app reads config at compile time):
    ```bash
    cp .env.example .env
    ```
-3. Edit `.env` with your Supabase credentials:
+3. Note your Supabase credentials from **Supabase Dashboard -> Project Settings -> API**:
    ```properties
    SUPABASE_URL=https://your-project-ref.supabase.co
    SUPABASE_ANON_KEY=your-public-anon-key
@@ -343,16 +343,36 @@ Open the project in Android Studio and let it sync. Or use the command line:
 
    These values come from **Supabase Dashboard -> Project Settings -> API**. The anon key is a public key — it is safe to embed in a mobile app **because Row Level Security protects all data**. Never put the service-role key or database password in `.env`.
 
-4. Run the database migrations in `supabase/migrations/` through the Supabase Dashboard or CLI.
+4. Pass the credentials at build/run time with `--dart-define` (the app's `SupabaseConfig` reads `String.fromEnvironment` — it does **not** read `.env` at runtime):
+   ```bash
+   flutter run -d chrome \
+     --dart-define=SUPABASE_URL=https://your-project-ref.supabase.co \
+     --dart-define=SUPABASE_ANON_KEY=your-public-anon-key
+   ```
+
+   ```bash
+   flutter build apk --release \
+     --dart-define=SUPABASE_URL=https://your-project-ref.supabase.co \
+     --dart-define=SUPABASE_ANON_KEY=your-public-anon-key
+   ```
+
+5. Run the database migrations in `supabase/migrations/` through the Supabase Dashboard or CLI.
 
 ### Run the Application
 
 ```bash
-# On a connected device or emulator
-./gradlew installDebug
+# Run in a browser for debugging (with your Supabase project)
+flutter run -d chrome \
+  --dart-define=SUPABASE_URL=https://your-project-ref.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=your-public-anon-key
 
-# Or run directly
-./gradlew :app:run
+# Or run the demo build without Supabase (offline demo mode)
+flutter run -d chrome
+
+# On a connected device or emulator
+flutter run \
+  --dart-define=SUPABASE_URL=https://your-project-ref.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=your-public-anon-key
 ```
 
 Without a configured `.env`, the app runs in **offline demo mode** with sample data instead of crashing.
@@ -448,7 +468,7 @@ Weekend/
 
 ### Completed
 
-- [x] Authentication (email/password, Google sign-in)
+- [x] Authentication (email/password)
 - [x] Profile creation and editing
 - [x] Nearby-first discovery with PostGIS
 - [x] Swipe-based discovery

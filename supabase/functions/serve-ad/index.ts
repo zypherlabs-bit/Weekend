@@ -18,13 +18,17 @@ async function authenticate(req: Request, supabase: ReturnType<typeof createClie
 async function validateAdUrl(url: string): Promise<boolean> {
   try {
     const u = new URL(url);
-    const allowedSchemes = ['https:', 'http:'];
+    // Production baseline: ad destinations must be public HTTPS URLs.
+    // Plain HTTP and loopback hosts are rejected so ads can never point
+    // at insecure or device-local endpoints.
+    if (u.protocol !== 'https:') return false;
     const allowedHosts = [
-      'weekend.app', 'localhost', '127.0.0.1',
-      'play.google.com', 'apps.apple.com',
-      'github.com', 'wikipedia.org',
+      'weekend.app',
+      'play.google.com',
+      'apps.apple.com',
+      'github.com',
+      'wikipedia.org',
     ];
-    if (!allowedSchemes.includes(u.protocol)) return false;
     if (!allowedHosts.some(h => u.hostname === h || u.hostname.endsWith('.' + h))) return false;
     return true;
   } catch {

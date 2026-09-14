@@ -1,0 +1,1 @@
+ C:\\Projects\\Weekend\\.dart_tool\\flutter_build\\36b1273b82c6cb3e6bb90faa2cbdc3eb\\dart_build_result.json:  C:\\Flutter\\bin\\cache\\dart-sdk\\version C:\\Projects\\Weekend\\.dart_tool\\package_config.json C:\\Projects\\Weekend\\pubspec.yaml c:\\projects\\weekend\\.dart_tool\\package_config.json

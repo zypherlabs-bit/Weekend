@@ -13,6 +13,9 @@
 /captures
 .externalNativeBuild
 .cxx
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
 local.properties
 .env
 .env.local
@@ -26,6 +29,7 @@ SHA256SUMS.txt
 key.properties
 debug.keystore
 supabase/.env
+dist/
 
 # Generated checksum files for release
 *release.apk.sha256

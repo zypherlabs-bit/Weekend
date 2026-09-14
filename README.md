@@ -415,7 +415,7 @@ flutter build apk --release
 
 Production APK builds are distributed through **GitHub Releases**.
 
-- Each release contains a **versioned APK** (e.g. `Weekend-v2.0.0-release.apk`) and its **SHA-256 checksum**.
+- Each release contains a **versioned APK** (e.g. `Weekend-v2.0.1-release.apk`) and its **SHA-256 checksum**.
 - **SHA-256 checksums** are provided for verification.
 - Download the latest APK from the [Download Latest APK](#android-apk) button above, or browse **[all releases](https://github.com/zypherlabs-bit/Weekend/releases)**.
 

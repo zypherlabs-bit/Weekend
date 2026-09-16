@@ -113,8 +113,11 @@ biometric stack.
 
 - CI (`.github/workflows/ci.yml`) runs analysis, tests and a release build on
   every push and pull request, so a broken or non-building commit is visible.
-- Release signing requires an untracked `android/key.properties`; without it,
-  builds fall back to debug signing (development only, never for distribution).
+- Release signing requires an untracked `android/key.properties`; without it, the
+  build signs with a **generated development key** (clearly logged as a warning)
+  so builds still complete. CI-built APKs are therefore verification builds, not
+  production artefacts — distribute only APKs signed with your own release
+  keystore, and always share the matching checksum.
 
 ---
 

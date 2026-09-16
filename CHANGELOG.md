@@ -31,6 +31,12 @@ checksum.
   fail in a fresh clone (and therefore in CI).
 - Added `tool/generate_placeholder_assets.dart` so the placeholder artwork can be
   regenerated deterministically, following the existing `tool/` convention.
+- Fixed release builds on machines without a debug keystore (including CI and
+  fresh clones). When `android/key.properties` is absent, the build now reuses or
+  generates the standard Android debug keystore at `$HOME/.android/debug.keystore`
+  instead of failing in `:app:validateSigningRelease`. Such APKs are development
+  builds signed with a generated key and are logged with an explicit warning;
+  production releases still require a real `key.properties`.
 
 ## [2.0.1] - 2026-09-13
 

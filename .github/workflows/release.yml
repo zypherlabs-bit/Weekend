@@ -57,6 +57,12 @@ jobs:
             - **Weekend-v${{ steps.prep.outputs.version }}-release.apk** — Android APK (Android 7.0 / API 24+)
             - **Weekend-v${{ steps.prep.outputs.version }}-release.apk.sha256** — SHA-256 checksum
 
+            ### Signing
+            This build is produced by CI. Unless a release keystore is configured for the
+            repository, the APK is signed with a generated development key — treat it as a
+            verification build. Verify the checksum and review the
+            [security policy](https://github.com/zypherlabs-bit/Weekend/blob/master/SECURITY.md).
+
             ### Verify the download
             ```bash
             # macOS / Linux

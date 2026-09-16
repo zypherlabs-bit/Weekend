@@ -32,8 +32,8 @@ android {
     }
 
     // Release signing is provided via an untracked key.properties file
-    // (see key.properties.example). Builds without it fall back to debug
-    // signing so CI and local development remain friction-free.
+    // (see key.properties.example). Builds without it fall back to a locally
+    // generated debug keystore so CI and fresh checkouts remain friction-free.
     val keyPropsFile = rootProject.file("key.properties")
     val keyProps = Properties()
     var keyStoreFile: File? = null
@@ -61,12 +61,44 @@ android {
                 keyAlias = keyKeyAlias
                 keyPassword = keyKeyPassword
             } else {
-                // Fallback to debug signing if release config not found
-                println("WARNING: key.properties not found or incomplete. Using debug signing for release.")
-                storeFile = signingConfigs.getByName("debug").storeFile
-                storePassword = signingConfigs.getByName("debug").storePassword
-                keyAlias = signingConfigs.getByName("debug").keyAlias
-                keyPassword = signingConfigs.getByName("debug").keyPassword
+                // Fallback: reuse (or generate) the standard Android debug
+                // keystore when key.properties is absent. The path is set
+                // explicitly so the build does not depend on how the Android
+                // Gradle Plugin resolves ANDROID_USER_HOME on a given machine.
+                println(
+                    "WARNING: key.properties not found or incomplete. " +
+                        "The release build will be signed with a generated development " +
+                        "key and must not be distributed as a production build.",
+                )
+                val debugStore = File(System.getProperty("user.home"), ".android/debug.keystore")
+                if (!debugStore.exists()) {
+                    debugStore.parentFile?.mkdirs()
+                    val generated = ProcessBuilder(
+                        listOf(
+                            "keytool", "-genkeypair",
+                            "-keystore", debugStore.absolutePath,
+                            "-storepass", "android",
+                            "-alias", "androiddebugkey",
+                            "-keypass", "android",
+                            "-keyalg", "RSA",
+                            "-keysize", "2048",
+                            "-validity", "10000",
+                            "-dname", "CN=Android Debug,O=Android,C=US",
+                        ),
+                    ).redirectErrorStream(true).start().waitFor()
+                    if (generated != 0 || !debugStore.exists()) {
+                        throw IllegalStateException(
+                            "key.properties is missing and no debug keystore could be " +
+                                "generated at ${debugStore.absolutePath}. Provide a valid " +
+                                "key.properties (see android/key.properties.example) to sign " +
+                                "the release build.",
+                        )
+                    }
+                }
+                storeFile = debugStore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
             }
         }
     }

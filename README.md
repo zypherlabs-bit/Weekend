@@ -618,7 +618,11 @@ flutter build apk --release \
 
 Release signing is picked up from an untracked `android/key.properties`
 (`storeFile`, `storePassword`, `keyAlias`, `keyKeyPassword`). Without it, the
-build falls back to debug signing so CI and local builds stay friction-free.
+build reuses — or generates — the standard Android **debug keystore** so CI and
+fresh clones stay friction-free. Such builds print an explicit warning: an APK
+signed this way is a **development build and must not be distributed as a
+production release**. Production releases must provide a real `key.properties`
+with your own keystore.
 
 **Versioning** lives in `pubspec.yaml` (`version: 2.0.1+2`). Pushing a `v*` tag
 triggers `.github/workflows/release.yml`, which builds the APK, generates

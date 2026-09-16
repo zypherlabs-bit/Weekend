@@ -1,6 +1,52 @@
 # Changelog
 
-## [2.0.0] - 2026-09-14
+All notable changes to **Weekend** are documented in this file.
+
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
+the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Releases are published as GitHub Releases with a versioned APK and a SHA-256
+checksum.
+
+## [Unreleased]
+
+### Documentation
+
+- Rewrote `README.md` as a complete project landing page: features, screenshots,
+  architecture, technology stack, installation, security, privacy, FAQ and
+  roadmap.
+- Added developer and user documentation: `docs/getting-started.md`,
+  `docs/installation.md`, `docs/architecture.md`, `docs/location-discovery.md`,
+  `docs/qr-invitations.md`, `docs/security.md`, `docs/privacy.md`,
+  `docs/testing.md`, `docs/contributing.md` and a `docs/README.md` index.
+- Rewrote `SECURITY.md` (supported versions, private reporting, scope, secret
+  handling, APK verification) and `CONTRIBUTING.md`.
+- Documented current limitations honestly instead of implying unimplemented
+  features ship today (see the *Known limitations* section of the README).
+
+### Fixed
+
+- Added the missing `assets/images/placeholder_avatar.png` artwork referenced by
+  the Explore screen. The `assets/images/` directory is now tracked, which also
+  fixes the `asset_directory_does_not_exist` warning that made `flutter analyze`
+  fail in a fresh clone (and therefore in CI).
+- Added `tool/generate_placeholder_assets.dart` so the placeholder artwork can be
+  regenerated deterministically, following the existing `tool/` convention.
+
+## [2.0.1] - 2026-09-13
+
+### Changed
+
+- Updated production APK configuration and Weekend branding for distribution.
+- Improved the referral-code experience in the invitation flow.
+- Notification taps now route to the relevant destination.
+- Weekend Plans UI improvements.
+
+### Build & repository hygiene
+
+- Removed committed build artifacts and Flutter build caches from version
+  control; local release artifacts are now git-ignored.
+
+## [2.0.0] - 2026-09-06
 
 ### Major Changes
 
@@ -67,3 +113,21 @@
 - Release APK: ~54 MB
 - Min SDK: 24 (Android 7.0)
 - Target SDK: 35
+
+## [1.0.0] - 2026-09-06
+
+### Added
+
+- First public Weekend release and GitHub landing page.
+- Android application distribution through GitHub Releases.
+
+### Notes
+
+- 1.0.0 belongs to the earlier Kotlin/Compose-era codebase. It is superseded by
+  the 2.0.x Flutter line and is no longer maintained; see the supported-versions
+  table in [SECURITY.md](SECURITY.md).
+
+[Unreleased]: https://github.com/zypherlabs-bit/Weekend/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/zypherlabs-bit/Weekend/compare/v2.0.0...v2.0.1
+[2.0.0]: https://github.com/zypherlabs-bit/Weekend/compare/v1.0.0...v2.0.0
+[1.0.0]: https://github.com/zypherlabs-bit/Weekend/releases/tag/v1.0.0

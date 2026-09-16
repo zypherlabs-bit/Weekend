@@ -4,6 +4,8 @@ Weekend's entire backend runs on Supabase: **Auth**, **PostgreSQL (+ PostGIS)**,
 
 This guide covers project setup, configuration, migrations, security, and local/production workflows.
 
+Part of the Weekend documentation set — start at [README.md](README.md).
+
 ---
 
 ## 1. Creating a Supabase project
@@ -19,21 +21,34 @@ The mobile app only ever uses the URL + anon key. The **service-role key** and *
 
 ## 2. Environment configuration
 
-Copy `.env.example` to `.env` in the repository root:
+Copy the documented template at the repository root:
+
+```bash
+cp .env.example .env
+```
 
 ```properties
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_ANON_KEY=public-anon-key-here
-GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com   # optional
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com   # optional placeholder
 ```
 
-- The [secrets-gradle-plugin](https://github.com/google/secrets-gradle-plugin) exposes these as `BuildConfig` fields; `SupabaseClient` reads them at startup.
+- **`.env` is documentation, not runtime configuration.** The Flutter app reads
+  `SUPABASE_URL` and `SUPABASE_ANON_KEY` with `String.fromEnvironment`, so supply
+  them as compile-time `--dart-define` values (see
+  [getting-started.md](getting-started.md)).
 - `.gitignore` excludes `.env` / `.env.*`. Never commit real keys.
-- If `.env` is missing or placeholder, the app runs in **offline demo mode** (sample data, no crash).
+- If the values are missing or left as placeholders, `SupabaseConfig.isConfigured`
+  is false and the app runs in **offline demo mode** (sample data, no crash).
+- `GOOGLE_CLIENT_ID` exists only as a template placeholder: no OAuth/Google
+  sign-in is implemented in the current release.
 
 ### Environment separation
 
-Use separate Supabase projects for development / staging / production and one `.env` per environment (e.g. `.env.dev`). Never point a development build at production data. For CI, set `SUPABASE_URL` and `SUPABASE_ANON_KEY` as GitHub Secrets.
+Use separate Supabase projects for development / staging / production and one
+`.env` per environment (e.g. `.env.dev`). Never point a development build at
+production data. For CI, set `SUPABASE_URL` and `SUPABASE_ANON_KEY` as GitHub
+Secrets and pass them through `--dart-define`.
 
 ## 3. Applying database migrations
 
@@ -43,9 +58,12 @@ Migrations live in `supabase/migrations/` and must be applied in order:
 |---|---|
 | `001_initial_schema.sql` | Tables, constraints, PostGIS, indexes |
 | `002_rls_policies.sql` | Row Level Security on every table |
-| `003_database_functions.sql` | Triggers (profile creation, mutual-like matching, deletion) and RPCs (`get_nearby_profiles`, `get_matches_for_user`, `get_referral_stats`, `delete_user_account`) |
+| `003_database_functions.sql` | Triggers (profile creation, mutual-like matching + referral credit, deletion) and RPCs (`get_nearby_profiles`, `get_matches_for_user`, `get_referral_stats`, `delete_user_account`) |
 | `004_storage_policies.sql` | Private `profile-photos` bucket + storage policies |
 | `005_security_hardening.sql` | Protected columns, `is_photo_verified`/`referral_code`, interest helpers |
+| `006_security_fixes.sql` | Least-privilege rewrites of the RPCs (`assert_self`), message rules (`enforce_message_rules`), photo moderation protection |
+| `007_advertisements_and_location.sql` | Advertisement tables + `ad_config` (120 s default interval), `crossed_paths`, `crossed_paths_log`, `user_location_buckets` |
+| `008_advertisements_rls_and_functions.sql` | Ad RLS plus RPCs `get_ad_for_user`, `record_ad_event`, `compute_crossed_paths` |
 
 ### Option A — Supabase CLI (recommended)
 
@@ -74,9 +92,12 @@ profiles ─┬─ profile_photos          (private bucket storage_path + modera
           ├─ blocks / reports        (safety)
           ├─ notifications
           ├─ plans ── plan_participants
-          ├─ favorite_places / crossed_paths
+          ├─ favorite_places
+          ├─ user_location_buckets ── crossed_paths ── crossed_paths_log
           └─ referrals ── referral_events
 verification_requests / moderation_events        (moderation pipeline)
+ad_campaigns ── advertisements ── ad_impressions / ad_clicks / ad_events
+ad_config                                        (ad frequency settings)
 ```
 
 Key behaviors implemented as **database triggers/functions** (never client logic):
@@ -126,17 +147,19 @@ For each table, verify with the SQL editor or two test accounts:
 
 Located in `supabase/functions/`:
 
-| Function | Purpose |
-|---|---|
-| `photo-verification` | Trusted multi-signal photo verification (human face, AI/synthetic image, illustration, screenshot…); writes the moderation/verification result server-side |
-| `account-deletion` | Secure server-side deletion of profile data + auth user |
-| `icebreaker` | AI conversation starters (Gemini key stays server-side) |
-| `date-ideas` | AI weekend date ideas |
-| `translate-message` | Message translation (provider key stays server-side) |
+| Function | Purpose | Called by the app today |
+|---|---|---|
+| `serve-ad` | Selects the next eligible advertisement for a user and records ad events server-side | **Yes** (`AdRepository`) |
+| `photo-verification` | Trusted multi-signal photo verification (human face, AI/synthetic image, illustration, screenshot…); writes the moderation/verification result server-side | Yes (verification flow) |
+| `account-deletion` | Secure server-side deletion of profile data + auth user | Backend ready; the in-app trigger is on the roadmap |
+| `icebreaker` | AI conversation starters (Gemini key stays server-side) | Not surfaced in the UI yet |
+| `date-ideas` | AI weekend date ideas | Not surfaced in the UI yet |
+| `translate-message` | Message translation (provider key stays server-side) | Repository call exists; the in-chat action is on the roadmap |
 
 Deploy:
 
 ```bash
+supabase functions deploy serve-ad
 supabase functions deploy photo-verification
 supabase functions deploy account-deletion
 # ... or all at once:
@@ -153,7 +176,18 @@ supabase db reset             # re-run all migrations against local DB
 supabase functions serve      # serve Edge Functions locally
 ```
 
-Then point `.env` at the local URLs (e.g. `http://10.0.2.2:54321`) and run the app from Android Studio.
+Then run the Flutter app against the local stack. On an Android emulator the host
+machine is reachable at `10.0.2.2`, so pass the local URL as a compile-time
+define:
+
+```bash
+flutter run \
+  --dart-define=SUPABASE_URL=http://10.0.2.2:54321 \
+  --dart-define=SUPABASE_ANON_KEY=<local anon key printed by `supabase start`>
+```
+
+`supabase/config.example.toml` shows the expected local configuration shape;
+never commit `supabase/config.toml` or `supabase/.env`.
 
 ## 10. Production checklist
 
@@ -162,9 +196,11 @@ Then point `.env` at the local URLs (e.g. `http://10.0.2.2:54321`) and run the a
 - [ ] Storage bucket private with policies from `004_storage_policies.sql`
 - [ ] Realtime replication enabled for `messages` + `notifications`
 - [ ] Edge Functions deployed; `GEMINI_API_KEY` set as a server secret only
-- [ ] Email confirmation enabled in Auth settings (or handled explicitly)
-- [ ] Separate dev/staging/prod projects; app `.env` points at the right one
+- [ ] `ad_config` reviewed (the default ad interval is 120 seconds)
+- [ ] Email confirmation settings chosen deliberately in Auth
+- [ ] Separate dev/staging/prod projects; the build points at the right one via `--dart-define`
 - [ ] No service-role key or DB password in the repo, `.env`, CI logs or APK
+- [ ] A retention policy defined for logs such as `crossed_paths_log`
 
 ## 11. Backups & recovery
 
@@ -172,4 +208,16 @@ Then point `.env` at the local URLs (e.g. `http://10.0.2.2:54321`) and run the a
 - **Migrations:** all schema lives in version-controlled SQL — recovery means re-running `supabase db push` on a restored/blank database.
 - **Storage:** objects are not covered by SQL dumps; periodically sync the `profile-photos` bucket to object storage if photo durability matters to you.
 - **Rollback:** never edit applied migrations — add a new numbered migration that reverses the change, then `supabase db push`.
-- **Monitoring:** watch Dashboard → Logs (API, Auth, Storage, Realtime, Functions). Never log passwords, tokens, or private message contents.
+- **Monitoring:** watch Dashboard → Logs (API, Auth, Storage, Realtime, Functions). Never log passwords, tokens or private message contents.
+
+---
+
+## Related documents
+
+- [getting-started.md](getting-started.md) — clone, configure and run the app
+- [architecture.md](architecture.md) — how the client talks to this backend
+- [security.md](security.md) — RLS, secrets and release integrity
+- [privacy.md](privacy.md) — what is stored and why
+- [location-discovery.md](location-discovery.md) — PostGIS discovery and geohashing
+- [qr-invitations.md](qr-invitations.md) — invitations and referrals
+- [testing.md](testing.md) — including `supabase/test/rls_test.sql`

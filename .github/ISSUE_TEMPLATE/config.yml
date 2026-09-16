@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Weekend documentation
+    url: https://github.com/zypherlabs-bit/Weekend/tree/master/docs
+    about: Installation, architecture, Supabase setup, location discovery, privacy and security guides.
+  - name: Download the latest Weekend APK
+    url: https://github.com/zypherlabs-bit/Weekend/releases/latest
+    about: Get the current Android build, its SHA-256 checksum and install instructions.
+  - name: Report a security vulnerability (private)
+    url: https://github.com/zypherlabs-bit/Weekend/security/advisories/new
+    about: Please report vulnerabilities privately instead of opening a public issue.

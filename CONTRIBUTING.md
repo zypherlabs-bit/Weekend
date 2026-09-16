@@ -1,121 +1,176 @@
 # Contributing to Weekend
 
-Thank you for your interest in contributing to Weekend! We welcome contributions from the community and are grateful for your help in making this project better.
+Thanks for your interest in **Weekend** — a free, open-source dating and social
+discovery app for Android (Flutter + Kotlin + Supabase). Contributions of all
+kinds are welcome: code, documentation, tests, design and translations.
 
-## Code of Conduct
+This project and everyone participating in it is governed by the
+[Code of Conduct](CODE_OF_CONDUCT.md). By taking part you agree to uphold it.
 
-This project and everyone participating in it is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+Deeper guidance lives in [docs/contributing.md](docs/contributing.md).
 
-## How Can I Contribute?
+---
 
-### Reporting Bugs
+## Quick start
 
-Before creating a bug report, please check the [existing issues](https://github.com/zypherlabs-bit/Weekend/issues) to see if the problem has already been reported.
+```bash
+git clone https://github.com/zypherlabs-bit/Weekend.git
+cd Weekend
+flutter pub get
+flutter run            # offline demo mode works with no backend
 
-When creating a bug report, please include:
+flutter analyze        # must be clean
+flutter test           # must pass
+```
 
-- **Clear title and description**
-- **Steps to reproduce** the issue
-- **Expected behavior** vs **actual behavior**
-- **Screenshots** if applicable
-- **Device information** (Android version, device model)
-- **App version**
+- Flutter **3.41.9** (bundles Dart 3.11.5), JDK **17**, Android SDK for the build.
+- Full setup, including connecting a Supabase project:
+  [docs/getting-started.md](docs/getting-started.md) and
+  [docs/supabase.md](docs/supabase.md).
 
-### Suggesting Features
+---
 
-Feature requests are welcome! Please provide:
+## Ways to help
 
-- **Clear title and description**
-- **Use case** — What problem does this solve?
-- **Proposed solution** — How should it work?
-- **Alternatives considered**
+| Contribution | How |
+|--------------|-----|
+| Bug report | Open an issue with the [bug template](.github/ISSUE_TEMPLATE/bug_report.md) |
+| Feature idea | Open an issue with the [feature template](.github/ISSUE_TEMPLATE/feature_request.md) |
+| Documentation | Pull request against `README.md`, `docs/` or the policy files |
+| Code change | Pull request with tests and an updated changelog entry |
+| Security issue | **Privately**, following [SECURITY.md](SECURITY.md) |
 
-### Pull Requests
+---
 
-1. **Fork** the repository
-2. **Create a branch** from `main`:
+## Reporting bugs
+
+Before filing, search [existing issues](https://github.com/zypherlabs-bit/Weekend/issues).
+
+Include:
+
+- clear title and description,
+- steps to reproduce,
+- expected vs actual behaviour,
+- screenshots if useful,
+- Android version, device model and app version,
+- whether Supabase was configured (offline demo mode behaves differently).
+
+Never paste real credentials, tokens or another person's data.
+
+---
+
+## Suggesting features
+
+Describe the problem first, then the proposed solution, then alternatives you
+considered. Features that fit Weekend's existing direction (location-aware,
+privacy-first, free, open source) are easiest to accept. If a feature is not
+implemented yet, please say so rather than describing it as shipped.
+
+---
+
+## Development workflow
+
+1. **Fork** the repository.
+2. **Branch** from the default branch (`master`):
    ```bash
    git checkout -b feature/your-feature-name
    ```
-3. **Make your changes**
-4. **Follow coding standards** (see below)
-5. **Test your changes** thoroughly
-6. **Commit** with clear, descriptive messages
-7. **Push** to your fork
-8. **Open a Pull Request** against `main`
+3. **Implement** the change following the conventions below.
+4. **Verify**:
+   ```bash
+   flutter analyze
+   flutter test
+   ```
+5. **Commit** with a clear message (imperative mood, ≤ 72 characters, explain why).
+6. **Push** to your fork and **open a pull request** using the repository
+   template. Reference the issue it fixes.
 
-## Coding Standards
+Keep pull requests focused: one logical change each.
 
-### Dart
+---
 
-- Follow [Dart Style Guide](https://dart.dev/guides/language/effective-dart/style)
-- Use meaningful variable and function names
-- Keep functions small and focused
-- Add comments for complex logic
-- Use camelCase for variables and methods
-- Use PascalCase for types and classes
-- Prefer const constructors where possible
-- Avoid unnecessary nullable types
+## Coding standards
 
-### Flutter
+**Dart / Flutter**
 
-- Follow [Flutter Widget Catalog](https://docs.flutter.dev/development/ui/widgets) guidelines
-- Use Material 3 components where possible
-- Keep widgets small and reusable
-- Extract reusable widgets
-- Use Riverpod for state management
-- Follow the project's folder structure (`lib/features/`, `lib/services/`, `lib/repositories/`, `lib/models/`, `lib/widgets/`)
+- Follow [Effective Dart](https://dart.dev/effective-dart) and
+  [Flutter style](https://docs.flutter.dev/development/ui/widgets) guidelines.
+- Respect the layering: screens in `lib/features/`, data access in
+  `lib/repositories/`, platform logic in `lib/services/`, state in
+  `lib/providers/`, data classes in `lib/models/`, shared UI in `lib/widgets/`.
+- Repositories must handle the offline demo case (`SupabaseConfig.client == null`)
+  by returning empty results instead of throwing.
+- Import geolocator as `geolocator` to avoid clashing with `LocationPreferences`.
+- Prefer `const` constructors and small, extracted widgets.
+- Never hardcode secrets: client config comes from `--dart-define`
+  (`String.fromEnvironment`); provider keys belong to Edge Function secrets.
 
-### Git Commits
+**SQL migrations**
 
-- Use present tense: "Add feature" not "Added feature"
-- Use imperative mood: "Move cursor to..." not "Moves cursor to..."
-- Limit the first line to 72 characters
-- Reference issues and PRs where appropriate
+- Migrations are append-only: add a new numbered file, never edit an applied one.
+- Enable RLS on new tables and add policies in the same change.
+- Cross-user reads belong in `security definer` functions that verify the caller
+  (`assert_self`) rather than trusting a client-supplied user id.
 
-Example:
-```
-Add photo verification UI
+**Edge Functions (Deno/TypeScript)**
 
-- Implement camera capture screen
-- Add verification status indicator
-- Update profile screen to show verification badge
+- Authenticate the caller's JWT before doing work.
+- Keep provider keys in function secrets and never return them to the client.
 
-Fixes #123
-```
+---
 
-## Development Setup
-
-1. Clone the repository
-2. Open in Android Studio or VS Code with Flutter extension
-3. Create `.env` from `.env.example`
-4. Run `flutter pub get`
-5. Run the app on an emulator or device
-
-## Testing
-
-Before submitting a PR:
+## Tests
 
 ```bash
-# Run lint analysis
 flutter analyze
-
-# Run tests
 flutter test
-
-# Build the app
-flutter build apk --release
+flutter test --coverage
 ```
 
-## Code Review Process
+Add or extend tests for behavioural changes. Useful starting points:
+`test/geohash_test.dart`, `test/location_service_test.dart`,
+`test/ad_service_timer_test.dart`, `test/ad_card_test.dart`,
+`test/discovery_repository_test.dart`. For schema or policy changes, add a case
+to `supabase/test/rls_test.sql`. See [docs/testing.md](docs/testing.md).
 
-- All submissions require review before merging
-- Maintainers will review PRs within a reasonable timeframe
-- Changes may be requested before approval
-- Once approved, a maintainer will merge the PR
+---
 
-## Questions?
+## Documentation
 
-Feel free to open an [issue](https://github.com/zypherlabs-bit/Weekend/issues) or start a [discussion](https://github.com/zypherlabs-bit/Weekend/discussions).
+If you change behaviour that documentation describes, update the relevant page in
+the same pull request — `README.md`, `docs/*.md`, `SECURITY.md`,
+`CONTRIBUTING.md`, and add an entry to `CHANGELOG.md`. Document only what the code
+actually does; mark planned work as planned.
+
+Screenshots in `docs/screenshots/` must show the current UI and contain no
+personal data, credentials or third-party branding.
+
+---
+
+## Security rules for contributors
+
+- Never commit `.env` files, keystores, `key.properties`, API keys, tokens or
+  personal data.
+- Do not weaken RLS, column protection or authentication to make a feature
+  convenient.
+- Do not log tokens, passwords or message contents.
+- Report vulnerabilities privately via [SECURITY.md](SECURITY.md).
+
+---
+
+## Code review
+
+- All changes are reviewed before merging.
+- Maintainers review as time allows; focused pull requests move faster.
+- Requested changes are normal — update the same branch.
+- CI (`.github/workflows/ci.yml`) must be green before merge.
+
+---
+
+## Questions
+
+Open an [issue](https://github.com/zypherlabs-bit/Weekend/issues) with the
+question label, or start a discussion if Discussions are enabled for the
+repository.
 
 Thank you for contributing to Weekend!

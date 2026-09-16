@@ -50,23 +50,36 @@ jobs:
           body: |
             ## Weekend v${{ steps.prep.outputs.version }}
 
-            Production release of Weekend - Flutter Edition.
+            Weekend — Make Every Weekend Brighter.
+            Free, open-source dating and social discovery app for Android (Flutter + Supabase).
 
             ### Download
-            - **Weekend-v${{ steps.prep.outputs.version }}-release.apk** - Versioned production APK
-            - **Weekend-v${{ steps.prep.outputs.version }}-release.apk.sha256** - SHA-256 checksum for verification
+            - **Weekend-v${{ steps.prep.outputs.version }}-release.apk** — Android APK (Android 7.0 / API 24+)
+            - **Weekend-v${{ steps.prep.outputs.version }}-release.apk.sha256** — SHA-256 checksum
 
-            ### Verify
-            SHA-256 checksum is provided with the APK.
+            ### Verify the download
+            ```bash
+            # macOS / Linux
+            shasum -a 256 Weekend-v${{ steps.prep.outputs.version }}-release.apk
+            ```
+            ```powershell
+            # Windows (PowerShell)
+            Get-FileHash .\Weekend-v${{ steps.prep.outputs.version }}-release.apk -Algorithm SHA256
+            ```
+            Compare the result with the published `.sha256` asset before installing.
 
             ### Install
-            1. Download the APK
-            2. Enable "Install from unknown sources" if prompted
-            3. Open the APK to install
+            1. Download the APK.
+            2. Open it and confirm Android's standard "install from this source" prompt.
+            3. Launch Weekend and sign in, or create an account.
+
+            Full instructions: https://github.com/zypherlabs-bit/Weekend/blob/master/docs/installation.md
+            Documentation: https://github.com/zypherlabs-bit/Weekend/tree/master/docs
+            Security policy: https://github.com/zypherlabs-bit/Weekend/blob/master/SECURITY.md
 
             ### Requirements
             - Android 7.0+ (API 24)
-            - ~55 MB storage
+            - arm64-v8a / armeabi-v7a / x86_64
           files: |
             Weekend-v${{ steps.prep.outputs.version }}-release.apk
             Weekend-v${{ steps.prep.outputs.version }}-release.apk.sha256

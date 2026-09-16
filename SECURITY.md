@@ -1,69 +1,139 @@
 # Security Policy
 
-## Supported Versions
+Weekend is an **open-source** dating and social discovery app for Android
+(Flutter + Kotlin + Supabase). Because the source code and the shipped APK can be
+inspected by anyone, the project assumes a fully untrusted client and enforces
+authorization server-side. See [docs/security.md](docs/security.md) for the full
+technical description.
 
-| Version | Supported |
-|---------|-----------|
-| 1.0.x   | ✅        |
+---
 
-## Reporting a Vulnerability
+## Supported versions
 
-If you discover a security vulnerability in Weekend, please report it responsibly:
+| Version | Supported | Notes |
+|---------|-----------|-------|
+| 2.0.x | ✅ | Current release line (`v2.0.1` is the latest published release) |
+| 1.0.x | ❌ | Historic Kotlin/Compose-era release, no longer maintained |
 
-1. **Do not** open a public GitHub issue for security vulnerabilities
-2. Email the maintainers with a detailed description of the vulnerability
-3. Include steps to reproduce and potential impact
-4. Allow reasonable time for a fix before public disclosure
+Security fixes are applied to the latest released version and to `master`.
 
-## Security Architecture
+---
 
-Weekend is designed with security as a core principle:
+## Reporting a vulnerability
 
-### Backend Security
-- **Supabase Auth**: Email/password authentication with email verification
-- **Row Level Security (RLS)**: Enabled on every database table
-- **Server-side authorization**: All security-critical decisions happen server-side
-- **PostGIS**: Location data is processed server-side; exact coordinates are never exposed
+Please report security issues **privately**.
 
-### Client Security
-- **No secrets in code**: Only public anon keys are embedded in the app
-- **HTTPS only**: All network traffic uses TLS
-- **Session management**: Secure token-based authentication
-- **Input validation**: Both client-side (UX) and server-side (security)
+1. **Do not** open a public GitHub issue for a vulnerability.
+2. Use GitHub's private reporting: go to the [Security tab](https://github.com/zypherlabs-bit/Weekend/security)
+   and choose **Report a vulnerability**, or contact the maintainers directly.
+3. Include:
+   - a description of the issue and its impact,
+   - steps to reproduce (a minimal proof of concept helps),
+   - the affected version or commit,
+   - any suggested mitigation.
+4. Allow reasonable time for a fix before public disclosure.
 
-### Data Privacy
-- **Location privacy**: Only approximate distance/city is shown to other users
-- **No exact GPS**: Raw coordinates are never stored in accessible form
-- **Account deletion**: Complete server-side data removal
-- **Photo verification**: AI-powered real-human verification
+Please do not access, modify or exfiltrate other users' data while researching,
+and do not run denial-of-service or automated mass-scanning tests against a live
+backend.
 
-### Anti-Abuse
-- **Rate limiting**: API request throttling via Supabase
-- **Scam detection**: Layered AI-powered scam detection
-- **Photo moderation**: Multi-signal image verification
-- **Block/report**: User-driven moderation tools
+### What to expect
 
-## Security Limitations
+- Acknowledgement of the report as soon as maintainers are available.
+- An assessment, and either a fix or a reasoned explanation.
+- Credit in the release notes if you would like it (opt-in).
 
-Weekend is open source. The security model assumes:
+There is no bug-bounty programme and no payment for reports.
 
-- Attackers can inspect the APK and source code
-- Attackers can inspect network traffic
-- Attackers can call APIs directly
+---
 
-Therefore, **all authorization is enforced server-side** via Supabase RLS and database constraints. The client is considered fully inspectable.
+## Scope
 
-**Weekend cannot be:**
-- 100% reverse-engineering proof
-- Impossible to DDoS
-- Completely immune to all attacks
+**In scope**
 
-Instead, Weekend implements **defense-in-depth** with server-side enforcement, rate limiting, and abuse detection.
+- The Android app in this repository (`lib/`, `android/`)
+- The database schema, RPCs, triggers and RLS policies (`supabase/migrations/`)
+- The Edge Functions (`supabase/functions/`)
+- The build and release pipeline (`.github/workflows/`)
+- Privacy-sensitive behaviour such as location handling and photo access
+
+**Out of scope**
+
+- Any third-party Supabase deployment that is not the one this project
+  configures
+- Supabase platform vulnerabilities (report those to Supabase)
+- Denial of service, spam, or social-engineering against maintainers
+- Findings that require physical access to an unlocked device
+- Missing security-hardening headers on non-existent services
+
+---
+
+## Security model in brief
+
+| Control | Implementation |
+|---------|----------------|
+| Row Level Security | Enabled on every table (`002_rls_policies.sql`), hardened in `006_security_fixes.sql` |
+| Caller verification | Cross-user RPCs are `security definer` and call `assert_self(auth.uid())` |
+| Protected columns | `protect_profile_columns`, `protect_photo_moderation`, `sync_photo_verified` |
+| Message integrity | `enforce_message_rules` rejects non-member or blocked-party inserts |
+| Private storage | Private `profile-photos` bucket with per-user folder policies and moderation gating |
+| Authenticated functions | Edge Functions verify the caller's JWT before doing work |
+| Secrets | Only the anon key ships in the app; provider keys live in function secrets |
+| Transport | HTTPS only, `usesCleartextTraffic="false"`, network security config |
+| Local data | `flutter_secure_storage` (Android Keystore); `allowBackup="false"` |
+| Biometric lock | `local_auth` with device-credential fallback; no biometric templates stored |
+| Release integrity | Every release ships a `.sha256` checksum; CI builds the APK |
+| Ad integrity | Events validated server-side; destination URLs must be HTTPS |
+
+### Verifying a release APK
+
+```powershell
+Get-FileHash .\Weekend-v2.0.1-release.apk -Algorithm SHA256   # Windows
+```
+
+```bash
+shasum -a 256 Weekend-v2.0.1-release.apk                      # macOS / Linux
+```
+
+Compare with the published `Weekend-v2.0.1-release.apk.sha256` asset.
+
+---
+
+## Handling secrets
+
+Never commit: `.env` files, the `service_role` key, database passwords, provider
+API keys, keystores (`*.jks`, `*.keystore`), or `key.properties`. These paths are
+git-ignored; if you find a secret committed anywhere in the repository or its
+history, please report it privately rather than opening a public issue.
+
+---
 
 ## Dependencies
 
-Key security-relevant dependencies are kept up to date. Run `./gradlew dependencies` to review.
+Keep the Flutter dependency tree current and review advisories:
 
-## Responsible Disclosure
+```bash
+flutter pub outdated            # outdated direct and transitive packages
+flutter pub deps                # full dependency graph
+flutter pub upgrade --major-versions   # apply major upgrades (review first)
+```
 
-We appreciate responsible security research and will acknowledge contributors who help improve Weekend's security.
+CI installs dependencies from `pubspec.yaml` / `pubspec.lock` on every push, so a
+broken or unavailable package fails the build.
+
+---
+
+## Known limitations
+
+Weekend does not claim to be immune to every class of attack. In particular, the
+in-app account-deletion action is not yet wired to the server-side deletion
+function, and email confirmation depends on the operator's Supabase Auth
+settings. The [Known limitations](README.md#known-limitations) section lists the
+current gaps in the product itself.
+
+---
+
+## Responsible disclosure
+
+We appreciate responsible security research and will acknowledge researchers who
+help improve Weekend's security. Thank you for reporting privately.

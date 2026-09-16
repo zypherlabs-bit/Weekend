@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/supabase_config.dart';
 import '../../providers/weekend_provider.dart';
 import '../../models/models.dart';
@@ -22,10 +23,12 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
   bool _showLocationBanner = false;
-  final List<Widget> _screens = [
+  List<Widget> get _screens => [
     const DiscoverScreen(),
     const ExploreScreen(),
-    const MatchesScreen(),
+    MatchesScreen(
+      onDiscoverTap: () => setState(() => _currentIndex = 0),
+    ),
     const ProfileTabScreen(),
   ];
   @override
@@ -37,9 +40,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    ref.read(weekendProvider.notifier).loadDiscoveryProfiles();
-    ref.read(weekendProvider.notifier).loadReferralData();
-    ref.read(weekendProvider.notifier).loadCrossedPaths();
+    final notifier = ref.read(weekendProvider.notifier);
+    notifier.loadCurrentUser();
+    notifier.loadDiscoveryProfiles();
+    notifier.loadReferralData();
+    notifier.loadCrossedPaths();
+    notifier.loadMatches();
+    notifier.loadPlans();
     final hasPerms = await LocationService.hasPermission();
     if (mounted) {
       setState(() {
@@ -716,7 +723,8 @@ class _EmptyState extends StatelessWidget {
 }
 
 class MatchesScreen extends ConsumerWidget {
-  const MatchesScreen({super.key});
+  final VoidCallback? onDiscoverTap;
+  const MatchesScreen({super.key, this.onDiscoverTap});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(weekendProvider);
@@ -729,7 +737,9 @@ class MatchesScreen extends ConsumerWidget {
                 title: 'No Matches Yet',
                 subtitle: 'Start discovering profiles to find your matches!',
                 actionLabel: 'Discover',
-                onAction: () {},
+                onAction:
+                    onDiscoverTap ??
+                        () {},
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -749,6 +759,33 @@ class ProfileTabScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const ProfileScreen();
+  }
+}
+
+/// Avatar that gracefully handles profiles with no photos yet — it renders a
+/// placeholder icon instead of attempting to load an empty image URL.
+class _MatchAvatar extends StatelessWidget {
+  final List<String> photos;
+  const _MatchAvatar({required this.photos});
+
+  @override
+  Widget build(BuildContext context) {
+    final photo = photos.isNotEmpty ? photos.first : null;
+    if (photo == null || photo.isEmpty) {
+      return CircleAvatar(
+        radius: 28,
+        backgroundColor: const Color(0xFF2E244A),
+        child: Icon(
+          Icons.person_rounded,
+          color: Colors.white.withValues(alpha: 0.6),
+          size: 28,
+        ),
+      );
+    }
+    return CircleAvatar(
+      radius: 28,
+      backgroundImage: CachedNetworkImageProvider(photo),
+    );
   }
 }
 
@@ -773,12 +810,7 @@ class MatchCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundImage: NetworkImage(
-                match.user.photos.firstOrNull ?? '',
-              ),
-            ),
+            _MatchAvatar(photos: match.user.photos),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

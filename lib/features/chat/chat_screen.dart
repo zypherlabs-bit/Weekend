@@ -54,11 +54,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final text = _messageController.text.trim();
     _messageController.clear();
     _scrollToBottom();
-    await _messageRepository.sendMessage(widget.match.id, text);
-
-    // Update local state
-    if (mounted) {
-      ref.read(weekendProvider.notifier).sendMessage(widget.match.id, text);
+    try {
+      // Persisted via the provider; the persisted row is delivered to both
+      // participants through the Realtime subscription — no local echo.
+      await ref.read(weekendProvider.notifier).sendMessage(
+            widget.match.id,
+            text,
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Message failed to send. Check your connection.'),
+            backgroundColor: Color(0xFFFF4B72),
+          ),
+        );
+      }
+      // Restore the text so the user can retry without retyping.
+      if (mounted) setState(() => _messageController.text = text);
     }
   }
 

@@ -6,6 +6,11 @@ import '../models/models.dart';
 
 class ProfileRepository {
   SupabaseClient? get _client => SupabaseConfig.client;
+
+  /// Fetch the real profile row for [userId].
+  ///
+  /// Column list is explicit because raw location columns on `profiles` are
+  /// not grantable to clients (migration 006) — a `select *` would fail.
   Future<UserProfile?> fetchUserProfile(String userId) async {
     final client = _client;
 
@@ -14,14 +19,25 @@ class ProfileRepository {
     try {
       final response = await client
           .from('profiles')
-          .select()
+          .select(
+            'id, display_name, date_of_birth, gender, bio, city, '
+            'relationship_intent, occupation, education, favorite_music, '
+            'ideal_weekend, verification_status, is_photo_verified, '
+            'trust_score, referral_code',
+          )
           .eq('id', userId)
           .single();
+
+      final dateOfBirth = DateTime.tryParse(
+        response['date_of_birth'] as String? ?? '',
+      );
 
       return UserProfile(
         id: response['id'] ?? userId,
         name: response['display_name'] ?? 'User',
-        age: 18,
+        age: dateOfBirth == null
+            ? 18
+            : DateTime.now().difference(dateOfBirth).inDays ~/ 365,
         gender: response['gender'] ?? 'Prefer not to say',
         photos: const [],
         city: response['city'] ?? '',
@@ -34,12 +50,14 @@ class ProfileRepository {
         favoritePlaces: const [],
         languages: const [],
         prompts: const [],
-        isPhotoVerified: response['verification_status'] == 'verified',
+        isPhotoVerified:
+            (response['is_photo_verified'] as bool? ?? false) ||
+            response['verification_status'] == 'verified',
         trustScore: response['trust_score'] ?? 50,
         crossedPathsCount: 0,
-        favoriteMusic: '',
-        idealWeekend: '',
-        referralCode: '',
+        favoriteMusic: response['favorite_music'] ?? '',
+        idealWeekend: response['ideal_weekend'] ?? '',
+        referralCode: response['referral_code'] ?? '',
       );
     } catch (e) {
       return null;

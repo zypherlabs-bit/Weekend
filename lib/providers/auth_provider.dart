@@ -22,22 +22,6 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
 
   SupabaseClient? get _client => SupabaseConfig.client;
 
-  bool get _isDemo => !SupabaseConfig.isConfigured;
-
-  static UserProfile _demoUser(String name) => UserProfile(
-    id: 'demo-user',
-    name: name,
-    age: 26,
-    gender: 'Man',
-    photos: const [
-      'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=800&q=80',
-    ],
-    city: 'Pune',
-    relationshipIntent: 'Dating & Weekend Plans',
-    interests: const ['Specialty Coffee', 'Hiking', 'Indie Music', 'Cycling'],
-    referralCode: 'WEEKEND-MX07',
-  );
-
   UserProfile _profileFromAuth(User user, String fallbackName) {
     return UserProfile(
       id: user.id,
@@ -92,19 +76,20 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     String password,
     String fullName,
   ) async {
-    if (_isDemo) {
-      state = WeekendAuthState(
+    final client = _client;
+    if (client == null) {
+      state = state.copyWith(
         isLoading: false,
-        isAuthenticated: true,
-        emailVerified: true,
-        user: _demoUser(fullName.isEmpty ? 'Max' : fullName),
+        error:
+            'Weekend is not connected to a backend. '
+            'Build with SUPABASE_URL and SUPABASE_ANON_KEY to enable accounts.',
       );
       return;
     }
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final response = await _client!.auth.signUp(
+      final response = await client.auth.signUp(
         email: email,
         password: password,
         data: {'full_name': fullName},
@@ -141,19 +126,20 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
   }
 
   Future<void> signInWithEmail(String email, String password) async {
-    if (_isDemo) {
-      state = WeekendAuthState(
+    final client = _client;
+    if (client == null) {
+      state = state.copyWith(
         isLoading: false,
-        isAuthenticated: true,
-        emailVerified: true,
-        user: _demoUser('Max'),
+        error:
+            'Weekend is not connected to a backend. '
+            'Build with SUPABASE_URL and SUPABASE_ANON_KEY to enable accounts.',
       );
       return;
     }
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final response = await _client!.auth.signInWithPassword(
+      final response = await client.auth.signInWithPassword(
         email: email,
         password: password,
       );
@@ -182,19 +168,20 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
   }
 
   Future<void> signInAnonymously() async {
-    if (_isDemo) {
-      state = WeekendAuthState(
+    final client = _client;
+    if (client == null) {
+      state = state.copyWith(
         isLoading: false,
-        isAuthenticated: true,
-        emailVerified: true,
-        user: _demoUser('Max'),
+        error:
+            'Weekend is not connected to a backend. '
+            'Build with SUPABASE_URL and SUPABASE_ANON_KEY to enable accounts.',
       );
       return;
     }
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final response = await _client!.auth.signInAnonymously();
+      final response = await client.auth.signInAnonymously();
 
       if (response.user != null) {
         state = state.copyWith(

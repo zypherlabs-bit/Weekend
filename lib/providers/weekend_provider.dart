@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,11 +7,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
 import '../models/models.dart';
-import '../services/demo_data.dart';
 
 import '../repositories/discovery_repository.dart';
+import '../repositories/match_repository.dart';
+import '../repositories/message_repository.dart';
+import '../repositories/plan_repository.dart';
 import '../repositories/profile_repository.dart';
-import '../repositories/ad_repository.dart';
+import '../repositories/safety_repository.dart';
 import '../services/location_service.dart';
 
 final weekendProvider = StateNotifierProvider<WeekendNotifier, WeekendState>((
@@ -18,7 +22,10 @@ final weekendProvider = StateNotifierProvider<WeekendNotifier, WeekendState>((
   return WeekendNotifier(
     discoveryRepository: DiscoveryRepository(),
     profileRepository: ProfileRepository(),
-    adRepository: AdRepository(),
+    matchRepository: MatchRepository(),
+    messageRepository: MessageRepository(),
+    planRepository: PlanRepository(),
+    safetyRepository: SafetyRepository(),
   );
 });
 
@@ -70,54 +77,39 @@ class WeekendState {
   });
 
   factory WeekendState.initial() {
+    // A neutral placeholder for the signed-in user. It carries no fabricated
+    // personal data: the real profile is loaded from Supabase as soon as the
+    // user is authenticated (see [WeekendNotifier.loadCurrentUser]).
     return WeekendState(
       currentUser: UserProfile(
-        id: 'user_me',
-        name: 'Max',
-        age: 26,
-        gender: 'Man',
-        photos: const [
-          'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=800&q=80',
-        ],
-        city: 'Pune',
+        id: 'me',
+        name: '',
+        age: 18,
+        gender: 'Prefer not to say',
+        photos: const [],
+        city: '',
         distanceKm: 0,
-        bio:
-            'Tech builder, specialty coffee addict, and spontaneous weekend trekker.',
-        occupation: 'Software Developer',
-        education: 'University Graduate',
-        relationshipIntent: 'Dating & Weekend Plans',
-        interests: const [
-          'Specialty Coffee',
-          'Hiking',
-          'Indie Music',
-          'Cycling',
-          'Travel',
-          'F1',
-        ],
-        favoritePlaces: const [
-          'Blue Tokai Cafe',
-          'Koregaon Park',
-          'ARAI Hills',
-        ],
-        languages: const ['English', 'Hindi'],
-        prompts: const [
-          ProfilePrompt(
-            prompt: 'My ideal weekend is...',
-            answer: 'Trying a new brunch spot followed by an outdoor trek.',
-          ),
-          ProfilePrompt(
-            prompt: 'Let\'s go...',
-            answer: 'To that hidden sourdough bakery in Camp!',
-          ),
-        ],
-        isPhotoVerified: true,
-        trustScore: 98,
-        crossedPathsCount: 7,
-        favoriteMusic: 'Coldplay, Prateek Kuhad, Tame Impala',
-        idealWeekend: 'Acoustic gigs & hill climbs',
-        referralCode: 'WEEKEND-MX07',
+        bio: '',
+        occupation: '',
+        education: '',
+        relationshipIntent: '',
+        interests: const [],
+        favoritePlaces: const [],
+        languages: const [],
+        prompts: const [],
+        isPhotoVerified: false,
+        trustScore: 50,
+        crossedPathsCount: 0,
+        favoriteMusic: '',
+        idealWeekend: '',
+        referralCode: '',
+        commonInterests: const [],
+        weekendAvailability: const {},
+        voiceIntroUrl: '',
+        compatibilityExplanation: '',
+        distanceDisplay: '',
       ),
-      referralData: const ReferralData(code: 'WEEKEND-MX07'),
+      referralData: const ReferralData(code: ''),
       selectedMode: DiscoveryMode.forYou,
     );
   }
@@ -167,29 +159,71 @@ class WeekendState {
 
 class WeekendNotifier extends StateNotifier<WeekendState> {
   final DiscoveryRepository _discoveryRepo;
+  final ProfileRepository _profileRepo;
+  final MatchRepository _matchRepo;
+  final MessageRepository _messageRepo;
+  final PlanRepository _planRepo;
+  final SafetyRepository _safetyRepo;
 
   WeekendNotifier({
     required DiscoveryRepository discoveryRepository,
     required ProfileRepository profileRepository,
-    required AdRepository adRepository,
+    required MatchRepository matchRepository,
+    required MessageRepository messageRepository,
+    required PlanRepository planRepository,
+    required SafetyRepository safetyRepository,
   }) : _discoveryRepo = discoveryRepository,
+       _profileRepo = profileRepository,
+       _matchRepo = matchRepository,
+       _messageRepo = messageRepository,
+       _planRepo = planRepository,
+       _safetyRepo = safetyRepository,
+       super(WeekendState.initial());
 
-       super(WeekendState.initial()) {
-    _seedDemoIfNeeded();
-  }
   SupabaseClient? get _client => SupabaseConfig.client;
 
-  bool get _isDemo => !SupabaseConfig.isConfigured;
+  bool get _hasBackend => _client != null;
 
-  void _seedDemoIfNeeded() {
-    if (_isDemo) {
+  /// Load the authenticated user's real profile from Supabase and replace the
+  /// neutral placeholder. Never fabricates data when the fetch fails — the UI
+  /// simply keeps showing whatever is genuinely known.
+  Future<void> loadCurrentUser() async {
+    if (!_hasBackend) return;
+    final userId = SupabaseConfig.currentUserId;
+    try {
+      final profile = await _profileRepo.fetchUserProfile(userId);
+      if (profile == null) return;
+      final photos = await _discoveryRepo.fetchProfilePhotos(userId);
+      final interests = await _discoveryRepo.fetchUserInterests(userId);
       state = state.copyWith(
-        deckProfiles: DemoData.sampleDeck(),
-        matches: DemoData.sampleMatches(state.currentUser),
-        chatMessages: DemoData.sampleMessages(),
-        plans: DemoData.samplePlans(),
-        crossedPaths: DemoData.sampleCrossedPaths(),
+        currentUser: profile.copyWith(photos: photos, interests: interests),
       );
+    } catch (e) {
+      debugPrint('Failed to load current user profile: $e');
+    }
+  }
+
+  /// Load the signed-in user's real matches from Supabase.
+  Future<void> loadMatches() async {
+    if (!_hasBackend) return;
+    final userId = SupabaseConfig.currentUserId;
+    try {
+      final matches = await _matchRepo.fetchMatches(userId);
+      state = state.copyWith(matches: matches);
+    } catch (e) {
+      debugPrint('Failed to load matches: $e');
+    }
+  }
+
+  /// Load the signed-in user's real Weekend Plans from Supabase.
+  Future<void> loadPlans() async {
+    if (!_hasBackend) return;
+    final userId = SupabaseConfig.currentUserId;
+    try {
+      final plans = await _planRepo.fetchPlans(userId);
+      state = state.copyWith(plans: plans);
+    } catch (e) {
+      debugPrint('Failed to load plans: $e');
     }
   }
 
@@ -198,38 +232,45 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
   }
 
   Future<void> loadDiscoveryProfiles() async {
+    if (!_hasBackend) {
+      // No backend configured: never fabricate profiles. The Discover screen
+      // renders its genuine empty state.
+      state = state.copyWith(deckProfiles: const [], swipedProfileIds: const []);
+      return;
+    }
     final userId = SupabaseConfig.currentUserId;
 
     final prefs = state.locationPreferences;
 
     final mode = _modeToString(state.selectedMode);
 
-    if (_isDemo) {
-      state = state.copyWith(
-        deckProfiles: DemoData.sampleDeck(),
-        swipedProfileIds: const [],
-      );
-      return;
-    }
     final client = _client;
 
     if (client == null) return;
 
-    final profiles = await _discoveryRepo.loadDiscoveryProfiles(
-      userId: userId,
-      maxDistanceKm: prefs.discoveryRadiusKm.toDouble(),
-      limit: 20,
-      mode: mode,
-    );
+    try {
+      final profiles = await _discoveryRepo.loadDiscoveryProfiles(
+        userId: userId,
+        maxDistanceKm: prefs.discoveryRadiusKm.toDouble(),
+        limit: 20,
+        mode: mode,
+      );
 
-    final enriched = await Future.wait(
-      profiles.map((p) async {
-        final photos = await _discoveryRepo.fetchProfilePhotos(p.id);
-        return p.copyWith(photos: photos);
-      }),
-    );
+      final enriched = await Future.wait(
+        profiles.map((p) async {
+          final photos = await _discoveryRepo.fetchProfilePhotos(p.id);
+          return p.copyWith(photos: photos);
+        }),
+      );
 
-    state = state.copyWith(deckProfiles: enriched, swipedProfileIds: const []);
+      state = state.copyWith(
+        deckProfiles: enriched,
+        swipedProfileIds: const [],
+      );
+    } catch (e) {
+      debugPrint('Failed to load discovery profiles: $e');
+      state = state.copyWith(deckProfiles: const []);
+    }
   }
 
   String _modeToString(DiscoveryMode mode) {
@@ -280,7 +321,7 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
   }
 
   Future<void> updateLocationIfNeeded() async {
-    if (_isDemo) return;
+    if (!_hasBackend) return;
     final prefs = state.locationPreferences;
     if (!prefs.locationDiscoveryEnabled && !prefs.nearbyDiscoveryEnabled) {
       return;
@@ -305,14 +346,12 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
       city: city,
     );
 
-    if (_isDemo) return;
-
     final crossed = await _discoveryRepo.fetchCrossedPaths(userId);
     state = state.copyWith(crossedPaths: crossed);
   }
 
   Future<void> loadCrossedPaths() async {
-    if (_isDemo) return;
+    if (!_hasBackend) return;
 
     final userId = SupabaseConfig.currentUserId;
 
@@ -320,72 +359,69 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     state = state.copyWith(crossedPaths: crossed);
   }
 
-  Future<void> swipeRight(
+  /// Express interest in [profile]. Persists the like server-side and returns
+  /// `true` when the like completes a mutual match (the match itself is
+  /// created transactionally by the `check_mutual_like` database trigger).
+  ///
+  /// Duplicate submissions are guarded: a profile already swiped in this
+  /// session is ignored, and a repeat like is absorbed by the database's
+  /// unique constraint.
+  Future<bool> swipeRight(
     UserProfile profile, {
     bool isStandOut = false,
   }) async {
-    if (_isDemo) {
-      state = state.copyWith(
-        deckProfiles: state.deckProfiles
-            .where((p) => p.id != profile.id)
-            .toList(),
-        likedProfiles: [...state.likedProfiles, profile.id],
-        swipedProfileIds: [...state.swipedProfileIds, profile.id],
-      );
-      return;
-    }
-    final client = _client;
+    if (state.swipedProfileIds.contains(profile.id)) return false;
 
-    if (client == null) return;
-
-    final userId = SupabaseConfig.currentUserId;
-
-    if (isStandOut) {
-      try {
-        await client.from('likes').insert({
-          'liker_id': userId,
-          'liked_id': profile.id,
-          'is_stand_out': true,
-        });
-      } catch (e) {
-        // ignore for demo
-      }
-    } else {
-      try {
-        await client.from('likes').insert({
-          'liker_id': userId,
-          'liked_id': profile.id,
-        });
-
-        final existingLike = await client
-            .from('likes')
-            .select()
-            .eq('liker_id', profile.id)
-            .eq('liked_id', userId)
-            .maybeSingle();
-
-        if (existingLike != null) {
-          state = state.copyWith(recentMatchCelebration: profile);
-        }
-      } catch (e) {
-        // ignore for demo
-      }
-    }
-
+    // Optimistically remove the card so the UI stays responsive on slow
+    // networks and the same card can never be submitted twice.
     state = state.copyWith(
-      deckProfiles: state.deckProfiles
-          .where((p) => p.id != profile.id)
-          .toList(),
+      deckProfiles:
+          state.deckProfiles.where((p) => p.id != profile.id).toList(),
       likedProfiles: [...state.likedProfiles, profile.id],
       swipedProfileIds: [...state.swipedProfileIds, profile.id],
     );
+
+    if (!_hasBackend) return false;
+
+    final userId = SupabaseConfig.currentUserId;
+
+    try {
+      final matched = await _matchRepo.recordLike(
+        userId,
+        profile.id,
+        isStandOut: isStandOut,
+      );
+      if (matched) {
+        state = state.copyWith(recentMatchCelebration: profile);
+        unawaited(loadMatches());
+      }
+      return matched;
+    } catch (e) {
+      debugPrint('Failed to record like for ${profile.id}: $e');
+      return false;
+    }
   }
 
-  void swipeLeft(String profileId) {
+  /// Pass on a profile. The pass is persisted server-side so the profile
+  /// stays excluded from future discovery results.
+  Future<void> swipeLeft(String profileId) async {
+    if (state.swipedProfileIds.contains(profileId)) return;
+
     state = state.copyWith(
-      deckProfiles: state.deckProfiles.where((p) => p.id != profileId).toList(),
+      deckProfiles:
+          state.deckProfiles.where((p) => p.id != profileId).toList(),
       swipedProfileIds: [...state.swipedProfileIds, profileId],
     );
+
+    if (!_hasBackend) return;
+
+    final userId = SupabaseConfig.currentUserId;
+
+    try {
+      await _matchRepo.recordPass(userId, profileId);
+    } catch (e) {
+      debugPrint('Failed to record pass for $profileId: $e');
+    }
   }
 
   void clearCelebration() {
@@ -411,22 +447,36 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     );
   }
 
+  /// Persist a chat message through Supabase. Delivery to both participants
+  /// happens via the Realtime stream; no local echo is fabricated here (the
+  /// persisted row arrives through the subscription).
   Future<void> sendMessage(String matchId, String text) async {
-    final userId = SupabaseConfig.currentUserId;
+    if (!_hasBackend) {
+      // Without a backend the message cannot be delivered. Keep the local
+      // echo so the chat UI remains functional for offline development, but
+      // never pretend the message was delivered.
+      final userId = SupabaseConfig.currentUserId;
 
-    final newMsg = ChatMessage(
-      id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-      senderId: userId,
-      text: text,
-      timestamp: DateTime.now().millisecondsSinceEpoch,
-    );
+      final newMsg = ChatMessage(
+        id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
+        senderId: userId,
+        text: text,
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+      );
 
-    final updatedMessages = Map<String, List<ChatMessage>>.from(
-      state.chatMessages,
-    );
-    updatedMessages[matchId] = [...(updatedMessages[matchId] ?? []), newMsg];
+      final updatedMessages = Map<String, List<ChatMessage>>.from(
+        state.chatMessages,
+      );
+      updatedMessages[matchId] = [
+        ...(updatedMessages[matchId] ?? []),
+        newMsg,
+      ];
 
-    state = state.copyWith(chatMessages: updatedMessages);
+      state = state.copyWith(chatMessages: updatedMessages);
+      return;
+    }
+
+    await _messageRepo.sendMessage(matchId, text);
   }
 
   void openChat(MatchItem match) {
@@ -437,18 +487,47 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     // Handled by navigation
   }
 
-  void blockUser(String userId) {
+  /// Block a user. Persisted to the `blocks` table; blocked users disappear
+  /// from discovery and are prevented from messaging by server-side rules.
+  Future<void> blockUser(String userId) async {
+    if (userId == 'me' || userId.isEmpty) return;
+
     state = state.copyWith(
       blockedUserIds: {...state.blockedUserIds, userId},
-      deckProfiles: state.deckProfiles.where((p) => p.id != userId).toList(),
+      deckProfiles:
+          state.deckProfiles.where((p) => p.id != userId).toList(),
       matches: state.matches.where((m) => m.user.id != userId).toList(),
     );
+
+    if (!_hasBackend) return;
+
+    try {
+      await _safetyRepo.blockUser(SupabaseConfig.currentUserId, userId);
+    } catch (e) {
+      debugPrint('Failed to persist block for $userId: $e');
+    }
   }
 
-  void reportUser(String userId, String reason) {
-    blockUser(userId);
+  /// Report a user for [reason]. The report is persisted to the `reports`
+  /// table for moderation, and the reported user is blocked as a safety
+  /// measure.
+  Future<void> reportUser(String userId, String reason) async {
+    if (_hasBackend && userId != 'me' && userId.isNotEmpty) {
+      try {
+        await _safetyRepo.reportUser(
+          SupabaseConfig.currentUserId,
+          userId,
+          reason,
+        );
+      } catch (e) {
+        debugPrint('Failed to persist report for $userId: $e');
+      }
+    }
+    await blockUser(userId);
   }
 
+  /// Create a Weekend Plan. Persisted to the `plans` table; the list is
+  /// refreshed from the database so the UI always reflects real data.
   Future<void> createPlan(
     String title,
     String category,
@@ -457,8 +536,10 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     String description,
   ) async {
     final user = state.currentUser;
-    final newPlan = WeekendPlan(
-      id: 'plan_${DateTime.now().millisecondsSinceEpoch}',
+
+    // Optimistic insert with a temporary id so the card appears instantly.
+    final tempPlan = WeekendPlan(
+      id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
       creatorId: user.id,
       creatorName: user.name,
       creatorPhoto: user.photos.firstOrNull ?? '',
@@ -471,10 +552,36 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
       isJoined: true,
     );
 
-    state = state.copyWith(plans: [newPlan, ...state.plans]);
+    state = state.copyWith(plans: [tempPlan, ...state.plans]);
+
+    if (!_hasBackend) return;
+
+    try {
+      await _planRepo.createPlan(
+        userId: SupabaseConfig.currentUserId,
+        title: title,
+        category: category,
+        venue: venue,
+        time: time,
+        description: description,
+      );
+      await loadPlans();
+    } catch (e) {
+      // Roll the optimistic insert back so the UI never shows a plan that
+      // was not actually created.
+      state = state.copyWith(
+        plans: state.plans.where((p) => p.id != tempPlan.id).toList(),
+      );
+      debugPrint('Failed to create plan: $e');
+      rethrow;
+    }
   }
 
-  void togglePlanJoin(String planId) {
+  /// Join or leave a Weekend Plan. Persisted to `plan_participants` and
+  /// re-synced from the database.
+  Future<void> togglePlanJoin(String planId) async {
+    if (planId.startsWith('temp_')) return;
+
     final updatedPlans = state.plans.map((plan) {
       if (plan.id == planId) {
         return plan.copyWith(
@@ -490,6 +597,20 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     }).toList();
 
     state = state.copyWith(plans: updatedPlans);
+
+    if (!_hasBackend) return;
+
+    try {
+      await _planRepo.togglePlanJoin(
+        SupabaseConfig.currentUserId,
+        planId,
+        state.currentUser.name,
+      );
+      await loadPlans();
+    } catch (e) {
+      debugPrint('Failed to toggle plan join for $planId: $e');
+      await loadPlans();
+    }
   }
 
   void resetDeck() {
@@ -607,7 +728,7 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
   }
 
   Future<void> loadReferralData() async {
-    if (_isDemo) return;
+    if (!_hasBackend) return;
 
     final client = _client;
 

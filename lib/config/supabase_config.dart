@@ -42,7 +42,10 @@ class SupabaseConfig {
     }
   }
 
-  /// Returns the authenticated user id, or a stable demo id when offline.
+  /// Returns the authenticated user id.
+  ///
+  /// Falls back to a neutral, non-personal sentinel when no client or session
+  /// exists; call sites guard on [isConfigured]/[client] before using it.
   static String get currentUserId =>
-      client?.auth.currentUser?.id ?? 'demo-user';
+      client?.auth.currentUser?.id ?? 'unauthenticated';
 }

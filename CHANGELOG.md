@@ -7,6 +7,50 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are published as GitHub Releases with a versioned APK and a SHA-256
 checksum.
 
+## [2.1.0] — 2026-09-16
+
+### Fixed — production data integrity
+
+- **Removed every source of fabricated users.** The offline sample deck,
+  sample matches, sample chats, sample plans and sample crossed paths
+  (`DemoData`) are deleted. Builds without a backend now show genuine empty
+  states instead of fictional people, and unconfigured builds show an honest
+  "backend not configured" message instead of a simulated login.
+- **The placeholder signed-in user no longer carries fabricated identity.**
+  The real profile is loaded from Supabase on app start.
+
+### Fixed — matching and discovery
+
+- Matches are now actually loaded (via the `get_matches_for_user` RPC) — the
+  Matches tab previously stayed empty in production even after real matches.
+- Passes are persisted to the `passes` table so passed profiles stay excluded.
+- Like/match logic consolidated through `MatchRepository`: the client only
+  records the like; the `check_mutual_like` database trigger transactionally
+  creates the match, conversation and referral credit. Client-side writes to
+  `matches` (which RLS forbids) are removed.
+- Duplicate swipes are guarded against double-submission.
+
+### Fixed — plans, safety, chat
+
+- Weekend Plans create/join/leave now persist to `plans`/`plan_participants`
+  with optimistic UI and authoritative re-sync; creator names resolve from
+  real profiles.
+- Block and Report now persist to `blocks`/`reports` (mapped to the schema's
+  `report_type` enum) instead of touching only local state.
+- Chat sends no longer double-write (local echo + repository); failures now
+  surface a retry-able snackbar and restore the draft.
+
+### Changed — release engineering
+
+- Release builds embed `SUPABASE_URL`/`SUPABASE_ANON_KEY` from repository
+  secrets as compile-time defines; the anon key is client-safe and protected
+  by RLS. No service-role or privileged credential is ever embedded.
+- `profiles` reads use explicit column lists compatible with the
+  column-level grants introduced in migration 006.
+
+### Unreleased (previous)
+
+
 ## [Unreleased]
 
 ### Documentation

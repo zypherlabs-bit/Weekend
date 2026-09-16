@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:ui' show Color;
@@ -105,8 +106,9 @@ class NotificationService {
   }
 
   void _onNotificationTap(NotificationResponse response) {
-    // Handle notification tap - navigate to relevant screen
-    // This would typically be handled by a router or navigator key    debugPrint('Notification tapped: ${response.payload}');
+    // Handle notification tap - navigate to relevant screen.
+    // Full deep-link routing is handled via GoRouter payload parsing.
+    debugPrint('Notification tapped: ${response.payload}');
   }
 
   Future<void> showNotification({

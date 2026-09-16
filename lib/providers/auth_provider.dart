@@ -35,6 +35,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     city: 'Pune',
     relationshipIntent: 'Dating & Weekend Plans',
     interests: const ['Specialty Coffee', 'Hiking', 'Indie Music', 'Cycling'],
+    referralCode: 'WEEKEND-MX07',
   );
 
   UserProfile _profileFromAuth(User user, String fallbackName) {

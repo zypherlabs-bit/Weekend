@@ -5,7 +5,6 @@ import '../../models/models.dart';
 
 class PlansScreen extends ConsumerWidget {
   const PlansScreen({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(weekendProvider);
@@ -196,20 +195,20 @@ class _PlanCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            height: 120,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
-              image: DecorationImage(
-                image: NetworkImage(
-                  plan.creatorPhoto.isNotEmpty ? plan.creatorPhoto : '',
+          if (plan.creatorPhoto.isNotEmpty) ...[
+            Container(
+              height: 120,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
                 ),
-                fit: BoxFit.cover,
+                image: DecorationImage(
+                  image: NetworkImage(plan.creatorPhoto),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
+          ],
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -355,17 +354,19 @@ class _PlanCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Toggle plan join
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: plan.isJoined
-                          ? const Color(0xFF2E244A)
-                          : const Color(0xFFFF4B72),
-                      foregroundColor: Colors.white,
+                  child: Consumer(
+                    builder: (context, ref, _) => ElevatedButton(
+                      onPressed: () => ref
+                          .read(weekendProvider.notifier)
+                          .togglePlanJoin(plan.id),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: plan.isJoined
+                            ? const Color(0xFF2E244A)
+                            : const Color(0xFFFF4B72),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text(plan.isJoined ? 'Leave Plan' : 'Join Plan'),
                     ),
-                    child: Text(plan.isJoined ? 'Leave Plan' : 'Join Plan'),
                   ),
                 ),
               ],

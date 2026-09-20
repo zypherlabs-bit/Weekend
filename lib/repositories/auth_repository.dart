@@ -60,6 +60,32 @@ class AuthRepository {
     await client.auth.updateUser(UserAttributes(password: newPassword));
   }
 
+  /// Delete the current user's account through the `account-deletion` Edge
+  /// Function. The privileged cleanup (auth user, profile rows, storage
+  /// objects, sessions) runs server-side; the client only forwards the
+  /// caller's own access token so the function can verify identity.
+  ///
+  /// Returns `true` when the backend confirms deletion. Throws on failure so
+  /// the UI can surface the real backend error instead of a fake success.
+  Future<bool> deleteAccount({String reason = 'user_request'}) async {
+    final client = _client;
+    if (client == null) return false;
+    final session = client.auth.currentSession;
+    final userId = client.auth.currentUser?.id;
+    if (session == null || userId == null) return false;
+    final response = await client.functions.invoke(
+      'account-deletion',
+      body: {'userId': userId, 'reason': reason},
+    );
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      if (data['success'] == true) return true;
+      final error = data['error']?.toString() ?? 'Account deletion failed.';
+      throw Exception(error);
+    }
+    return response.status == 200;
+  }
+
   // ---------------------------------------------------------------- MFA/2FA
 
   /// List enrolled MFA factors for the current user.

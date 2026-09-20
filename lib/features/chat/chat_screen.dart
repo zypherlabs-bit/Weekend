@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../config/supabase_config.dart';
 import '../../providers/weekend_provider.dart';
 
 import '../../models/models.dart';
@@ -142,33 +143,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Voice call with ${widget.match.user.name} — coming soon'), backgroundColor: Colors.grey.shade600),
-                );
-              }
-            },
-            icon: const Icon(Icons.call_rounded, color: Colors.white),
+            tooltip: 'Voice calls are not available in this release',
+            onPressed: null,
+            icon: const Icon(Icons.call_rounded, color: Colors.white38),
           ),
               PopupMenuButton(
             icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
             color: const Color(0xFF2E244A),
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'date_ideas',
-                child: Text(
-                  'Smart Date Ideas',
-                  style: TextStyle(color: Color(0xFFFF9966)),
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'share_date',
-                child: Text(
-                  'Share My Date',
-                  style: TextStyle(color: Color(0xFFFF4B72)),
-                ),
-              ),
               const PopupMenuItem(
                 value: 'block',
                 child: Text('Block User', style: TextStyle(color: Colors.grey)),
@@ -181,30 +163,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
               ),
             ],
-            onSelected: (value) {
+            onSelected: (value) async {
               switch (value) {
                 case 'block':
-                  ref.read(weekendProvider.notifier).blockUser(widget.match.user.id);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Blocked ${widget.match.user.name}'), backgroundColor: const Color(0xFF4CAF50)),
-                    );
-                  }
+                  await ref.read(weekendProvider.notifier).blockUser(widget.match.user.id);
+                  if (!mounted) return;
+                  if (context.mounted) Navigator.pop(context);
                   break;
                 case 'report':
-                  ref.read(weekendProvider.notifier).reportUser(widget.match.user.id, 'Inappropriate behavior');
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Report submitted against ${widget.match.user.name}'), backgroundColor: const Color(0xFF4CAF50)),
-                    );
-                  }
+                  await ref.read(weekendProvider.notifier).reportUser(widget.match.user.id, 'Inappropriate behavior');
+                  if (!mounted) return;
+                  if (context.mounted) Navigator.pop(context);
                   break;
-                default:
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('$value — coming soon'), backgroundColor: Colors.grey.shade600),
-                    );
-                  }
               }
             },
           ),
@@ -344,26 +314,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
             child: Row(
               children: [
-                IconButton(
-                  onPressed: () {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Photo sharing — coming soon'), backgroundColor: Colors.grey.shade600),
-                      );
-                    }
-                  },
-
-                  icon: Icon(
-                    Icons.image_rounded,
-                    color: Colors.white.withValues(alpha: 0.6),
-                  ),
-                ),
                 Expanded(
                   child: TextField(
                     controller: _messageController,
+                    enabled: SupabaseConfig.isConfigured,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: 'Type a message...',
+                      hintText: SupabaseConfig.isConfigured
+                          ? 'Type a message...'
+                          : 'Connect a backend to enable messaging',
 
                       hintStyle: TextStyle(
                         color: Colors.white.withValues(alpha: 0.45),

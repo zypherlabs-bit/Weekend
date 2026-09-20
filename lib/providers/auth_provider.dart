@@ -384,6 +384,30 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     }
   }
 
+  /// Delete the current account via the server-side `account-deletion`
+  /// function, then clear local auth state. Returns `true` when deleted.
+  Future<bool> deleteAccount({String reason = 'user_request'}) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final deleted = await _repo.deleteAccount(reason: reason);
+      if (!deleted) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Account deletion is unavailable without a backend connection.',
+        );
+        return false;
+      }
+      state = const WeekendAuthState(isAuthenticated: false, isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString().replaceAll('Exception: ', ''),
+      );
+      return false;
+    }
+  }
+
   /// Cancel a pending MFA challenge (back to the sign-in screen).
   void cancelMfaChallenge() {
     final client = _client;

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 import '../safety/safety_dialogs.dart';
 import '../../services/biometric_auth_service.dart';
+import '../../providers/auth_provider.dart';
 import '../../repositories/auth_repository.dart';
 import '../../config/supabase_config.dart';
 
@@ -233,19 +234,36 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
               'Language',
               style: TextStyle(color: Colors.white),
             ),
+            subtitle: const Text(
+              'English (more languages planned)',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
             trailing: const Icon(
               Icons.chevron_right_rounded,
               color: Colors.white60,
             ),
-            onTap: () {},
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('English is the supported language in this release.'),
+                ),
+              );
+            },
           ),
           ListTile(
             title: const Text('Privacy', style: TextStyle(color: Colors.white)),
+            subtitle: const Text(
+              'Discovery radius and visibility in Location settings',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
             trailing: const Icon(
               Icons.chevron_right_rounded,
               color: Colors.white60,
             ),
-            onTap: () {},
+            onTap: () {
+              Navigator.pop(context);
+              if (context.mounted) context.push('/location-settings');
+            },
           ),
           ListTile(
             title: const Text(
@@ -294,32 +312,64 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   }
 
   void _showDeleteAccountDialog(BuildContext dialogContext) {
+    final messenger = ScaffoldMessenger.of(dialogContext);
     showDialog(
       context: dialogContext,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text(
-          'Delete Account',
-          style: TextStyle(color: Colors.red),
-        ),
-        content: const Text(
-          'This action cannot be undone. All your data will be permanently deleted.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+      builder: (context) {
+        var deleting = false;
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            backgroundColor: const Color(0xFF1C162E),
+            title: const Text(
+              'Delete Account',
+              style: TextStyle(color: Colors.red),
+            ),
+            content: const Text(
+              'This action cannot be undone. All your data will be permanently deleted.',
+              style: TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: deleting ? null : () => Navigator.pop(context),
+                child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+              ),
+              TextButton(
+                onPressed: deleting
+                    ? null
+                    : () async {
+                        setState(() => deleting = true);
+                        final deleted = await ref
+                            .read(authStateProvider.notifier)
+                            .deleteAccount();
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                        if (deleted) {
+                          if (dialogContext.mounted) {
+                            dialogContext.go('/onboarding');
+                          }
+                        } else {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                ref.read(authStateProvider).error ??
+                                    'Account deletion failed. Try again.',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                child: deleting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Delete', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Handle account deletion
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

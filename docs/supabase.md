@@ -64,6 +64,7 @@ Migrations live in `supabase/migrations/` and must be applied in order:
 | `006_security_fixes.sql` | Least-privilege rewrites of the RPCs (`assert_self`), message rules (`enforce_message_rules`), photo moderation protection |
 | `007_advertisements_and_location.sql` | Advertisement tables + `ad_config` (120 s default interval), `crossed_paths`, `crossed_paths_log`, `user_location_buckets` |
 | `008_advertisements_rls_and_functions.sql` | Ad RLS plus RPCs `get_ad_for_user`, `record_ad_event`, `compute_crossed_paths` |
+| `009_account_deletion_service_role.sql` | Service-role `EXECUTE` grant + ownership-guard bypass for `delete_user_account` (fixes the Edge Function deletion path) |
 
 ### Option A — Supabase CLI (recommended)
 
@@ -151,7 +152,7 @@ Located in `supabase/functions/`:
 |---|---|---|
 | `serve-ad` | Selects the next eligible advertisement for a user and records ad events server-side | **Yes** (`AdRepository`) |
 | `photo-verification` | Trusted multi-signal photo verification (human face, AI/synthetic image, illustration, screenshot…); writes the moderation/verification result server-side | Yes (verification flow) |
-| `account-deletion` | Secure server-side deletion of profile data + auth user | Backend ready; the in-app trigger is on the roadmap |
+| `account-deletion` | Secure server-side deletion of profile data + auth user | Wired: Settings → Delete Account; verify with [verification-2fa-deletion.md](verification-2fa-deletion.md) |
 | `icebreaker` | AI conversation starters (Gemini key stays server-side) | Not surfaced in the UI yet |
 | `date-ideas` | AI weekend date ideas | Not surfaced in the UI yet |
 | `translate-message` | Message translation (provider key stays server-side) | Repository call exists; the in-chat action is on the roadmap |

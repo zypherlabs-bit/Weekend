@@ -17,6 +17,7 @@ than shipped, it is marked as such.
 | [location-discovery.md](location-discovery.md) | Developers | Discovery modes, radius, travel mode, geohashing and location privacy |
 | [qr-invitations.md](qr-invitations.md) | Developers | The QR invitation payload, validation order and referral flow |
 | [security.md](security.md) | Developers / security researchers | Threat model, server-side enforcement, secrets, release integrity |
+| [verification-2fa-deletion.md](verification-2fa-deletion.md) | Operators / QA | Executable live-project verification plan for TOTP 2FA and account deletion |
 | [privacy.md](privacy.md) | Users / developers | What data Weekend handles and the privacy controls available |
 | [testing.md](testing.md) | Contributors | Test suites, commands, conventions |
 | [contributing.md](contributing.md) | Contributors | Workflow, standards, review expectations |

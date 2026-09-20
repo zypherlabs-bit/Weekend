@@ -53,6 +53,18 @@ checksum.
 
 ## [Unreleased]
 
+### Security
+
+- Added `009_account_deletion_service_role.sql`: the live `account-deletion`
+  path could never succeed — 006 revoked the service role's `EXECUTE` on
+  `delete_user_account`, and `assert_self` raises for service-role calls
+  (`auth.uid()` is null without a user JWT). The service role now gets an
+  explicit grant and bypasses `assert_self`; the Edge Function still
+  authenticates the caller's JWT and rejects cross-account deletion, and
+  direct authenticated callers remain guarded.
+- Added the operator verification plan for TOTP 2FA and account deletion
+  (`docs/verification-2fa-deletion.md`).
+
 ### Documentation
 
 - Rewrote `README.md` as a complete project landing page: features, screenshots,

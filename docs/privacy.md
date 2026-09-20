@@ -117,11 +117,13 @@ on the roadmap (`show_me_to` and read receipts are not yet wired to the app).
 - Profile data is removed by the server-side deletion path (`delete_user_account`
   RPC and the `account-deletion` Edge Function), including related rows and the
   auth user.
-- **Current limitation:** the in-app "Delete account" confirmation is not yet
-  wired to that function (see
-  [Known limitations](../README.md#known-limitations)). Until it is, deletion has
-  to be requested from the operator of the backend you use, or performed by a
-  maintainer or administrator.
+- In-app deletion is wired: **Settings → Delete Account** invokes the
+  `account-deletion` Edge Function with the caller's own access token; the
+  function verifies identity server-side before performing the privileged
+  cleanup (profile rows, auth user, storage objects, sessions). Operators
+  should verify the end-to-end flow with
+  [verification-2fa-deletion.md](verification-2fa-deletion.md) before opening
+  a deployment to users.
 - The schema does not define automatic expiry jobs (for example, timed deletion
   of `crossed_paths_log` or old messages). Self-hosting operators should define a
   retention policy appropriate to their users.

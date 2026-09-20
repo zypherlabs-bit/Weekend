@@ -106,9 +106,10 @@ package (`com.weekend.app`) and signing key are unchanged.
 ## 7. Uninstall
 
 Long-press the Weekend icon → **App info** → **Uninstall**. Uninstalling removes
-the local app data; to remove server-side account data, see the account deletion
-notes in [privacy.md](privacy.md) and the current status of the in-app deletion
-flow in the [Known limitations](../README.md#known-limitations) section.
+the local app data; for server-side account data use **Settings → Delete
+Account** (see the account deletion notes in
+[privacy.md](privacy.md)); operators can verify the flow with
+[verification-2fa-deletion.md](verification-2fa-deletion.md).
 
 ---
 

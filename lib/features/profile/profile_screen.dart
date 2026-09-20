@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -205,8 +205,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       ),
                       TextButton.icon(
-                        onPressed: () {
-                          // Copy referral code
+                        onPressed: () async {
+                          final ctx = context;
+                          final code = user.referralCode;
+                          if (code.isEmpty) {
+                            return;
+                          }
+                          await Clipboard.setData(ClipboardData(text: code));
+                          if (!ctx.mounted) return;
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(content: Text('Referral code copied: $code'), backgroundColor: const Color(0xFF4CAF50)),
+                          );
                         },
                         icon: const Icon(
                           Icons.copy_rounded,

@@ -39,7 +39,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             .read(authStateProvider.notifier)
             .signUpWithEmail(email, password, name);
       }
-      if (mounted && ref.read(authStateProvider).isAuthenticated) {
+      if (!mounted) return;
+      final authState = ref.read(authStateProvider);
+      if (authState.needsMfaChallenge) {
+        context.go('/mfa-challenge');
+      } else if (authState.isAuthenticated) {
         context.go('/home');
       }
     } catch (e) {

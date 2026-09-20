@@ -142,10 +142,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Voice call with ${widget.match.user.name} — coming soon'), backgroundColor: Colors.grey.shade600),
+                );
+              }
+            },
             icon: const Icon(Icons.call_rounded, color: Colors.white),
           ),
-          PopupMenuButton(
+              PopupMenuButton(
             icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
             color: const Color(0xFF2E244A),
             itemBuilder: (context) => [
@@ -176,7 +182,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ],
             onSelected: (value) {
-              // Handle menu actions
+              switch (value) {
+                case 'block':
+                  ref.read(weekendProvider.notifier).blockUser(widget.match.user.id);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Blocked ${widget.match.user.name}'), backgroundColor: const Color(0xFF4CAF50)),
+                    );
+                  }
+                  break;
+                case 'report':
+                  ref.read(weekendProvider.notifier).reportUser(widget.match.user.id, 'Inappropriate behavior');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Report submitted against ${widget.match.user.name}'), backgroundColor: const Color(0xFF4CAF50)),
+                    );
+                  }
+                  break;
+                default:
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('$value — coming soon'), backgroundColor: Colors.grey.shade600),
+                    );
+                  }
+              }
             },
           ),
         ],
@@ -316,7 +345,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             child: Row(
               children: [
                 IconButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Photo sharing — coming soon'), backgroundColor: Colors.grey.shade600),
+                      );
+                    }
+                  },
 
                   icon: Icon(
                     Icons.image_rounded,

@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 import '../safety/safety_dialogs.dart';
 import '../../services/biometric_auth_service.dart';
+import '../../repositories/auth_repository.dart';
+import '../../config/supabase_config.dart';
 
-class SettingsDialog extends StatefulWidget {
+/// Weekend account settings: privacy toggles, biometric app lock,
+/// account security (2FA / change password / sessions / delete).
+class SettingsDialog extends ConsumerStatefulWidget {
   const SettingsDialog({super.key});
 
   @override
-  State<SettingsDialog> createState() => _SettingsDialogState();
+  ConsumerState<SettingsDialog> createState() => _SettingsDialogState();
 }
 
-class _SettingsDialogState extends State<SettingsDialog> {
+class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   bool _pushNotifications = true;
 
   bool _darkMode = true;
@@ -18,11 +25,15 @@ class _SettingsDialogState extends State<SettingsDialog> {
   bool _biometricLock = false;
 
   bool _isLoadingBiometric = true;
+  bool _isMfaEnabled = false;
+  bool _isLoadingMfa = true;
+  final _authRepository = AuthRepository();
 
   @override
   void initState() {
     super.initState();
     _loadBiometricSetting();
+    _loadMfaStatus();
   }
 
   Future<void> _loadBiometricSetting() async {
@@ -32,6 +43,22 @@ class _SettingsDialogState extends State<SettingsDialog> {
         _biometricLock = enabled;
         _isLoadingBiometric = false;
       });
+    }
+  }
+
+  Future<void> _loadMfaStatus() async {
+    try {
+      final enabled = await _authRepository.isMfaEnabled();
+      if (mounted) {
+        setState(() {
+          _isMfaEnabled = enabled;
+          _isLoadingMfa = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingMfa = false);
+      }
     }
   }
 
@@ -65,14 +92,52 @@ class _SettingsDialogState extends State<SettingsDialog> {
     }
   }
 
+  Future<void> _changePassword() async {
+    final email = SupabaseConfig.client?.auth.currentUser?.email;
+    if (email == null || email.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No email on this account — cannot send reset link.'),
+        ),
+      );
+      return;
+    }
+    try {
+      await _authRepository.resetPassword(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Password reset link sent to $email.')),
+      );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not send reset email. Try again.')),
+      );
+    }
+  }
+
+  Future<void> _openSecurity() async {
+    Navigator.pop(context);
+    if (context.mounted) {
+      context.push('/mfa-enrollment');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: const Color(0xFF1C162E),
       title: const Text('Settings', style: TextStyle(color: Colors.white)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           SwitchListTile(
             title: const Text(
               'Push Notifications',
@@ -125,6 +190,46 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
           ListTile(
             title: const Text(
+              'Security & 2FA',
+              style: TextStyle(color: Colors.white),
+            ),
+            subtitle: _isLoadingMfa
+                ? const Text(
+                    'Checking…',
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  )
+                : Text(
+                    _isMfaEnabled
+                        ? 'Two-factor authentication is ON'
+                        : 'Two-factor authentication is OFF',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+            trailing: const Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white60,
+            ),
+            onTap: _openSecurity,
+          ),
+          ListTile(
+            title: const Text(
+              'Change password',
+              style: TextStyle(color: Colors.white),
+            ),
+            subtitle: const Text(
+              'Email a reset link',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            trailing: const Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white60,
+            ),
+            onTap: _changePassword,
+          ),
+          ListTile(
+            title: const Text(
               'Language',
               style: TextStyle(color: Colors.white),
             ),
@@ -168,12 +273,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
               Icons.chevron_right_rounded,
               color: Colors.red,
             ),
-            onTap: () {
+             onTap: () {
               Navigator.pop(context);
               _showDeleteAccountDialog(context);
             },
           ),
-        ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -187,9 +293,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
     );
   }
 
-  void _showDeleteAccountDialog(BuildContext context) {
+  void _showDeleteAccountDialog(BuildContext dialogContext) {
     showDialog(
-      context: context,
+      context: dialogContext,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1C162E),
         title: const Text(

@@ -7,6 +7,8 @@ import '../config/supabase_config.dart';
 
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/auth/auth_screen.dart';
+import '../features/auth/mfa_challenge_screen.dart';
+import '../features/auth/mfa_enrollment_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/profile/profile_screen.dart';
 
@@ -32,12 +34,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       final isOnboarding = state.matchedLocation == '/onboarding';
       final isAuth = state.matchedLocation == '/auth';
+      final isMfa = state.matchedLocation == '/mfa-challenge';
 
       // While the session is being restored, keep the user on the splash.
       if (isLoading) return isSplash ? null : '/';
 
+      // A pending 2FA step-up stays on the challenge screen; nowhere else.
+      if (authState.needsMfaChallenge && !isMfa) return '/mfa-challenge';
+      if (!authState.needsMfaChallenge && isMfa) {
+        return authState.isAuthenticated ? '/home' : '/auth';
+      }
+
       // Unauthenticated users may only be on the splash, onboarding or auth.
-      if (!isAuthenticated && !isOnboarding && !isAuth) {
+      if (!isAuthenticated && !isOnboarding && !isAuth && !isMfa) {
         return '/onboarding';
       }
 
@@ -57,6 +66,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
+
+      GoRoute(
+        path: '/mfa-challenge',
+        builder: (context, state) => const MfaChallengeScreen(),
+      ),
+
+      GoRoute(
+        path: '/mfa-enrollment',
+        builder: (context, state) => const MfaEnrollmentScreen(),
+      ),
 
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
 

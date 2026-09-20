@@ -439,6 +439,8 @@ class WeekendAuthState {
   final String? session;
   final String? error;
   final bool emailVerified;
+  final bool needsMfaChallenge;
+  final bool mfaEnabled;
   const WeekendAuthState({
     this.isAuthenticated = false,
     this.isLoading = false,
@@ -446,6 +448,8 @@ class WeekendAuthState {
     this.session,
     this.error,
     this.emailVerified = false,
+    this.needsMfaChallenge = false,
+    this.mfaEnabled = false,
   });
   WeekendAuthState copyWith({
     bool? isAuthenticated,
@@ -454,6 +458,8 @@ class WeekendAuthState {
     String? session,
     String? error,
     bool? emailVerified,
+    bool? needsMfaChallenge,
+    bool? mfaEnabled,
   }) {
     return WeekendAuthState(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
@@ -462,8 +468,20 @@ class WeekendAuthState {
       session: session ?? this.session,
       error: error ?? this.error,
       emailVerified: emailVerified ?? this.emailVerified,
+      needsMfaChallenge: needsMfaChallenge ?? this.needsMfaChallenge,
+      mfaEnabled: mfaEnabled ?? this.mfaEnabled,
     );
   }
+
+  WeekendAuthState clearError() => WeekendAuthState(
+        isAuthenticated: isAuthenticated,
+        isLoading: isLoading,
+        user: user,
+        session: session,
+        emailVerified: emailVerified,
+        needsMfaChallenge: needsMfaChallenge,
+        mfaEnabled: mfaEnabled,
+      );
 }
 
 class Advertisement {

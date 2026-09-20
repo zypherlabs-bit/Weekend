@@ -7,6 +7,29 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are published as GitHub Releases with a versioned APK and a SHA-256
 checksum.
 
+## [2.2.0] — 2026-09-20
+
+### Added — release and distribution
+
+- **Production release APK built with real Supabase credentials** (v2.2.0+4).
+- **Verified installation on Android emulator** — app launches successfully,
+  connects to Supabase backend.
+- **GitHub release published** with versioned APK and SHA-256 checksum.
+- **README updated** to point to v2.2.0 download links.
+
+### Fixed — build and verification
+
+- All 94 automated tests pass.
+- Flutter analyze reports no issues.
+- APK signed and verified: package `com.weekend.app`, version 2.2.0 (code 4),
+  minSdk 24, targetSdk 36.
+- SHA-256: `fe1f11efff798e7ff9c6ed87074e75cadc364fd6826e483a024565487e48836c`
+
+### Updated — documentation
+
+- README download section points to v2.2.0 APK.
+- SHA-256 checksum file included in release assets.
+
 ## [2.1.0] — 2026-09-16
 
 ### Fixed — production data integrity

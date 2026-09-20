@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../providers/weekend_provider.dart';
+import '../../config/supabase_config.dart';
+import '../../repositories/safety_repository.dart';
+
 class SafetyCenterScreen extends ConsumerStatefulWidget {
   const SafetyCenterScreen({super.key});
   @override
@@ -267,61 +271,177 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
   void _showBlockedUsers(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text(
-          'Blocked Users',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'Your blocked users list will appear here.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Close',
-              style: TextStyle(color: Color(0xFFFF4B72)),
+      builder: (context) => FutureBuilder<List<String>>(
+        future: _blockedUserIds(),
+        builder: (context, snapshot) {
+          final blocked = snapshot.data ?? const [];
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1C162E),
+            title: const Text(
+              'Blocked Users',
+              style: TextStyle(color: Colors.white),
             ),
-          ),
-        ],
+            content: blocked.isEmpty
+                ? const Text(
+                    'No blocked users yet. Use the block button on any profile or in chat.',
+                    style: TextStyle(color: Colors.white70),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${blocked.length} blocked',
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                      const SizedBox(height: 8),
+                      ...blocked.map((id) => ListTile(
+                            title: Text(
+                              id,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(
+                                Icons.lock_open_rounded,
+                                color: Colors.white70,
+                              ),
+                              onPressed: () async {
+                                final repo = SafetyRepository();
+                                await repo.unblockUser(
+                                  SupabaseConfig.currentUserId,
+                                  id,
+                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Unblocked: $id'),
+                                      backgroundColor:
+                                          const Color(0xFF4CAF50),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          )),
+                    ],
+                  ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(color: Color(0xFFFF4B72)),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
+  Future<List<String>> _blockedUserIds() async {
+    final client = SupabaseConfig.client;
+    if (client == null) return const [];
+    try {
+      final result = await client
+          .from('blocks')
+          .select('blocked_id')
+          .eq('blocker_id', SupabaseConfig.currentUserId);
+      return (result as List).map((r) => r['blocked_id'] as String).toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
   void _showReportDialog(BuildContext context) {
+      final targetCtrl = TextEditingController();
+    String? selectedReason;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text(
-          'Report a User',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Select a reason for reporting:',
-              style: TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 16),
-            ..._reportReasons.map(
-              (reason) => ListTile(
-                title: Text(
-                  reason,
-                  style: const TextStyle(color: Colors.white),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1C162E),
+          title: const Text(
+            'Report a User',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Target user ID:',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: targetCtrl,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Enter user ID to report',
+                  hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
+                  filled: true,
+                  fillColor: const Color(0xFF2E244A),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Report submitted: $reason'),
-                      backgroundColor: const Color(0xFF4CAF50),
-                    ),
-                  );
-                },
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Select a reason for reporting:',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 8),
+              ..._reportReasons.map(
+                (reason) => ListTile(
+                  title: Text(
+                    reason,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    setDialogState(() => selectedReason = reason);
+                  },
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: targetCtrl.text.isNotEmpty && selectedReason != null
+                  ? () async {
+                      Navigator.pop(context);
+                      await ref
+                          .read(weekendProvider.notifier)
+                          .reportUser(
+                            targetCtrl.text.trim(),
+                            selectedReason!,
+                          );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Report submitted: $selectedReason'),
+                            backgroundColor: const Color(0xFF4CAF50),
+                          ),
+                        );
+                      }
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF4B72),
+              ),
+              child: const Text(
+                'Submit',
+                style: TextStyle(color: Colors.white),
               ),
             ),
           ],
@@ -446,51 +566,130 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
   void _showPrivacyControls(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text(
-          'Privacy Controls',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _PrivacyOption(
-              title: 'Show me in search',
-              subtitle: 'Allow others to find your profile',
-              value: true,
-              onChanged: (v) {},
+      builder: (context) {
+        bool showMeInSearch = true;
+        bool showDistance = true;
+        bool crossedPaths = true;
+        bool readReceipts = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            backgroundColor: const Color(0xFF1C162E),
+            title: const Text(
+              'Privacy Controls',
+              style: TextStyle(color: Colors.white),
             ),
-            _PrivacyOption(
-              title: 'Show distance',
-              subtitle: 'Show approximate distance to others',
-              value: true,
-              onChanged: (v) {},
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SwitchListTile(
+                  title: const Text(
+                    'Show me in search',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    'Allow others to find your profile',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
+                  ),
+                  value: showMeInSearch,
+                  onChanged: (v) => setDialogState(() => showMeInSearch = v),
+                  activeThumbColor: const Color(0xFFFF4B72),
+                ),
+                SwitchListTile(
+                  title: const Text(
+                    'Show distance',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    'Show approximate distance to others',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
+                  ),
+                  value: showDistance,
+                  onChanged: (v) => setDialogState(() => showDistance = v),
+                  activeThumbColor: const Color(0xFFFF4B72),
+                ),
+                SwitchListTile(
+                  title: const Text(
+                    'Crossed paths',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    "Match with people you've crossed paths with",
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
+                  ),
+                  value: crossedPaths,
+                  onChanged: (v) => setDialogState(() => crossedPaths = v),
+                  activeThumbColor: const Color(0xFFFF4B72),
+                ),
+                SwitchListTile(
+                  title: const Text(
+                    'Read receipts',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    'Let others see when you have read messages',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
+                  ),
+                  value: readReceipts,
+                  onChanged: (v) => setDialogState(() => readReceipts = v),
+                  activeThumbColor: const Color(0xFFFF4B72),
+                ),
+              ],
             ),
-            _PrivacyOption(
-              title: 'Crossed paths',
-              subtitle: 'Match with people you\'ve crossed paths with',
-              value: true,
-              onChanged: (v) {},
-            ),
-            _PrivacyOption(
-              title: 'Read receipts',
-              subtitle: 'Let others see when you\'ve read messages',
-              value: false,
-              onChanged: (v) {},
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Close',
-              style: TextStyle(color: Color(0xFFFF4B72)),
-            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(color: Color(0xFFFF4B72)),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  final client = SupabaseConfig.client;
+                  if (client != null) {
+                    final userId = SupabaseConfig.currentUserId;
+                    try {
+                      await client.from('user_settings').upsert({
+                        'user_id': userId,
+                        'show_me_in_search': showMeInSearch,
+                        'discovery_emails_enabled': true,
+                        'push_notifications_enabled': true,
+                        'max_distance_km': 25,
+                        'preferred_genders': <String>[],
+                      });
+                    } catch (_) {}
+                  }
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Privacy settings saved'),
+                        backgroundColor: Color(0xFF4CAF50),
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF4B72),
+                ),
+                child: const Text('Save', style: TextStyle(color: Colors.white)),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -718,32 +917,6 @@ class _FeatureCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _PrivacyOption extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-  const _PrivacyOption({
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-  });
-  @override
-  Widget build(BuildContext context) {
-    return SwitchListTile(
-      title: Text(title, style: const TextStyle(color: Colors.white)),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
-      ),
-      value: value,
-      onChanged: onChanged,
-      activeThumbColor: const Color(0xFFFF4B72),
     );
   }
 }

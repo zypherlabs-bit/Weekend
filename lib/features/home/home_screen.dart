@@ -9,6 +9,7 @@ import '../../models/models.dart';
 import '../../services/ad_service.dart';
 import '../../repositories/ad_repository.dart';
 import '../../widgets/discovery_card.dart';
+import '../../widgets/weekend_empty_state.dart';
 import '../../services/location_service.dart';
 import '../chat/chat_screen.dart';
 import '../profile/profile_screen.dart';
@@ -152,63 +153,89 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       type: BottomNavigationBarType.fixed,
       selectedItemColor: const Color(0xFFFF4B72),
       unselectedItemColor: Colors.white.withValues(alpha: 0.55),
+      selectedLabelStyle: const TextStyle(fontSize: 12),
+      unselectedLabelStyle: const TextStyle(fontSize: 12),
       items: [
         BottomNavigationBarItem(
-          icon: Icon(
-            _currentIndex == 0 ? Icons.weekend_rounded : Icons.weekend_outlined,
+          icon: Semantics(
+            label: 'Discover tab',
+            child: Icon(
+              _currentIndex == 0
+                  ? Icons.weekend_rounded
+                  : Icons.weekend_outlined,
+            ),
           ),
           label: 'Discover',
+          tooltip: 'Discover',
         ),
         BottomNavigationBarItem(
-          icon: Icon(
-            _currentIndex == 1 ? Icons.explore_rounded : Icons.explore_outlined,
+          icon: Semantics(
+            label: 'Explore tab',
+            child: Icon(
+              _currentIndex == 1
+                  ? Icons.explore_rounded
+                  : Icons.explore_outlined,
+            ),
           ),
           label: 'Explore',
+          tooltip: 'Explore',
         ),
         BottomNavigationBarItem(
-          icon: Stack(
-            children: [
-              Icon(
-                _currentIndex == 2
-                    ? Icons.chat_bubble_rounded
-                    : Icons.chat_bubble_outline_rounded,
-              ),
-              if (state.matches.any((m) => m.unreadCount > 0))
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFF4B72),
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      '${state.matches.fold(0, (sum, m) => sum + m.unreadCount)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+          icon: Semantics(
+            label: 'Chat tab',
+            child: Stack(
+              children: [
+                Icon(
+                  _currentIndex == 2
+                      ? Icons.chat_bubble_rounded
+                      : Icons.chat_bubble_outline_rounded,
+                ),
+                if (state.matches.any((m) => m.unreadCount > 0))
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Semantics(
+                      label:
+                          '${state.matches.fold(0, (sum, m) => sum + m.unreadCount)} unread messages',
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFF4B72),
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '${state.matches.fold(0, (sum, m) => sum + m.unreadCount)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
           label: 'Chat',
+          tooltip: 'Chat',
         ),
         BottomNavigationBarItem(
-          icon: Icon(
-            _currentIndex == 3
-                ? Icons.person_rounded
-                : Icons.person_outline_rounded,
+          icon: Semantics(
+            label: 'Profile tab',
+            child: Icon(
+              _currentIndex == 3
+                  ? Icons.person_rounded
+                  : Icons.person_outline_rounded,
+            ),
           ),
           label: 'Profile',
+          tooltip: 'Profile',
         ),
       ],
     );
@@ -379,7 +406,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
             ),
             Expanded(
               child: state.deckProfiles.isEmpty
-                  ? _EmptyState(
+                  ? WeekendEmptyState(
                       icon: Icons.search_off_rounded,
                       title: "You're All Caught Up!",
                       subtitle:
@@ -433,6 +460,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                   children: [
                     _ActionButton(
                       icon: Icons.close_rounded,
+                      semanticLabel: 'Pass on this profile',
                       color: const Color(0xFF22202A),
                       iconColor: Colors.white,
                       onPressed: () => ref
@@ -441,6 +469,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                     ),
                     _ActionButton(
                       icon: Icons.star_rounded,
+                      semanticLabel: 'Send a stand-out like',
                       color: const Color(0xFF22202A),
                       iconColor: const Color(0xFFFF9966),
                       onPressed: () => ref
@@ -452,6 +481,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                     ),
                     _ActionButton(
                       icon: Icons.favorite_rounded,
+                      semanticLabel: 'Like this profile',
                       color: const Color(0xFFFF4B72),
                       size: 64,
                       onPressed: () => ref
@@ -624,12 +654,14 @@ class _FilterChip extends StatelessWidget {
 
 class _ActionButton extends StatelessWidget {
   final IconData icon;
+  final String semanticLabel;
   final Color color;
   final Color iconColor;
   final double size;
   final VoidCallback onPressed;
   const _ActionButton({
     required this.icon,
+    required this.semanticLabel,
     required this.color,
     this.iconColor = Colors.white,
     this.size = 54,
@@ -637,85 +669,17 @@ class _ActionButton extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: IconButton(
-        onPressed: onPressed,
-        icon: Icon(icon, color: iconColor, size: size * 0.4),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String actionLabel;
-  final VoidCallback onAction;
-  const _EmptyState({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.actionLabel,
-    required this.onAction,
-  });
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF4B72).withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 40, color: const Color(0xFFFF4B72)),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withValues(alpha: 0.7),
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: onAction,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF4B72),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-              ),
-              child: Text(actionLabel),
-            ),
-          ],
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        child: IconButton(
+          tooltip: semanticLabel,
+          onPressed: onPressed,
+          icon: Icon(icon, color: iconColor, size: size * 0.4),
         ),
       ),
     );
@@ -732,14 +696,12 @@ class MatchesScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFF130E20),
       body: SafeArea(
         child: state.matches.isEmpty
-            ? _EmptyState(
+            ? WeekendEmptyState(
                 icon: Icons.chat_bubble_outline_rounded,
                 title: 'No Matches Yet',
                 subtitle: 'Start discovering profiles to find your matches!',
                 actionLabel: 'Discover',
-                onAction:
-                    onDiscoverTap ??
-                        () {},
+                onAction: onDiscoverTap,
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(16),

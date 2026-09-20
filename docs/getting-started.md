@@ -52,39 +52,49 @@ flutter run -d chrome  # or in a browser during development
 ### B. Production mode (your own Supabase project)
 
 1. Create a project at [supabase.com](https://supabase.com/).
-2. Copy the documented template and fill in your values:
-
-   ```bash
-   cp .env.example .env      # reference only; the app reads --dart-define
-   ```
+2. Apply migrations and deploy Edge Functions (see [supabase.md](supabase.md)).
+3. Copy your **Project URL** and **anon/public key** from
+   **Supabase Dashboard → Project Settings → API**:
 
    ```properties
-   SUPABASE_URL=https://your-project-ref.supabase.co
-   SUPABASE_ANON_KEY=your-public-anon-key
+   SUPABASE_URL=https://your-project-ref.supabase.co   # <-- YOUR project URL
+   SUPABASE_ANON_KEY=your-real-anon-key-here            # <-- YOUR anon key
    ```
 
-3. Pass the values at build/run time. `lib/config/supabase_config.dart` reads
-   them with `String.fromEnvironment`, so they must be supplied as
-   `--dart-define`:
+   **⚠️ Critical:** The placeholder values shown here are **not valid
+   credentials**. If you use them, the app runs in offline demo mode
+   instead of connecting to the backend. You **must** replace them with
+   real values from your Supabase dashboard.
+
+4. Build/run with your real credentials via `--dart-define`:
 
    ```bash
    flutter run \
      --dart-define=SUPABASE_URL=https://your-project-ref.supabase.co \
-     --dart-define=SUPABASE_ANON_KEY=your-public-anon-key
+     --dart-define=SUPABASE_ANON_KEY=your-real-anon-key-here
    ```
 
-4. Apply the database schema:
+   **To build a release APK:**
+
+   ```bash
+   flutter build apk --release \
+     --dart-define=SUPABASE_URL=https://your-project-ref.supabase.co \
+     --dart-define=SUPABASE_ANON_KEY=your-real-anon-key-here
+   ```
+
+5. Apply the database schema:
 
    ```bash
    supabase link --project-ref <your-project-ref>
    supabase db push
    ```
 
-5. Deploy the Edge Functions you need (see [supabase.md](supabase.md)):
+6. Deploy the Edge Functions you need (see [supabase.md](supabase.md)):
 
    ```bash
    supabase functions deploy serve-ad
    supabase functions deploy photo-verification
+   supabase functions deploy account-deletion
    supabase secrets set GEMINI_API_KEY=...   # server-side only
    ```
 
@@ -108,10 +118,13 @@ demo mode).
 
 ## 5. Build a release APK
 
+Replace the placeholder values with your real Supabase credentials before building.
+Using placeholder values will produce an APK that runs in offline demo mode.
+
 ```bash
 flutter build apk --release \
   --dart-define=SUPABASE_URL=https://your-project-ref.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=your-public-anon-key
+  --dart-define=SUPABASE_ANON_KEY=your-real-anon-key-here
 ```
 
 Output: `build/app/outputs/flutter-apk/app-release.apk`.

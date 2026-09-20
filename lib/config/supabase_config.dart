@@ -26,7 +26,17 @@ class SupabaseConfig {
       url.isNotEmpty &&
       anonKey.isNotEmpty &&
       url != 'https://your-project-ref.supabase.co' &&
-      anonKey != 'public-anon-key-here';
+      anonKey != 'public-anon-key-here' &&
+      url != '' &&
+      anonKey != '';
+
+  /// Returns a human-readable error message when the backend is not connected.
+  static String get configError {
+    if (url.isEmpty || anonKey.isEmpty) return 'SUPABASE_URL and SUPABASE_ANON_KEY are missing. Build with --dart-define flags.';
+    if (url == 'https://your-project-ref.supabase.co') return 'SUPABASE_URL is still a placeholder. Replace with your real Supabase project URL from Dashboard → Project Settings → API.';
+    if (anonKey == 'public-anon-key-here') return 'SUPABASE_ANON_KEY is still a placeholder. Replace with your real anon key from Dashboard → Project Settings → API.';
+    return 'Backend configuration error.';
+  }
 
   /// The live [SupabaseClient], or `null` when running in offline demo mode.
   ///

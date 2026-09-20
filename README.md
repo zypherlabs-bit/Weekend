@@ -559,6 +559,38 @@ cd Weekend
 flutter pub get
 ```
 
+### Connect to Supabase
+
+Before the app can connect to a real backend, you need a Supabase project
+and must apply migrations and deploy Edge Functions. See [supabase.md](docs/supabase.md).
+
+**Step 1 — Create a Supabase project** at [supabase.com](https://supabase.com/).
+
+**Step 2 — Apply migrations:**
+```bash
+supabase link --project-ref <your-project-ref>
+supabase db push
+```
+
+**Step 3 — Deploy Edge Functions** (required for account deletion, photo
+verification, ad serving):
+```bash
+supabase functions deploy
+supabase secrets set GEMINI_API_KEY=...   # server-side only
+```
+
+**Step 4 — Set your credentials at build time** (replaces placeholder values):
+```bash
+# Get SUPABASE_URL and SUPABASE_ANON_KEY from:
+#   Supabase Dashboard → Project Settings → API
+flutter build apk --release \
+  --dart-define=SUPABASE_URL=https://your-project-ref.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=your-real-anon-key-here
+```
+
+If you skip this step, the app runs in **offline demo mode** with sample data
+instead of connecting to the backend.
+
 ### Run without a backend (offline demo mode)
 
 Weekend starts in **offline demo mode** when no Supabase credentials are
@@ -596,13 +628,24 @@ Then apply the migrations and deploy the Edge Functions — see
 documented template. `.env` files are git-ignored and are **not** read at
 runtime — the app reads compile-time `--dart-define` values only.
 
-> **Never** commit or ship the `service_role` key, the database password, or any
+> **⚠️ Never** commit or ship the `service_role` key, the database password, or any
 > provider API key. The anon key is designed to be public *because* Row Level
 > Security protects every table; a service-role key bypasses RLS entirely.
+>
+> If the app shows "backend not configured", you are using placeholder values.
+> Replace `https://your-project-ref.supabase.co` and `your-public-anon-key`
+> with real credentials from your Supabase dashboard before building.
 
 ---
 
 ## Building the Android APK
+
+### ⚠️ Must use real Supabase credentials
+
+The placeholders `https://your-project-ref.supabase.co` and `your-public-anon-key`
+below are **not valid credentials**. If you use them, the app will run in
+**offline demo mode** instead of connecting to the backend. Replace them with
+values from **Supabase Dashboard → Project Settings → API**.
 
 ```bash
 # Debug build for a connected device
@@ -611,10 +654,16 @@ flutter build apk --debug
 # Release APK (with your Supabase project baked in)
 flutter build apk --release \
   --dart-define=SUPABASE_URL=https://your-project-ref.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=your-public-anon-key
+  --dart-define=SUPABASE_ANON_KEY=your-real-anon-key-here
 
 # Output: build/app/outputs/flutter-apk/app-release.apk
 ```
+
+**Before building, you must:**
+1. Create a Supabase project at [supabase.com](https://supabase.com/)
+2. Apply migrations: `supabase link --project-ref <ref> && supabase db push`
+3. Deploy Edge Functions: `supabase functions deploy`
+4. Set the `GEMINI_API_KEY` secret in Supabase: `supabase secrets set GEMINI_API_KEY=...`
 
 Release signing is picked up from an untracked `android/key.properties`
 (`storeFile`, `storePassword`, `keyAlias`, `keyKeyPassword`). Without it, the

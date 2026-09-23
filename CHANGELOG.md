@@ -7,6 +7,82 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are published as GitHub Releases with a versioned APK and a SHA-256
 checksum.
 
+## [Unreleased]
+
+### Fixed - LIVE-only auth
+
+- Auth repository auth calls now throw a clear "not connected to a backend"
+  error instead of silently returning. The silent return made signup look
+  accepted ("check your email") on builds with no backend while nothing was
+  ever sent.
+- Release CI refuses to build when `SUPABASE_URL` / `SUPABASE_ANON_KEY`
+  secrets are missing or still placeholders, so a release APK can never be an
+  offline demo build.
+
+## [2.3.0] - 2026-09-22
+
+### Fixed - signup, email confirmation and navigation
+
+- **Duplicate screens after signup are gone.** `appRouterProvider` no longer
+  `ref.watch`es the auth state. Watching rebuilt the provider on every
+  auth-state emission and constructed a brand-new `GoRouter`, which restarts at
+  `/` and replayed splash -> entry screens instead of continuing forward. The
+  state now reaches the router through `refreshListenable`, so exactly one
+  router instance survives the whole flow.
+- **"Check your email" is no longer a dead end.** When Supabase returns a user
+  with no session (`mailer_autoconfirm = false`) the app records an explicit
+  `awaitingEmailConfirmation` state instead of a red error banner and continues
+  to a dedicated confirmation step.
+- **New `/confirm-email` step** with a genuine Supabase re-send
+  (`auth.resend(type: signup)`), an "I've confirmed - Sign in" action and a
+  "Use a different email" escape. No local verification flag is ever set.
+- **Real session synchronisation.** `AuthNotifier` subscribes to
+  `onAuthStateChange`, so a session created outside the widget tree (the
+  confirmation link opened in a browser) is adopted without restarting the app.
+  The listener never satisfies a pending 2FA step-up.
+- **Stale errors no longer persist.** `WeekendAuthState.copyWith` gained
+  `clearError` / `clearPendingEmail`. Previously `error: null` was silently
+  ignored, so an old error banner followed the user between forms.
+- **Readable auth error mapping** for unconfirmed emails, invalid credentials,
+  existing accounts, send rate limits and rejected addresses instead of raw SDK
+  text.
+- **Signing in with an unconfirmed account** (`email_not_confirmed`) now routes
+  to the confirmation step instead of reporting a credential failure.
+- **"Get Started" opens the sign-up form** (`/auth?mode=signup`) instead of
+  showing the sign-in form first.
+- `emailRedirectTo` plumbing (`--dart-define=AUTH_EMAIL_REDIRECT_URL=...`) for
+  signup and password-reset emails. When unset, Supabase keeps using the
+  project's Site URL, which is GoTrue's documented behaviour.
+
+### Added - tests
+
+- `test/app_router_stability_test.dart` fails if an auth-state change ever
+  reconstructs the router again.
+- `test/widget_test.dart` now asserts onboarding -> sign-up directly, including
+  that the sign-in form is not shown first.
+
+### Verified against the live project
+
+- Live project ref `ocypgybqfushqfzisnvs` is the only backend in the release
+  path (confirmed by scanning the packaged Dart snapshot).
+- Signup, confirmation-email delivery and password sign-in were exercised end
+  to end against the live project.
+
+### Requires Supabase dashboard action (operator)
+
+The live project still uses Supabase defaults for two mailer settings. Neither
+can be changed from the repository, and both must be changed before
+confirmation can complete on a phone:
+
+1. **Authentication -> URL Configuration -> Site URL** is still
+   `http://localhost:3000`, so the emailed confirmation link redirects to
+   localhost. Set it (and add the app URL to *Redirect URLs*) to the real
+   production origin.
+2. **Project Settings -> Auth -> SMTP** still uses Supabase's built-in shared
+   mailer (`noreply@mail.app.supabase.io`), which is rate limited and frequently
+   spam-filtered. Configure a custom SMTP provider.
+
+
 ## [2.2.0] — 2026-09-20
 
 ### Added — release and distribution
@@ -23,7 +99,7 @@ checksum.
 - Flutter analyze reports no issues.
 - APK signed and verified: package `com.weekend.app`, version 2.2.0 (code 4),
   minSdk 24, targetSdk 36.
-- SHA-256: `fe1f11efff798e7ff9c6ed87074e75cadc364fd6826e483a024565487e48836c`
+- SHA-256: `592BFAD4772B37E5C01144C11854D84AD14774734DDF31F65FC80701B602F4FB`
 
 ### Updated — documentation
 
@@ -212,7 +288,9 @@ checksum.
   the 2.0.x Flutter line and is no longer maintained; see the supported-versions
   table in [SECURITY.md](SECURITY.md).
 
-[Unreleased]: https://github.com/zypherlabs-bit/Weekend/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/zypherlabs-bit/Weekend/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/zypherlabs-bit/Weekend/compare/v2.2.0...v2.3.0
+[2.2.0]: https://github.com/zypherlabs-bit/Weekend/compare/v2.1.0...v2.2.0
 [2.0.1]: https://github.com/zypherlabs-bit/Weekend/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/zypherlabs-bit/Weekend/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/zypherlabs-bit/Weekend/releases/tag/v1.0.0

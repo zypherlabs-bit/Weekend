@@ -43,9 +43,6 @@ of its own.
   invocation without a valid session is rejected.
 - Email confirmation behaviour depends on your own Supabase Auth settings.
 
-**Not implemented:** OAuth/Google sign-in, multi-factor authentication and
-passkeys. Do not assume they exist.
-
 ---
 
 ## 3. Secrets
@@ -108,7 +105,7 @@ biometric stack.
 - Verify before installing:
 
   ```powershell
-  Get-FileHash .\Weekend-v2.0.1-release.apk -Algorithm SHA256
+  Get-FileHash .\Weekend-v2.3.0-release.apk -Algorithm SHA256
   ```
 
 - CI (`.github/workflows/ci.yml`) runs analysis, tests and a release build on

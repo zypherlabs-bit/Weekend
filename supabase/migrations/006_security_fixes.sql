@@ -92,7 +92,7 @@ returns table (
     distance_km double precision,
     is_photo_verified boolean,
     trust_score integer,
-    primary_photo_url text,
+    primary_photo_path text,
     interests text[],
     relationship_intent text,
     last_active_at timestamptz,
@@ -118,7 +118,7 @@ begin
         p.display_name,
         case
             when p.date_of_birth is not null
-            then date_part('years', age(p.date_of_birth))
+            then date_part('years', age(p.date_of_birth))::int
             else 25
         end as age,
         p.gender,
@@ -127,20 +127,22 @@ begin
         case
             when p.latitude is not null and p.longitude is not null
             then round(
-                ST_Distance(
-                    ST_Point(p.longitude, p.latitude)::geography,
-                    ST_Point(
-                        (select latitude from public.profiles where id = p_user_id),
-                        (select longitude from public.profiles where id = p_user_id)
-                    )::geography
-                ) / 1000,
+                (
+                    ST_Distance(
+                        ST_Point(p.longitude, p.latitude)::geography,
+                        ST_Point(
+                            (select longitude from public.profiles where id = p_user_id),
+                            (select latitude from public.profiles where id = p_user_id)
+                        )::geography
+                    ) / 1000
+                )::numeric,
                 1
-            )
+            )::double precision
             else 0
         end as distance_km,
         p.is_photo_verified,
         p.trust_score,
-        (select photo_url from public.profile_photos where user_id = p.id and is_primary = true limit 1) as primary_photo_url,
+        (select storage_path from public.profile_photos where user_id = p.id and moderation_status = 'approved' order by is_primary desc, created_at asc limit 1) as primary_photo_path,
         (select array_agg(i.name) from public.user_interests ui join public.interests i on ui.interest_id = i.id where ui.user_id = p.id) as interests,
         p.relationship_intent,
         p.last_active_at,
@@ -205,7 +207,7 @@ returns table (
     distance_km double precision,
     is_photo_verified boolean,
     trust_score integer,
-    primary_photo_url text,
+    primary_photo_path text,
     interests text[],
     relationship_intent text,
     matched_at timestamptz,
@@ -233,27 +235,29 @@ begin
         m.id as match_id,
         case when m.user_a_id = p_user_id then m.user_b_id else m.user_a_id end as other_user_id,
         op.display_name,
-        case when op.date_of_birth is not null then date_part('years', age(op.date_of_birth)) else 25 end as age,
+        case when op.date_of_birth is not null then date_part('years', age(op.date_of_birth))::int else 25 end as age,
         op.gender,
         op.bio,
         op.city,
         case
             when op.latitude is not null and op.longitude is not null
             then round(
-                ST_Distance(
-                    ST_Point(op.longitude, op.latitude)::geography,
-                    ST_Point(
-                        (select latitude from public.profiles where id = p_user_id),
-                        (select longitude from public.profiles where id = p_user_id)
-                    )::geography
-                ) / 1000,
+                (
+                    ST_Distance(
+                        ST_Point(op.longitude, op.latitude)::geography,
+                        ST_Point(
+                            (select longitude from public.profiles where id = p_user_id),
+                            (select latitude from public.profiles where id = p_user_id)
+                        )::geography
+                    ) / 1000
+                )::numeric,
                 1
-            )
+            )::double precision
             else 0
         end as distance_km,
         op.is_photo_verified,
         op.trust_score,
-        (select photo_url from public.profile_photos where user_id = op.id and is_primary = true limit 1) as primary_photo_url,
+        (select storage_path from public.profile_photos where user_id = op.id and moderation_status = 'approved' order by is_primary desc, created_at asc limit 1) as primary_photo_path,
         (select array_agg(i.name) from public.user_interests ui join public.interests i on ui.interest_id = i.id where ui.user_id = op.id) as interests,
         op.relationship_intent,
         m.created_at as matched_at,
@@ -308,38 +312,40 @@ declare
 begin
     perform public.assert_self(p_user_id);
 
-    select referral_code into v_code
-    from public.referrals
-    where referrer_id = p_user_id
-    order by created_at desc
+    -- Qualify every column: the OUT parameters below share names with columns
+    -- (referral_code), which made the original references ambiguous.
+    select r.referral_code into v_code
+    from public.referrals r
+    where r.referrer_id = p_user_id
+    order by r.created_at desc
     limit 1;
 
     if v_code is null then
-        select referral_code into v_code
-        from public.profiles
-        where id = p_user_id;
+        select p.referral_code into v_code
+        from public.profiles p
+        where p.id = p_user_id;
     end if;
 
     return query
     select
         v_code as referral_code,
         count(*)::integer as invited_count,
-        count(*) filter (where status = 'successful')::integer as verified_count,
+        count(*) filter (where r.status = 'successful')::integer as verified_count,
         case
-            when count(*) filter (where status = 'successful') >= 10 then 'Elite Pioneer'
-            when count(*) filter (where status = 'successful') >= 5 then 'Silver Ambassador'
-            when count(*) filter (where status = 'successful') >= 1 then 'Bronze Contributor'
+            when count(*) filter (where r.status = 'successful') >= 10 then 'Elite Pioneer'
+            when count(*) filter (where r.status = 'successful') >= 5 then 'Silver Ambassador'
+            when count(*) filter (where r.status = 'successful') >= 1 then 'Bronze Contributor'
             else 'New Pioneer'
         end as badge_title,
         case
-            when count(*) filter (where status = 'successful') >= 10 then 'Gold Ambassador'
-            when count(*) filter (where status = 'successful') >= 5 then 'Silver Ambassador'
-            when count(*) filter (where status = 'successful') >= 1 then 'Bronze Contributor'
+            when count(*) filter (where r.status = 'successful') >= 10 then 'Gold Ambassador'
+            when count(*) filter (where r.status = 'successful') >= 5 then 'Silver Ambassador'
+            when count(*) filter (where r.status = 'successful') >= 1 then 'Bronze Contributor'
             else 'New Pioneer'
         end as achievement_tier,
         'https://weekend.app/invite/' || coalesce(v_code, '') as link_url
-    from public.referrals
-    where referrer_id = p_user_id;
+    from public.referrals r
+    where r.referrer_id = p_user_id;
 end;
 $$;
 
@@ -534,6 +540,17 @@ grant select (
     id, display_name, date_of_birth, gender, bio, city, locality, country,
     relationship_intent, verification_status, is_photo_verified, trust_score,
     profile_completion, created_at, updated_at, last_active_at, referral_code
+) on public.profiles to authenticated;
+
+-- UPDATE needs explicit column grants after the revoke (and UPDATE silently
+-- requires SELECT on the columns being written). Only user-editable profile
+-- fields are writable; verification_status / trust_score / profile_completion
+-- and the moderation columns remain backend-only (protected also by the
+-- protect_profile_columns trigger from 005).
+grant update (
+    display_name, date_of_birth, gender, bio, city, locality, country,
+    relationship_intent, occupation, education, favorite_music, ideal_weekend,
+    latitude, longitude, referral_code
 ) on public.profiles to authenticated;
 
 -- ============================================================

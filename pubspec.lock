@@ -177,6 +177,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.1"
+  cbor:
+    dependency: transitive
+    description:
+      name: cbor
+      sha256: "2c5c37650f0a2d25149f03e748ab7b2857787bde338f95fe947738b80d713da2"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.5.1"
   characters:
     dependency: transitive
     description:
@@ -257,6 +265,46 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.2"
+  credential_manager:
+    dependency: "direct main"
+    description:
+      name: credential_manager
+      sha256: eab594e63c457c1d5f319eb89d703cfa298fe0764f37c4367f51d3d4fe4b1321
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.1.0"
+  credential_manager_android:
+    dependency: transitive
+    description:
+      name: credential_manager_android
+      sha256: "043743f3a9ca565a554fe879376c5bab0bba038a180dc462e6fa75d13cb20931"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.0"
+  credential_manager_ios:
+    dependency: transitive
+    description:
+      name: credential_manager_ios
+      sha256: "54bddf9355c421b5613456d6532cca9139e35c20fe35effdf12aa4729cf805f8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.0"
+  credential_manager_platform_interface:
+    dependency: transitive
+    description:
+      name: credential_manager_platform_interface
+      sha256: "318a17a77febc25f531370944d5f02186b20ab869b1bee2fbd93ca8b8edcb93e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.0"
+  credential_manager_web:
+    dependency: transitive
+    description:
+      name: credential_manager_web
+      sha256: fa30afd4a0ec4189259fdaf84feeee8b8411ceaaa3472a3f3d601cf860793be8
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.0"
   cross_file:
     dependency: transitive
     description:
@@ -672,6 +720,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  hex:
+    dependency: transitive
+    description:
+      name: hex
+      sha256: "4e7cd54e4b59ba026432a6be2dd9d96e4c5205725194997193bf871703b82c4a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.0"
   hooks:
     dependency: transitive
     description:

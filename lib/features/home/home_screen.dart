@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +9,7 @@ import '../../models/models.dart';
 import '../../services/ad_service.dart';
 import '../../repositories/ad_repository.dart';
 import '../../widgets/discovery_card.dart';
+import '../../widgets/weekend_design_system.dart';
 import '../../widgets/weekend_empty_state.dart';
 import '../../services/location_service.dart';
 import '../chat/chat_screen.dart';
@@ -63,12 +64,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(weekendProvider);
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
-      body: Stack(
-        children: [
-          IndexedStack(index: _currentIndex, children: _screens),
-          if (_showLocationBanner) _buildLocationBanner(),
-        ],
+      backgroundColor: Colors.transparent,
+      body: WeekendAtmosphere(
+        child: Stack(
+          children: [
+            IndexedStack(index: _currentIndex, children: _screens),
+            if (_showLocationBanner) _buildLocationBanner(),
+          ],
+        ),
       ),
       bottomNavigationBar: _buildBottomNav(state),
     );
@@ -315,7 +318,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     super.build(context);
     final state = ref.watch(weekendProvider);
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -693,7 +696,7 @@ class MatchesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(weekendProvider);
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: state.matches.isEmpty
             ? WeekendEmptyState(
@@ -724,7 +727,7 @@ class ProfileTabScreen extends StatelessWidget {
   }
 }
 
-/// Avatar that gracefully handles profiles with no photos yet — it renders a
+/// Avatar that gracefully handles profiles with no photos yet â€” it renders a
 /// placeholder icon instead of attempting to load an empty image URL.
 class _MatchAvatar extends StatelessWidget {
   final List<String> photos;
@@ -823,3 +826,4 @@ class MatchCard extends StatelessWidget {
     );
   }
 }
+

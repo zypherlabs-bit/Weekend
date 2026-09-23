@@ -15,6 +15,13 @@ Future<void> main() async {
   // `--dart-define`. A failure here must never freeze the app — the rest of
   // the startup simply continues in offline demo mode.
   if (SupabaseConfig.isConfigured) {
+    // LIVE-ONLY: never let a release binary silently run against placeholder
+    // or loopback credentials. Release CI also fails before building when
+    // SUPABASE_URL / SUPABASE_ANON_KEY secrets are missing or placeholders.
+    assert(() {
+      SupabaseConfig.assertLiveConfigured();
+      return true;
+    }());
     try {
       await Supabase.initialize(
         url: SupabaseConfig.url,

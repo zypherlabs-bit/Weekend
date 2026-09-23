@@ -85,27 +85,27 @@ Download the latest Weekend Android APK from **GitHub Releases**.
 | Link | Purpose |
 |------|---------|
 | [**Latest release page**](https://github.com/zypherlabs-bit/Weekend/releases/latest) | Always points at the newest stable Weekend release |
-| [`Weekend-v2.1.0-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.1.0-release.apk) | Current production APK (~75 MB) |
-| [`Weekend-v2.1.0-release.apk.sha256`](https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.1.0-release.apk.sha256) | SHA-256 checksum for the current APK |
+| [`Weekend-v2.3.0-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.3.0-release.apk) | Current production APK (~78 MB) |
+| [`Weekend-v2.3.0-release.apk.sha256`](https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.3.0-release.apk.sha256) | SHA-256 checksum for the current APK |
 | [All releases](https://github.com/zypherlabs-bit/Weekend/releases) | Full release history and notes |
 
 **Requirements:** Android 7.0 (API 24) or newer · `arm64-v8a` / `armeabi-v7a` / `x86_64`
 
 ### Install the APK
 
-1. Download `Weekend-v2.1.0-release.apk` from the link above.
+1. Download `Weekend-v2.3.0-release.apk` from the link above.
 2. Verify the download (recommended):
 
    ```bash
    # Windows (PowerShell)
-   Get-FileHash Weekend-v2.1.0-release.apk -Algorithm SHA256
+   Get-FileHash Weekend-v2.3.0-release.apk -Algorithm SHA256
 
    # macOS / Linux
-   sha256sum Weekend-v2.1.0-release.apk
+   sha256sum Weekend-v2.3.0-release.apk
    ```
 
    Compare the output with the contents of
-   `Weekend-v2.1.0-release.apk.sha256` in the same release.
+   `Weekend-v2.3.0-release.apk.sha256` in the same release.
 
 3. Open the APK on your device. Because Weekend is distributed directly through
    GitHub (not through an app store), Android will show its standard security

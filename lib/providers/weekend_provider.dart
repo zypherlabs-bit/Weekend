@@ -254,6 +254,9 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
         maxDistanceKm: prefs.discoveryRadiusKm.toDouble(),
         limit: 20,
         mode: mode,
+        preferredGenders: prefs.preferredGenders,
+        ageMin: 18,
+        ageMax: 100,
       );
 
       final enriched = await Future.wait(
@@ -298,6 +301,14 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     state = state.copyWith(
       locationPreferences: state.locationPreferences.copyWith(
         discoveryRadiusKm: km,
+      ),
+    );
+  }
+
+  void setPreferredGenders(List<String> genders) {
+    state = state.copyWith(
+      locationPreferences: state.locationPreferences.copyWith(
+        preferredGenders: genders,
       ),
     );
   }

@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_provider.dart';
 import '../config/supabase_config.dart';
+import '../models/models.dart';
 
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/auth/auth_screen.dart';
+import '../features/auth/confirm_email_screen.dart';
 import '../features/auth/mfa_challenge_screen.dart';
 import '../features/auth/mfa_enrollment_screen.dart';
 import '../features/home/home_screen.dart';
@@ -21,20 +23,52 @@ import '../features/discovery/location_settings_screen.dart';
 import '../features/qr/qr.dart';
 import '../features/safety/safety_center_screen.dart';
 
+/// Bridges the Riverpod auth state into GoRouter's refresh hook.
+///
+/// Only routing-relevant transitions notify; the redirect itself always reads
+/// the current state with `ref.read`.
+class _AuthRefreshNotifier extends ChangeNotifier {
+  _AuthRefreshNotifier(Ref ref) {
+    ref.listen<WeekendAuthState>(authStateProvider, (previous, next) {
+      if (previous?.isAuthenticated == next.isAuthenticated &&
+          previous?.isLoading == next.isLoading &&
+          previous?.needsProfileSetup == next.needsProfileSetup &&
+          previous?.needsMfaChallenge == next.needsMfaChallenge &&
+          previous?.awaitingEmailConfirmation ==
+              next.awaitingEmailConfirmation) {
+        return;
+      }
+      notifyListeners();
+    });
+  }
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  // The router is built ONCE. Previously this provider used
+  // `ref.watch(authStateProvider)`, so every auth-state emission disposed the
+  // provider and constructed a brand-new GoRouter. A fresh GoRouter starts at
+  // `initialLocation: '/'`, which threw the user back through splash → entry
+  // screens again after signup and produced the repeated screens. Feeding the
+  // state in through `refreshListenable` keeps one router instance for the app
+  // lifetime: redirects re-run, navigation history is preserved.
+  final refresh = _AuthRefreshNotifier(ref);
+  ref.onDispose(refresh.dispose);
 
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: refresh,
     redirect: (context, state) {
+      final authState = ref.read(authStateProvider);
       final isAuthenticated = authState.isAuthenticated;
       final isLoading = authState.isLoading;
 
-      final isSplash = state.matchedLocation == '/';
-
-      final isOnboarding = state.matchedLocation == '/onboarding';
-      final isAuth = state.matchedLocation == '/auth';
-      final isMfa = state.matchedLocation == '/mfa-challenge';
+      final location = state.matchedLocation;
+      final isSplash = location == '/';
+      final isOnboarding = location == '/onboarding';
+      final isAuth = location == '/auth';
+      final isMfa = location == '/mfa-challenge';
+      final isConfirmEmail = location == '/confirm-email';
+      final isPersonalDetails = location == '/edit-profile';
 
       // While the session is being restored, keep the user on the splash.
       if (isLoading) return isSplash ? null : '/';
@@ -42,18 +76,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // A pending 2FA step-up stays on the challenge screen; nowhere else.
       if (authState.needsMfaChallenge && !isMfa) return '/mfa-challenge';
       if (!authState.needsMfaChallenge && isMfa) {
-        return authState.isAuthenticated ? '/home' : '/auth';
+        return isAuthenticated ? '/home' : '/auth';
       }
 
-      // Unauthenticated users may only be on the splash, onboarding or auth.
-      if (!isAuthenticated && !isOnboarding && !isAuth && !isMfa) {
+      // Screens a visitor may legitimately see with no session. The splash is
+      // deliberately NOT one of them: it must hand off to onboarding once the
+      // session check finishes, otherwise the app would sit on it forever.
+      final isGuestScreen = isOnboarding || isAuth || isConfirmEmail;
+      final isEntryScreen = isSplash || isGuestScreen;
+
+      if (!isAuthenticated) {
+        if (isGuestScreen || isMfa) return null;
         return '/onboarding';
       }
 
-      // Authenticated users are redirected away from the entry screens.
-      if (isAuthenticated && (isOnboarding || isAuth || isSplash)) {
-        return '/home';
+      // Authenticated users with an incomplete profile finish Personal
+      // Details first (except anonymous guests, who skip onboarding).
+      if (authState.needsProfileSetup && !isPersonalDetails && !isMfa) {
+        return '/edit-profile';
       }
+
+      // Authenticated users are redirected away from the entry screens.
+      // Personal Details stays reachable after setup via explicit navigation.
+      if (isEntryScreen && !authState.needsProfileSetup) return '/home';
 
       return null;
     },
@@ -65,7 +110,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const OnboardingScreen(),
       ),
 
-      GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
+      GoRoute(
+        path: '/auth',
+        builder: (context, state) => AuthScreen(
+          // Arriving from onboarding means the visitor asked to create an
+          // account, so open on "Create Account" instead of showing the
+          // sign-in form first.
+          startOnSignUp: state.uri.queryParameters['mode'] == 'signup',
+        ),
+      ),
+
+      GoRoute(
+        path: '/confirm-email',
+        builder: (context, state) => const ConfirmEmailScreen(),
+      ),
 
       GoRoute(
         path: '/mfa-challenge',

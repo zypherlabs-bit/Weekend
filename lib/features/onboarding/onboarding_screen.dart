@@ -132,7 +132,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         curve: Curves.easeInOut,
                       );
                     } else {
-                      context.go('/auth');
+                      // "Get Started" means "create an account": open the auth
+                      // screen directly on the sign-up form.
+                      context.go('/auth?mode=signup');
                     }
                   },
                   style: ElevatedButton.styleFrom(

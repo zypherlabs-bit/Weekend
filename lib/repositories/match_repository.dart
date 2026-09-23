@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
 import '../models/models.dart';
+import '../services/photo_url_service.dart';
 
 /// Data source for likes, passes and matches.
 ///
@@ -26,10 +27,22 @@ class MatchRepository {
         params: {'p_user_id': userId, 'p_limit': 50, 'p_offset': 0},
       );
 
-      return (result as List).map((row) {
+      final rows = result as List;
+
+      // Resolve private photo storage paths to signed URLs in one batch.
+      final paths = rows
+          .map((row) => row['primary_photo_path'] as String? ?? '')
+          .where((p) => p.isNotEmpty)
+          .toSet()
+          .toList();
+      final photoUrls = await PhotoUrlService.resolve(paths);
+
+      return rows.map((row) {
         final interests = (row['interests'] as List?)?.cast<String>() ?? [];
         final shared = (row['shared_interests'] as List?)?.cast<String>() ?? [];
         final lastMessageAt = row['last_message_time'] as String?;
+        final photoPath = row['primary_photo_path'] as String? ?? '';
+        final photoUrl = photoUrls[photoPath];
 
         return MatchItem(
           id: row['match_id'] as String? ?? '',
@@ -38,7 +51,7 @@ class MatchRepository {
             name: row['display_name'] as String? ?? 'User',
             age: row['age'] as int? ?? 25,
             gender: row['gender'] as String? ?? 'Prefer not to say',
-            photos: _photosFromUrl(row['primary_photo_url'] as String?),
+            photos: photoUrl == null ? const [] : <String>[photoUrl],
             city: row['city'] as String? ?? '',
             distanceKm: (row['distance_km'] as num?)?.round() ?? 0,
             bio: row['bio'] as String? ?? '',
@@ -121,9 +134,6 @@ class MatchRepository {
       if (!_isUniqueViolation(e)) rethrow;
     }
   }
-
-  List<String> _photosFromUrl(String? url) =>
-      (url == null || url.isEmpty) ? const [] : <String>[url];
 
   bool _isUniqueViolation(Object e) =>
       e.toString().contains('duplicate key') ||

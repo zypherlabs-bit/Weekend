@@ -30,7 +30,19 @@ key.properties
 debug.keystore
 supabase/.env
 dist/
+# Local Supabase CLI state (holds the linked live project ref)
+/supabase/.temp/
+
+# Local debug logs and one-off verification notes (never part of a release)
+install_log.txt
+FINAL_VERIFICATION_REPORT.md
 
 # Generated checksum files for release
 *release.apk.sha256
+
+# Local Supabase provisioning script (holds credentials)
+/supabase_setup.ps1
+
+# Local VS Code launch config (may hold backend credentials)
+/.vscode/launch.json
 

@@ -21,11 +21,12 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
+        freeCompilerArgs += "-Xincremental-compilation=false"
     }
 
     defaultConfig {
         applicationId = "com.weekend.app"
-        minSdk = flutter.minSdkVersion
+        minSdk = 24  // Required for Credential Manager / Passkeys
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

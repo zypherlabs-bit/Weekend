@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/weekend_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/image_optimizer.dart';
 import '../../repositories/profile_repository.dart';
 
+/// Personal Details (onboarding + edit profile).
+///
+/// This is the immediate next page after signup: the session stays active and
+/// the profile is saved for the authenticated Supabase user. Existing users
+/// with a complete profile continue into the app after saving.
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
   @override
@@ -103,6 +109,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         weekendAvailability: _weekendAvailability,
       );
       await ref.read(weekendProvider.notifier).updateProfile(updatedProfile);
+      // Personal Details saved for the authenticated user; re-evaluate
+      // onboarding state so first-time signups continue into the app.
+      await ref.read(authStateProvider.notifier).refreshProfileSetup();
+      await ref.read(weekendProvider.notifier).loadCurrentUser();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -110,7 +120,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             backgroundColor: Color(0xFF4CAF50),
           ),
         );
-        context.pop();
+        if (ref.read(authStateProvider).needsProfileSetup) {
+          // Still incomplete — stay on Personal Details.
+          return;
+        }
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/home');
+        }
       }
     } catch (e) {
       if (mounted) {

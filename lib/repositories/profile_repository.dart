@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
 import '../models/models.dart';
+import '../services/photo_url_service.dart';
 
 class ProfileRepository {
   SupabaseClient? get _client => SupabaseConfig.client;
@@ -32,6 +33,9 @@ class ProfileRepository {
         response['date_of_birth'] as String? ?? '',
       );
 
+      // Resolve approved photos (private bucket -> signed URLs).
+      final photoUrls = await fetchProfilePhotos(userId);
+
       return UserProfile(
         id: response['id'] ?? userId,
         name: response['display_name'] ?? 'User',
@@ -39,7 +43,7 @@ class ProfileRepository {
             ? 18
             : DateTime.now().difference(dateOfBirth).inDays ~/ 365,
         gender: response['gender'] ?? 'Prefer not to say',
-        photos: const [],
+        photos: photoUrls,
         city: response['city'] ?? '',
         distanceKm: 0,
         bio: response['bio'] ?? '',
@@ -72,14 +76,20 @@ class ProfileRepository {
     try {
       final response = await client
           .from('profile_photos')
-          .select('photo_url')
+          .select('storage_path')
           .eq('user_id', userId)
           .eq('moderation_status', 'approved');
 
-      return (response as List)
-          .map((photo) => photo['photo_url'] as String? ?? '')
-          .where((url) => url.isNotEmpty)
+      final paths = (response as List)
+          .map((photo) => photo['storage_path'] as String? ?? '')
+          .where((path) => path.isNotEmpty)
           .toList();
+
+      final resolved = await PhotoUrlService.resolve(paths);
+      return [
+        for (final p in paths)
+          if (resolved.containsKey(p)) resolved[p]!,
+      ];
     } catch (e) {
       return [];
     }
@@ -103,6 +113,14 @@ class ProfileRepository {
             'gender': profile.gender,
 
             'relationship_intent': profile.relationshipIntent,
+
+            'occupation': profile.occupation,
+
+            'education': profile.education,
+
+            'favorite_music': profile.favoriteMusic,
+
+            'ideal_weekend': profile.idealWeekend,
           })
           .eq('id', profile.id);
     } catch (e) {
@@ -117,7 +135,9 @@ class ProfileRepository {
   ) async {
     final client = _client;
     if (client == null) return '';
-    final fileName = 'photo_${DateTime.now().millisecondsSinceEpoch}.webp';
+    // ImageOptimizer encodes JPEG; the extension/content type must match or
+    // the bucket's allowed_mime_types check rejects the upload.
+    final fileName = 'photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final path = '$userId/$fileName';
 
     await client.storage
@@ -125,19 +145,19 @@ class ProfileRepository {
         .uploadBinary(
           path,
           bytes,
-          fileOptions: FileOptions(contentType: 'image/webp'),
+          fileOptions: FileOptions(contentType: 'image/jpeg'),
         );
 
-    final publicUrl = client.storage.from('profile-photos').getPublicUrl(path);
-
+    // The bucket is private: store the storage PATH (never a public URL) so
+    // the client can mint short-lived signed URLs on demand.
     await client.from('profile_photos').insert({
       'user_id': userId,
-      'photo_url': publicUrl,
+      'photo_url': path,
       'storage_path': path,
       'is_primary': isPrimary,
-      'moderation_status': 'pending',
+      // moderation_status is decided server-side (see migration 011).
     });
 
-    return publicUrl;
+    return path;
   }
 }

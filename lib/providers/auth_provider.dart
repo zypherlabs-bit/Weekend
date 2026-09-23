@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -72,10 +74,77 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
 
   AuthNotifier(this._repo)
       : super(const WeekendAuthState(isLoading: true)) {
+    _listenToAuthChanges();
     _checkSession();
   }
 
   SupabaseClient? get _client => SupabaseConfig.client;
+
+  StreamSubscription<AuthState>? _authSubscription;
+
+  /// Mirror Supabase's own session stream.
+  ///
+  /// A session can appear outside this widget tree — the user confirms their
+  /// address in a browser and returns to the app, a token is refreshed, or the
+  /// account is revoked on another device. Listening to the SDK keeps the app
+  /// state in step with the real session instead of guessing.
+  void _listenToAuthChanges() {
+    final client = _client;
+    if (client == null) return;
+    _authSubscription = client.auth.onAuthStateChange.listen(
+      _handleAuthStateChange,
+      onError: (Object _, StackTrace __) {},
+    );
+  }
+
+  Future<void> _handleAuthStateChange(AuthState data) async {
+    // A primary (aal1) session must never satisfy a pending 2FA step-up.
+    if (state.needsMfaChallenge) return;
+
+    final session = data.session;
+    final user = session?.user;
+
+    if (data.event == AuthChangeEvent.signedOut || user == null) {
+      if (state.isAuthenticated || state.awaitingEmailConfirmation) {
+        state = const WeekendAuthState(isLoading: false);
+      }
+      return;
+    }
+
+    final confirmed = user.emailConfirmedAt != null;
+
+    // First time this app instance sees the session: adopt it, then let the
+    // router decide between Personal Details and home.
+    if (!state.isAuthenticated) {
+      final needsSetup = await _profileNeedsSetup(user.id);
+      state = state.copyWith(
+        isAuthenticated: true,
+        isLoading: false,
+        user: _profileFromAuth(user, 'User'),
+        session: session!.accessToken,
+        emailVerified: confirmed,
+        awaitingEmailConfirmation: false,
+        clearPendingEmail: true,
+        needsProfileSetup: needsSetup,
+        needsMfaChallenge: false,
+        clearError: true,
+      );
+      await _refreshMfaFlag();
+      await _loadLocationPreferences(user.id);
+      return;
+    }
+
+    if (confirmed && !state.emailVerified) {
+      state = state.copyWith(emailVerified: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    _authSubscription = null;
+    super.dispose();
+  }
 
   UserProfile _profileFromAuth(User user, String fallbackName) {
     return UserProfile(
@@ -103,6 +172,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       final user = client.auth.currentUser;
 
       if (user != null && session != null) {
+        final needsSetup = await _profileNeedsSetup(user.id);
         state = WeekendAuthState(
           isAuthenticated: true,
           isLoading: false,
@@ -110,6 +180,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
           user: _profileFromAuth(user, 'User'),
           session: session.accessToken,
           emailVerified: user.emailConfirmedAt != null,
+          needsProfileSetup: needsSetup,
         );
       } else {
         state = const WeekendAuthState(
@@ -144,49 +215,139 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     if (client == null) {
       state = state.copyWith(
         isLoading: false,
+        clearError: true,
         error:
             'Weekend is not connected to a backend. '
             'Build with SUPABASE_URL and SUPABASE_ANON_KEY to enable accounts.',
       );
       return;
     }
-    state = state.copyWith(isLoading: true, error: null);
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      awaitingEmailConfirmation: false,
+      clearPendingEmail: true,
+    );
 
     try {
       final response = await client.auth.signUp(
         email: email,
         password: password,
         data: {'full_name': fullName},
+        emailRedirectTo: SupabaseConfig.emailRedirectOrNull,
       );
 
-      if (response.user != null) {
-        final emailVerified = response.user!.emailConfirmedAt != null;
-
+      if (response.user == null) {
         state = state.copyWith(
           isLoading: false,
-
-          isAuthenticated: emailVerified,
-
-          emailVerified: emailVerified,
-          user: _profileFromAuth(response.user!, fullName),
+          isAuthenticated: false,
+          error: 'Signup could not be completed. Please try again.',
         );
-
-        if (!emailVerified) {
-          state = state.copyWith(
-            error:
-                'Please check your email to confirm your account before continuing.',
-          );
-        }
-      } else {
-        state = state.copyWith(isLoading: false, isAuthenticated: false);
+        return;
       }
+
+      // The SDK returns a session only when Supabase actually issued one. With
+      // email confirmation enabled (mailer_autoconfirm = false) the account is
+      // created but no session exists until the user confirms.
+      final session = response.session;
+      if (session == null) {
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: false,
+          needsProfileSetup: false,
+          emailVerified: false,
+          awaitingEmailConfirmation: true,
+          pendingEmail: email,
+          user: _profileFromAuth(response.user!, fullName),
+          clearError: true,
+        );
+        return;
+      }
+
+      final needsSetup = await _profileNeedsSetup(response.user!.id);
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: true,
+        needsProfileSetup: needsSetup,
+        emailVerified: response.user!.emailConfirmedAt != null,
+        awaitingEmailConfirmation: false,
+        clearPendingEmail: true,
+        user: _profileFromAuth(response.user!, fullName),
+        session: session.accessToken,
+        clearError: true,
+      );
+      await _refreshMfaFlag();
+      await _loadLocationPreferences(response.user!.id);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: false,
-        error: e.toString(),
+        error: _readableAuthError(e),
       );
     }
+  }
+
+  /// Re-send the confirmation mail for the pending signup.
+  ///
+  /// Supabase's built-in mailer is rate limited, so a successful call is not a
+  /// delivery guarantee; the returned string is what the UI should tell the
+  /// user.
+  Future<String> resendConfirmationEmail() async {
+    final client = _client;
+    final email = state.pendingEmail;
+    if (client == null || email == null || email.isEmpty) {
+      return 'No pending signup to resend.';
+    }
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _repo.resendSignupConfirmation(
+        email,
+        emailRedirectTo: SupabaseConfig.emailRedirectOrNull,
+      );
+      state = state.copyWith(isLoading: false);
+      return 'Confirmation email requested for $email.';
+    } catch (e) {
+      final message = _readableAuthError(e);
+      state = state.copyWith(isLoading: false, error: message);
+      return message;
+    }
+  }
+
+  /// Clear a displayed error (e.g. when the user switches forms).
+  void dismissError() {
+    if (state.error == null) return;
+    state = state.clearError();
+  }
+
+  /// Turns SDK errors into user-facing text without leaking credentials.
+  String _readableAuthError(Object e) {
+    if (e is AuthException) {
+      final code = e.code ?? '';
+      if (code == 'email_not_confirmed') {
+        return 'This email is not confirmed yet. Open the link we emailed you.';
+      }
+      if (code == 'invalid_credentials') {
+        return 'Incorrect email or password.';
+      }
+      if (code == 'user_already_exists' || code == 'email_exists') {
+        return 'An account with this email already exists. Try signing in.';
+      }
+      if (code == 'over_email_send_rate_limit' ||
+          code == 'over_request_rate_limit') {
+        return 'Too many emails requested. Please wait a few minutes.';
+      }
+      if (code == 'email_address_invalid') {
+        return 'That email address was rejected. Please use a different one.';
+      }
+      if (code == 'signup_disabled') {
+        return 'New signups are currently disabled.';
+      }
+      return e.message;
+    }
+    if (e is AuthRetryableFetchException) {
+      return 'Could not reach Weekend. Check your connection and try again.';
+    }
+    return e.toString().replaceAll('Exception: ', '');
   }
 
   Future<void> signInWithEmail(String email, String password) async {
@@ -200,11 +361,13 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       );
       return;
     }
-    // Start clean: no stale MFA gate from a previous attempt.
+    // Start clean: no stale MFA gate or error from a previous attempt.
     state = state.copyWith(
       isLoading: true,
-      error: null,
+      clearError: true,
       needsMfaChallenge: false,
+      awaitingEmailConfirmation: false,
+      clearPendingEmail: true,
     );
 
     try {
@@ -236,6 +399,8 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
           session: response.session?.accessToken,
           emailVerified: response.user!.emailConfirmedAt != null,
           needsMfaChallenge: false,
+          needsProfileSetup: await _profileNeedsSetup(response.user!.id),
+          clearError: true,
         );
 
         await _refreshMfaFlag();
@@ -244,11 +409,25 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
         state = state.copyWith(isLoading: false, isAuthenticated: false);
       }
     } catch (e) {
+      // An account that exists but was never confirmed is not a credential
+      // failure: route the user to the confirmation step instead of showing a
+      // dead-end error.
+      if (e is AuthException && e.code == 'email_not_confirmed') {
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: false,
+          needsMfaChallenge: false,
+          awaitingEmailConfirmation: true,
+          pendingEmail: email,
+          clearError: true,
+        );
+        return;
+      }
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: false,
         needsMfaChallenge: false,
-        error: e.toString(),
+        error: _readableAuthError(e),
       );
     }
   }
@@ -285,6 +464,8 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
         user: user != null ? _profileFromAuth(user, 'User') : state.user,
         session: session?.accessToken ?? state.session,
         emailVerified: user?.emailConfirmedAt != null || state.emailVerified,
+        needsProfileSetup:
+            user != null ? await _profileNeedsSetup(user.id) : false,
       );
       if (user != null) await _loadLocationPreferences(user.id);
       return true;
@@ -318,6 +499,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       final response = await client.auth.signInAnonymously();
 
       if (response.user != null) {
+        final needsSetup = await _profileNeedsSetup(response.user!.id);
         state = state.copyWith(
           isLoading: false,
           isAuthenticated: true,
@@ -325,6 +507,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
           user: _profileFromAuth(response.user!, 'User'),
           session: response.session?.accessToken,
           emailVerified: true,
+          needsProfileSetup: needsSetup,
         );
       } else {
         state = state.copyWith(isLoading: false, isAuthenticated: false);
@@ -333,6 +516,104 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  /// Sign up with a passkey (WebAuthn).
+  Future<void> signUpWithPasskey({
+    required String email,
+    required String fullName,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      state = state.copyWith(
+        isLoading: false,
+        error:
+            'Weekend is not connected to a backend. '
+            'Build with SUPABASE_URL and SUPABASE_ANON_KEY to enable accounts.',
+      );
+      return;
+    }
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final result = await _repo.signUpWithPasskey(
+        email: email,
+        fullName: fullName,
+      );
+
+      if (result.success && result.session != null) {
+        final user = client.auth.currentUser;
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: true,
+          user: user != null ? _profileFromAuth(user, fullName) : null,
+          session: result.session!.accessToken,
+          emailVerified: user?.emailConfirmedAt != null,
+          needsProfileSetup: true,
+        );
+        if (user != null) await _loadLocationPreferences(user.id);
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: false,
+          error: result.error ?? 'Passkey registration failed.',
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  /// Sign in with a passkey (WebAuthn).
+  Future<void> signInWithPasskey() async {
+    final client = _client;
+    if (client == null) {
+      state = state.copyWith(
+        isLoading: false,
+        error:
+            'Weekend is not connected to a backend. '
+            'Build with SUPABASE_URL and SUPABASE_ANON_KEY to enable accounts.',
+      );
+      return;
+    }
+    state = state.copyWith(isLoading: true, error: null, needsMfaChallenge: false);
+
+    try {
+      final result = await _repo.signInWithPasskey();
+
+      if (result.success && result.session != null) {
+        final user = client.auth.currentUser;
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: true,
+          user: user != null ? _profileFromAuth(user, 'User') : null,
+          session: result.session!.accessToken,
+          emailVerified: user?.emailConfirmedAt != null,
+          needsMfaChallenge: false,
+          needsProfileSetup:
+              user != null ? await _profileNeedsSetup(user.id) : true,
+        );
+        if (user != null) await _loadLocationPreferences(user.id);
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: false,
+          needsMfaChallenge: false,
+          error: result.error ?? 'Passkey sign-in failed.',
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: false,
+        needsMfaChallenge: false,
         error: e.toString(),
       );
     }
@@ -369,9 +650,12 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       return;
     }
     try {
-      await client.auth.resetPasswordForEmail(email);
+      await client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: SupabaseConfig.emailRedirectOrNull,
+      );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: _readableAuthError(e));
     }
   }
 
@@ -439,5 +723,40 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     } catch (e) {
       // ignore
     }
+  }
+
+  /// True when the authenticated user's profile still needs Personal Details.
+  ///
+  /// A missing profile row (trigger not yet applied), an empty display name,
+  /// or an empty city all count as incomplete. A failed lookup is treated as
+  /// incomplete rather than silently letting an un-onboarded user into home.
+  /// Anonymous guest sessions skip onboarding entirely.
+  Future<bool> _profileNeedsSetup(String userId) async {
+    final client = _client;
+    if (client == null) return false;
+    final user = client.auth.currentUser;
+    if (user != null && user.isAnonymous) return false;
+    try {
+      final row = await client
+          .from('profiles')
+          .select('id, display_name, city')
+          .eq('id', userId)
+          .maybeSingle();
+      if (row == null) return true;
+      final name = (row['display_name'] as String?)?.trim() ?? '';
+      final city = (row['city'] as String?)?.trim() ?? '';
+      return name.isEmpty || city.isEmpty;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /// Re-check profile completeness (called after Personal Details is saved).
+  Future<void> refreshProfileSetup() async {
+    final client = _client;
+    final userId = client?.auth.currentUser?.id;
+    if (userId == null) return;
+    final needsSetup = await _profileNeedsSetup(userId);
+    state = state.copyWith(needsProfileSetup: needsSetup);
   }
 }

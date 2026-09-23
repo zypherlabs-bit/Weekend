@@ -9,7 +9,7 @@ create extension if not exists "uuid-ossp";
 -- ============================================================
 -- ADVERTISEMENT CAMPAIGNS TABLE
 -- ============================================================
-create table public.ad_campaigns (
+create table if not exists public.ad_campaigns (
     id uuid primary key default uuid_generate_v4(),
     name text not null,
     advertiser_id uuid,
@@ -31,7 +31,7 @@ create table public.ad_campaigns (
 -- ============================================================
 -- ADVERTISEMENTS TABLE
 -- ============================================================
-create table public.advertisements (
+create table if not exists public.advertisements (
     id uuid primary key default uuid_generate_v4(),
     campaign_id uuid references public.ad_campaigns(id) on delete cascade,
     title text not null,
@@ -50,19 +50,22 @@ create table public.advertisements (
 -- ============================================================
 -- AD IMPRESSIONS TABLE
 -- ============================================================
-create table public.ad_impressions (
+-- NOTE: the original `unique (ad_id, user_id, date_trunc('hour', ...))`
+-- table constraint was invalid Postgres (expressions are not allowed in
+-- UNIQUE constraints, and date_trunc on timestamptz is not IMMUTABLE).
+-- Per-user hourly dedupe is enforced in record_ad_event with an anti-join.
+create table if not exists public.ad_impressions (
     id uuid primary key default uuid_generate_v4(),
     ad_id uuid references public.advertisements(id) on delete cascade,
     user_id uuid references public.profiles(id) on delete cascade,
     campaign_id uuid references public.ad_campaigns(id) on delete cascade,
-    impression_time timestamptz default now(),
-    unique (ad_id, user_id, date_trunc('hour', impression_time))
+    impression_time timestamptz default now()
 );
 
 -- ============================================================
 -- AD CLICKS TABLE
 -- ============================================================
-create table public.ad_clicks (
+create table if not exists public.ad_clicks (
     id uuid primary key default uuid_generate_v4(),
     ad_id uuid references public.advertisements(id) on delete cascade,
     user_id uuid references public.profiles(id) on delete cascade,
@@ -73,7 +76,7 @@ create table public.ad_clicks (
 -- ============================================================
 -- AD EVENTS TABLE (general events log)
 -- ============================================================
-create table public.ad_events (
+create table if not exists public.ad_events (
     id uuid primary key default uuid_generate_v4(),
     ad_id uuid references public.advertisements(id) on delete cascade,
     user_id uuid references public.profiles(id) on delete cascade,
@@ -86,7 +89,7 @@ create table public.ad_events (
 -- ============================================================
 -- AD CONFIG TABLE (server-side frequency settings)
 -- ============================================================
-create table public.ad_config (
+create table if not exists public.ad_config (
     id text primary key,
     ad_interval_seconds integer default 120 check (ad_interval_seconds >= 10),
     max_ads_per_hour integer default 10,
@@ -100,34 +103,40 @@ values ('default', 120, 10)
 on conflict (id) do nothing;
 
 -- ============================================================
--- CROSSED PATHS TABLE (enhanced for privacy-safe co-location)
+-- CROSSED PATHS (upgrade the table created in 001 for privacy-safe
+-- co-location) - geohash bucket is an area of approximately 5km x 5km.
 -- ============================================================
--- Store geohash buckets (not exact coordinates) for privacy-safe crossed paths.
--- A geohash bucket is an area of approximately 5km x 5km.
-create table public.crossed_paths (
-    id uuid primary key default uuid_generate_v4(),
-    user_a_id uuid references public.profiles(id) on delete cascade,
-    user_b_id uuid references public.profiles(id) on delete cascade,
-    geohash_bucket text not null,
-    first_crossed_at timestamptz default now(),
-    last_crossed_at timestamptz default now(),
-    cross_count integer default 1,
-    created_at timestamptz default now(),
-    unique (user_a_id, user_b_id, geohash_bucket)
-);
+-- 001 created crossed_paths without the geohash bucket; extend it instead
+-- of creating a duplicate table.
+alter table public.crossed_paths add column if not exists geohash_bucket text;
+
+-- Widen the uniqueness from (user_a_id, user_b_id) to include the bucket.
+do $$
+begin
+    if not exists (
+        select 1 from pg_constraint
+        where conname = 'crossed_paths_user_bucket_key'
+    ) then
+        alter table public.crossed_paths
+            drop constraint if exists crossed_paths_user_a_id_user_b_id_key;
+        alter table public.crossed_paths
+            add constraint crossed_paths_user_bucket_key
+            unique (user_a_id, user_b_id, geohash_bucket);
+    end if;
+end $$;
 
 -- ============================================================
 -- CROSSED PATHS LOG (append-only, for aggregation only
 -- ============================================================
-create table public.crossed_paths_log (
+create table if not exists public.crossed_paths_log (
     id uuid primary key default uuid_generate_v4(),
     user_id uuid references public.profiles(id) on delete cascade,
     geohash_bucket text not null,
     timestamp timestamptz default now()
 );
 
-create index idx_crossed_paths_log_user_time on public.crossed_paths_log(user_id, timestamp desc);
-create index idx_crossed_paths_log_bucket on public.crossed_paths_log(geohash_bucket, timestamp desc);
+create index if not exists idx_crossed_paths_log_user_time on public.crossed_paths_log(user_id, timestamp desc);
+create index if not exists idx_crossed_paths_log_bucket on public.crossed_paths_log(geohash_bucket, timestamp desc);
 
 -- ============================================================
 -- USER LOCATION BUCKETS (privacy-safe geohash storage)
@@ -135,7 +144,7 @@ create index idx_crossed_paths_log_bucket on public.crossed_paths_log(geohash_bu
 -- Instead of storing exact lat/lon for crossed-paths, we store
 -- a geohash bucket. The profiles table still has raw latitude/longitude
 -- for distance queries, but crossed paths is computed from buckets.
-create table public.user_location_buckets (
+create table if not exists public.user_location_buckets (
     id uuid primary key default uuid_generate_v4(),
     user_id uuid unique references public.profiles(id) on delete cascade,
     geohash_7 text not null,
@@ -145,8 +154,8 @@ create table public.user_location_buckets (
     updated_at timestamptz default now()
 );
 
-create index idx_user_location_buckets_geohash on public.user_location_buckets(geohash_7);
-create index idx_user_location_buckets_city on public.user_location_buckets(city);
+create index if not exists idx_user_location_buckets_geohash on public.user_location_buckets(geohash_7);
+create index if not exists idx_user_location_buckets_city on public.user_location_buckets(city);
 
 -- ============================================================
 -- INDEXES
@@ -163,7 +172,6 @@ create index if not exists idx_advertisements_active on public.advertisements(is
 -- Ad impressions indexes
 create index if not exists idx_ad_impressions_user_time on public.ad_impressions(user_id, impression_time desc);
 create index if not exists idx_ad_impressions_ad_time on public.ad_impressions(ad_id, impression_time desc);
-create index if not exists idx_ad_impressions_hour on public.ad_impressions(date_trunc('hour', impression_time));
 
 -- Ad clicks indexes
 create index if not exists idx_ad_clicks_user_time on public.ad_clicks(user_id, click_time desc);
@@ -187,16 +195,28 @@ begin
 end;
 $$ language plpgsql;
 
+-- Update trigger for timestamps (drop-guarded for idempotent re-runs)
+create or replace function public.update_ad_updated_at()
+returns trigger as $$
+begin
+    new.updated_at = now();
+    return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists ad_campaigns_updated_at_trigger on public.ad_campaigns;
 create trigger ad_campaigns_updated_at_trigger
     before update on public.ad_campaigns
     for each row
     execute function public.update_ad_updated_at();
 
+drop trigger if exists advertisements_updated_at_trigger on public.advertisements;
 create trigger advertisements_updated_at_trigger
     before update on public.advertisements
     for each row
     execute function public.update_ad_updated_at();
 
+drop trigger if exists ad_config_updated_at_trigger on public.ad_config;
 create trigger ad_config_updated_at_trigger
     before update on public.ad_config
     for each row

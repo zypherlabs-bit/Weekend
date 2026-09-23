@@ -13,6 +13,11 @@
 
     <!-- Notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Biometric / Credential Manager for passkeys -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
+
     <application
         android:label="Weekend"
         android:name="${applicationName}"
@@ -43,12 +48,23 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- WebAuthn / Passkey support - handle credential manager callbacks -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="weekend.app"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- WebAuthn / Passkey relying party configuration -->
+        <meta-data
+            android:name="android.credentials.webauthn.relying_party_id"
+            android:value="weekend.app" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -71,6 +87,13 @@
         <intent>
             <action android:name="android.intent.action.SEND"/>
             <data android:mimeType="image/*"/>
+        </intent>
+        <!-- Credential Manager / Autofill service queries -->
+        <intent>
+            <action android:name="android.service.autofill.AutofillService"/>
+        </intent>
+        <intent>
+            <action android:name="android.service.credentials.CredentialProviderService"/>
         </intent>
     </queries>
 </manifest>

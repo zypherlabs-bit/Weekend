@@ -336,7 +336,7 @@ create index idx_profiles_relationship_intent on public.profiles(relationship_in
 create index idx_profiles_verification_status on public.profiles(verification_status);
 create index idx_profiles_last_active on public.profiles(last_active_at desc);
 create index idx_profiles_location on public.profiles using gist (
-    ST_Point(longitude, latitude)::geography
+    (ST_Point(longitude, latitude)::geography)
 ) where latitude is not null and longitude is not null;
 
 -- Photo indexes
@@ -371,4 +371,4 @@ create index idx_plan_participants_plan on public.plan_participants(plan_id);
 
 -- Referrals indexes
 create index idx_referrals_referrer on public.referrals(referrer_id);
-create index idx_referrals_referree on public.referrals(referree_id);
+create index idx_referrals_referee on public.referrals(referee_id);

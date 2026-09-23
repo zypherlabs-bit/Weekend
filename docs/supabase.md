@@ -30,7 +30,6 @@ cp .env.example .env
 ```properties
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_ANON_KEY=public-anon-key-here
-GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com   # optional placeholder
 ```
 
 - **`.env` is documentation, not runtime configuration.** The Flutter app reads
@@ -40,8 +39,6 @@ GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com   # optional p
 - `.gitignore` excludes `.env` / `.env.*`. Never commit real keys.
 - If the values are missing or left as placeholders, `SupabaseConfig.isConfigured`
   is false and the app runs in **offline demo mode** (sample data, no crash).
-- `GOOGLE_CLIENT_ID` exists only as a template placeholder: no OAuth/Google
-  sign-in is implemented in the current release.
 
 ### Environment separation
 

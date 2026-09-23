@@ -441,6 +441,19 @@ class WeekendAuthState {
   final bool emailVerified;
   final bool needsMfaChallenge;
   final bool mfaEnabled;
+  final bool needsProfileSetup;
+
+  /// True when Supabase accepted the signup but the account still has to be
+  /// confirmed through the emailed link before a session is issued.
+  ///
+  /// This is a distinct state from [error]: nothing went wrong, the flow is
+  /// simply waiting on the user. It mirrors the live project's real
+  /// `mailer_autoconfirm` setting instead of inventing a verified flag.
+  final bool awaitingEmailConfirmation;
+
+  /// The address the confirmation mail was sent to (for resend / display).
+  final String? pendingEmail;
+
   const WeekendAuthState({
     this.isAuthenticated = false,
     this.isLoading = false,
@@ -450,6 +463,9 @@ class WeekendAuthState {
     this.emailVerified = false,
     this.needsMfaChallenge = false,
     this.mfaEnabled = false,
+    this.needsProfileSetup = false,
+    this.awaitingEmailConfirmation = false,
+    this.pendingEmail,
   });
   WeekendAuthState copyWith({
     bool? isAuthenticated,
@@ -457,19 +473,28 @@ class WeekendAuthState {
     UserProfile? user,
     String? session,
     String? error,
+    bool clearError = false,
     bool? emailVerified,
     bool? needsMfaChallenge,
     bool? mfaEnabled,
+    bool? needsProfileSetup,
+    bool? awaitingEmailConfirmation,
+    String? pendingEmail,
+    bool clearPendingEmail = false,
   }) {
     return WeekendAuthState(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       isLoading: isLoading ?? this.isLoading,
       user: user ?? this.user,
       session: session ?? this.session,
-      error: error ?? this.error,
+      error: clearError ? null : (error ?? this.error),
       emailVerified: emailVerified ?? this.emailVerified,
       needsMfaChallenge: needsMfaChallenge ?? this.needsMfaChallenge,
       mfaEnabled: mfaEnabled ?? this.mfaEnabled,
+      needsProfileSetup: needsProfileSetup ?? this.needsProfileSetup,
+      awaitingEmailConfirmation:
+          awaitingEmailConfirmation ?? this.awaitingEmailConfirmation,
+      pendingEmail: clearPendingEmail ? null : (pendingEmail ?? this.pendingEmail),
     );
   }
 
@@ -481,6 +506,9 @@ class WeekendAuthState {
         emailVerified: emailVerified,
         needsMfaChallenge: needsMfaChallenge,
         mfaEnabled: mfaEnabled,
+        needsProfileSetup: needsProfileSetup,
+        awaitingEmailConfirmation: awaitingEmailConfirmation,
+        pendingEmail: pendingEmail,
       );
 }
 
@@ -666,6 +694,11 @@ class LocationPreferences {
   final String? travelModeCity;
   final double? travelModeLat;
   final double? travelModeLon;
+  /// Gender preferences for discovery filtering.
+  /// Empty list means no preference filter (show all genders).
+  /// Values must match the gender options in the profiles table:
+  /// 'Man', 'Woman', 'Non-binary', 'Prefer not to say'
+  final List<String> preferredGenders;
   const LocationPreferences({
     this.locationDiscoveryEnabled = true,
     this.crossedPathsEnabled = true,
@@ -676,6 +709,7 @@ class LocationPreferences {
     this.travelModeCity,
     this.travelModeLat,
     this.travelModeLon,
+    this.preferredGenders = const [],
   });
   LocationPreferences copyWith({
     bool? locationDiscoveryEnabled,
@@ -687,6 +721,7 @@ class LocationPreferences {
     String? travelModeCity,
     double? travelModeLat,
     double? travelModeLon,
+    List<String>? preferredGenders,
   }) {
     return LocationPreferences(
       locationDiscoveryEnabled:
@@ -700,6 +735,7 @@ class LocationPreferences {
       travelModeCity: travelModeCity ?? this.travelModeCity,
       travelModeLat: travelModeLat ?? this.travelModeLat,
       travelModeLon: travelModeLon ?? this.travelModeLon,
+      preferredGenders: preferredGenders ?? this.preferredGenders,
     );
   }
 
@@ -713,6 +749,7 @@ class LocationPreferences {
     'travel_mode_city': travelModeCity,
     'travel_mode_lat': travelModeLat,
     'travel_mode_lon': travelModeLon,
+    'preferred_genders': preferredGenders,
   };
   factory LocationPreferences.fromJson(Map<String, dynamic> json) =>
       LocationPreferences(
@@ -727,6 +764,10 @@ class LocationPreferences {
         travelModeCity: json['travel_mode_city'] as String?,
         travelModeLat: (json['travel_mode_lat'] as num?)?.toDouble(),
         travelModeLon: (json['travel_mode_lon'] as num?)?.toDouble(),
+        preferredGenders: (json['preferred_genders'] as List?)
+                ?.map((g) => g.toString())
+                .toList() ??
+            [],
       );
 }
 

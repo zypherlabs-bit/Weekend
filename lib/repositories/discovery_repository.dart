@@ -4,10 +4,12 @@ import '../config/supabase_config.dart';
 import '../models/models.dart';
 
 import '../services/location_service.dart';
+import '../services/photo_url_service.dart';
 
 class DiscoveryRepository {
   /// The live Supabase client, or `null` in offline demo mode.
   SupabaseClient? get _client => SupabaseConfig.client;
+
 
   /// Load profiles using the privacy-safe server-side RPC.
   /// The RPC `get_nearby_profiles` computes distance server-side and never
@@ -43,20 +45,32 @@ class DiscoveryRepository {
         },
       );
 
-      return (result as List).map((row) {
+      final rows = result as List;
+
+      // Resolve private photo storage paths to signed URLs in one batch.
+      final paths = rows
+          .map((row) => row['primary_photo_path'] as String? ?? '')
+          .where((p) => p.isNotEmpty)
+          .toSet()
+          .toList();
+      final photoUrls = await PhotoUrlService.resolve(paths);
+
+      return rows.map((row) {
         final interests = (row['interests'] as List?)?.cast<String>() ?? [];
         final distanceKm = (row['distance_km'] as num?)?.toDouble() ?? 0.0;
         final isVerified = row['is_photo_verified'] as bool? ?? false;
         final trustScore = row['trust_score'] as int? ?? 50;
         final compatibilityScore =
             (row['compatibility_score'] as num?)?.toDouble() ?? 0.0;
+        final photoPath = row['primary_photo_path'] as String? ?? '';
+        final photoUrl = photoUrls[photoPath];
 
         return UserProfile(
           id: row['profile_id'] as String? ?? '',
           name: row['display_name'] as String? ?? 'Unknown',
           age: row['age'] as int? ?? 25,
           gender: row['gender'] as String? ?? 'Prefer not to say',
-          photos: const [],
+          photos: photoUrl == null ? const [] : [photoUrl],
           city: row['city'] as String? ?? '',
           distanceKm: distanceKm.round(),
           distanceDisplay: LocationService.formatDistanceWithAway(distanceKm),
@@ -110,7 +124,8 @@ class DiscoveryRepository {
   }
 
   /// Fetch profile photos from the privacy-safe storage bucket.
-  /// Only approved, moderated photos are returned.
+  /// Only approved, moderated photos are returned, as short-lived signed
+  /// URLs minted by the `get-photo-urls` Edge Function.
   Future<List<String>> fetchProfilePhotos(String userId) async {
     final client = _client;
 
@@ -119,16 +134,22 @@ class DiscoveryRepository {
     try {
       final response = await client
           .from('profile_photos')
-          .select('photo_url')
+          .select('storage_path')
           .eq('user_id', userId)
           .eq('moderation_status', 'approved')
           .order('is_primary', ascending: false)
           .order('created_at', ascending: false);
 
-      return (response as List)
-          .map((photo) => photo['photo_url'] as String? ?? '')
-          .where((url) => url.isNotEmpty)
+      final paths = (response as List)
+          .map((photo) => photo['storage_path'] as String? ?? '')
+          .where((path) => path.isNotEmpty)
           .toList();
+
+      final resolved = await PhotoUrlService.resolve(paths);
+      return [
+        for (final p in paths)
+          if (resolved.containsKey(p)) resolved[p]!,
+      ];
     } catch (e) {
       return [];
     }

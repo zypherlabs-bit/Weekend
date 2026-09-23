@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/weekend_provider.dart';
 import '../../models/models.dart';
@@ -10,9 +10,9 @@ class PlansScreen extends ConsumerWidget {
     final state = ref.watch(weekendProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF130E20),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
           'Weekend Plans',
@@ -453,3 +453,4 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
+

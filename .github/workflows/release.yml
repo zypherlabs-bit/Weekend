@@ -32,10 +32,24 @@ jobs:
         run: flutter test
 
       - name: Build release APK
-        run: >
-          flutter build apk --release
-          --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-          --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "${{ secrets.SUPABASE_URL }}" ] || [ -z "${{ secrets.SUPABASE_ANON_KEY }}" ]; then
+            echo "LIVE-ONLY: SUPABASE_URL / SUPABASE_ANON_KEY secrets are missing. Refusing to build an offline demo APK." >&2
+            exit 1
+          fi
+          case "${{ secrets.SUPABASE_URL }}" in
+            *your-project-ref*|*localhost*|*127.0.0.1*|*10.0.2.2*)
+              echo "LIVE-ONLY: SUPABASE_URL secret is a placeholder or loopback URL. Refusing to build." >&2
+              exit 1
+              ;;
+          esac
+          if [ "${{ secrets.SUPABASE_ANON_KEY }}" = "public-anon-key-here" ] || [ "${{ secrets.SUPABASE_ANON_KEY }}" = "your-real-anon-key-here" ] || [ "${{ secrets.SUPABASE_ANON_KEY }}" = "your-public-anon-key" ]; then
+            echo "LIVE-ONLY: SUPABASE_ANON_KEY secret is a placeholder. Refusing to build." >&2
+            exit 1
+          fi
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
 
       - name: Prepare release assets
         id: prep

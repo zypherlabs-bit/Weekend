@@ -22,6 +22,40 @@ class SupabaseConfig {
   );
   static const String storageBucket = 'profile-photos';
 
+  /// Optional production redirect target sent to Supabase with signup and
+  /// password-reset emails (`--dart-define=AUTH_EMAIL_REDIRECT_URL=...`).
+  ///
+  /// GoTrue only honours this value when it is present in the project's
+  /// *Authentication -> URL Configuration -> Redirect URLs* allow-list. When
+  /// empty (the default) Supabase falls back to the project Site URL, which is
+  /// GoTrue's documented behaviour — no redirect target is invented here.
+  static const String emailRedirectUrl = String.fromEnvironment(
+    'AUTH_EMAIL_REDIRECT_URL',
+    defaultValue: '',
+  );
+
+  /// The redirect target to send, or `null` to let Supabase use its Site URL.
+  static String? get emailRedirectOrNull =>
+      emailRedirectUrl.trim().isEmpty ? null : emailRedirectUrl.trim();
+
+  /// LIVE-ONLY GUARANTEE: release builds must never embed placeholder or
+  /// non-production Supabase credentials. CI fails the build when the
+  /// required secrets are absent (see .github/workflows/release.yml), and
+  /// this assertion stops a misconfigured release binary from silently
+  /// running against the wrong backend.
+  static void assertLiveConfigured() {
+    assert(
+      isConfigured &&
+          !url.contains('your-project-ref') &&
+          !url.contains('localhost') &&
+          !url.contains('127.0.0.1') &&
+          !url.contains('10.0.2.2'),
+      'LIVE Supabase credentials are missing. Build with '
+      '--dart-define=SUPABASE_URL=https://<live-ref>.supabase.co '
+      '--dart-define=SUPABASE_ANON_KEY=<live-anon-key>.',
+    );
+  }
+
   static bool get isConfigured =>
       url.isNotEmpty &&
       anonKey.isNotEmpty &&

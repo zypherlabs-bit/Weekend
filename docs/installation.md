@@ -27,9 +27,9 @@ are only used for the features that need them.
 
 1. Open the [latest release](https://github.com/zypherlabs-bit/Weekend/releases/latest).
 2. Download the current APK asset, for example
-   `Weekend-v2.1.0-release.apk` (~74 MB).
+   `Weekend-v2.3.0-release.apk` (~78 MB).
 3. Optionally download the matching checksum file
-   `Weekend-v2.1.0-release.apk.sha256`.
+   `Weekend-v2.3.0-release.apk.sha256`.
 
 > The asset file name embeds the version (`Weekend-v<version>-release.apk`), so it
 > changes with every release. The release page always lists the newest one.
@@ -43,18 +43,18 @@ Compare the SHA-256 hash of the file you downloaded with the published checksum.
 **Windows (PowerShell)**
 
 ```powershell
-Get-FileHash .\Weekend-v2.0.1-release.apk -Algorithm SHA256
+Get-FileHash .\Weekend-v2.3.0-release.apk -Algorithm SHA256
 ```
 
 **macOS / Linux**
 
 ```bash
-shasum -a 256 Weekend-v2.0.1-release.apk
+shasum -a 256 Weekend-v2.3.0-release.apk
 # or:
-sha256sum Weekend-v2.0.1-release.apk
+sha256sum Weekend-v2.3.0-release.apk
 ```
 
-The output must match the contents of `Weekend-v2.0.1-release.apk.sha256` in the
+The output must match the contents of `Weekend-v2.3.0-release.apk.sha256` in the
 release. If it does not match, do not install the file and download it again.
 
 Hash verification confirms the file was not corrupted or modified in transit. It

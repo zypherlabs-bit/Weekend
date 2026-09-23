@@ -12,6 +12,25 @@ const SUSPICIOUS_PATTERNS = [
   /art\b/i, /god/i, /deity/i, /religious/i, /logo\b/i, /brand/i, /filter/i,
 ];
 
+// Social media handle patterns for detection in images/text
+const SOCIAL_MEDIA_PATTERNS = [
+  // Instagram
+  /(?:^|\s|[\u200B\u200C\u200D\u200E\u200F\u2028\u2029\u202A\u202B\u202C\u202D\u202E\u202F\u205F\u3000]|^)insta?[gp]ram\s*(?:com\/|@)?([a-zA-Z0-9_\.]{3,30})/i,
+  /instagram\.com\/(?:p\/|stories\/)?([a-zA-Z0-9_]{3,30})/i,
+  /@[a-zA-Z0-9_]{3,30}\s*(?:instagram|insta)/i,
+  // Telegram
+  /t\.me\/([a-zA-Z0-9_]{3,30})/i,
+  /telegram\.com\/(\w+)/i,
+  /@[\w]{3,30}\s*(?:telegram|telegramm|tg)/i,
+  // Generic social handles
+  /(?:dm|contact|message)\s*(?:me|on)\s*(?:@|at\s*)([a-zA-Z0-9_]{3,30})/i,
+  // URL patterns that might be social media
+  /(?:https?:\/\/)?(?:www\.)?(?:instagram|telegram|snapchat|twitter|x\.com|tiktok|discord)\.com\/?[a-zA-Z0-9_\/-]{3,50}/i,
+  // QR code indicators - if image has structured patterns typical of QR codes
+  // (This is a simplified check - production would use proper QR detection)
+  /qrcode/i, /qr\s*code/i, /quick\s*response/i,
+];
+
 /**
  * Verifies the caller's JWT and ensures the authenticated user matches
  * the requested userId. Returns the user ID or null if unauthenticated.
@@ -161,11 +180,22 @@ serve(async (req: Request) => {
       }
     }
 
-    // Secondary signal: check filename/URL for suspicious patterns
+    // Check filename/URL for suspicious patterns
     const suspiciousMatches = SUSPICIOUS_PATTERNS.filter(p =>
       p.test(photoUrl) || p.test(storagePath || '')
     );
     detectionSignals.filename_suspicious_patterns = suspiciousMatches;
+
+    // Check for social media patterns in filename/URL
+    const socialMatches = SOCIAL_MEDIA_PATTERNS.filter(p =>
+      p.test(photoUrl) || p.test(storagePath || '')
+    );
+    if (socialMatches.length > 0) {
+      detectionSignals.social_media_detected = true;
+      detectionSignals.social_media_patterns = socialMatches.map(m => m.toString());
+      riskLevel = riskLevel === 'high' ? 'high' : 'medium';
+      suspicionReasons.push('Image filename/URL contains social media patterns');
+    }
 
     // Determine result
     const geminiAnalysis = (detectionSignals.gemini_analysis ||

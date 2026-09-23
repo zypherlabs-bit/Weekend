@@ -21,7 +21,7 @@ void main() {
     expect(find.text('Welcome to Weekend'), findsOneWidget);
   });
 
-  testWidgets('Get Started button navigates to auth screen',
+  testWidgets('Get Started button opens the sign-up form (no sign-in detour)',
       (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: WeekendApp()));
     await tester.pump();
@@ -40,7 +40,10 @@ void main() {
     await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle(const Duration(milliseconds: 300));
 
-    expect(find.text('Welcome Back'), findsOneWidget);
-    expect(find.text('Sign In'), findsOneWidget);
+    // "Get Started" means "create an account", so the auth screen opens
+    // directly on the sign-up form. The user must not be sent through the
+    // sign-in screen (nor a duplicate auth screen) first.
+    expect(find.text('Create Account'), findsWidgets);
+    expect(find.text('Welcome Back'), findsNothing);
   });
 }

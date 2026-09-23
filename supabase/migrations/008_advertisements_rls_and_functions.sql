@@ -352,11 +352,18 @@ begin
             );
         end if;
 
-        -- Record impression
+        -- Record impression (dedupe: skip when the same user already saw
+        -- this ad within the last hour; the old unique expression index
+        -- was invalid Postgres, so dedupe happens server-side here).
         insert into public.ad_impressions (ad_id, user_id, campaign_id, impression_time)
         select p_ad_id, p_user_id, campaign_id, now()
         from public.advertisements where id = p_ad_id
-        on conflict do nothing;
+        and not exists (
+            select 1 from public.ad_impressions ai
+            where ai.ad_id = p_ad_id
+              and ai.user_id = p_user_id
+              and ai.impression_time > now() - interval '1 hour'
+        );
     elsif p_event_type = 'click' then
         -- Record click
         insert into public.ad_clicks (ad_id, user_id, campaign_id, click_time)

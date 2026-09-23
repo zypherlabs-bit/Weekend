@@ -12,7 +12,7 @@ technical description.
 
 | Version | Supported | Notes |
 |---------|-----------|-------|
-| 2.0.x | ✅ | Current release line (`v2.0.1` is the latest published release) |
+| 2.2.x | ✅ | Current release line (`v2.2.0` is the latest published release) |
 | 1.0.x | ❌ | Historic Kotlin/Compose-era release, no longer maintained |
 
 Security fixes are applied to the latest released version and to `master`.
@@ -88,14 +88,14 @@ There is no bug-bounty programme and no payment for reports.
 ### Verifying a release APK
 
 ```powershell
-Get-FileHash .\Weekend-v2.0.1-release.apk -Algorithm SHA256   # Windows
+Get-FileHash .\Weekend-v2.2.0-release.apk -Algorithm SHA256   # Windows
 ```
 
 ```bash
-shasum -a 256 Weekend-v2.0.1-release.apk                      # macOS / Linux
+shasum -a 256 Weekend-v2.2.0-release.apk                      # macOS / Linux
 ```
 
-Compare with the published `Weekend-v2.0.1-release.apk.sha256` asset.
+Compare with the published `Weekend-v2.2.0-release.apk.sha256` asset.
 
 ---
 

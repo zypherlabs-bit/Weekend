@@ -30,6 +30,7 @@ Related project files:
 - [../CHANGELOG.md](../CHANGELOG.md) — release history
 - [../CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) — community expectations
 - [../LICENSE](../LICENSE) — MIT licence
+- [analytics/](analytics/) — live analytics dashboard (GitHub Pages): repository visitors and APK downloads
 
 ## Quick facts
 
@@ -42,3 +43,4 @@ Related project files:
 | Backend | Supabase — PostgreSQL + PostGIS, Auth, Storage, Realtime, Edge Functions (Deno) |
 | Licence | MIT |
 | Latest release | <https://github.com/zypherlabs-bit/Weekend/releases/latest> |
+| Analytics dashboard | <https://zypherlabs-bit.github.io/Weekend/analytics/> |

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weekend Analytics — Repository Visitors &amp; APK Downloads</title>
+<meta name="description" content="Daily analytics for Weekend, the open-source Android dating and social discovery app built with Flutter and Supabase: GitHub repository visitors, APK downloads, and 7/30-day totals.">
+<meta name="keywords" content="Weekend, Android Dating & Social Discovery App, Open Source, Flutter, Supabase, GitHub analytics, APK downloads">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#0b0f17">
+<style>
+:root{--bg:#0b0f17;--card:#131a26;--line:#222c3f;--txt:#e6ebf5;--muted:#8b93a7;--accent:#3ddc84;--accent2:#4ea1ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:24px 16px 48px}
+header{text-align:center;padding:24px 0 8px}
+h1{font-size:clamp(22px,4vw,34px);letter-spacing:.14em;margin:0 0 6px}
+.tagline{color:var(--accent);font-weight:600;margin:0}
+.subtitle{color:var(--muted);margin:4px 0 0;font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+h2{margin:0 0 2px;font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+h3{margin:0 0 10px;font-size:15px}
+.big{font-size:clamp(30px,5vw,44px);font-weight:700;margin:6px 0 0}
+.big-label{color:var(--muted);font-size:12px;margin:0 0 12px}
+.metric{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.metric span{color:var(--muted)}
+.metric strong{font-variant-numeric:tabular-nums;text-align:right}
+.metric small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+.hint{color:var(--muted);font-size:11.5px;margin:12px 0 0}
+.src{display:inline-block;font-size:10.5px;border:1px solid var(--line);border-radius:999px;padding:2px 8px;color:var(--muted);margin-bottom:8px}
+.empty{color:var(--muted);font-size:13px}
+.release-rows div{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--line);font-size:14px;flex-wrap:wrap}
+.release-rows span{color:var(--muted)}
+code.hash{font-size:11px;word-break:break-all;color:var(--accent);text-align:right}
+.notes ul{margin:6px 0 0;padding-left:18px;color:var(--muted);font-size:13px}
+.notes li{margin:6px 0}
+footer{color:var(--muted);font-size:13px;text-align:center;margin-top:22px}
+footer a{color:var(--accent2)}
+section{margin-top:16px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>WEEKEND ANALYTICS</h1>
+  <p class="tagline">Make Every Weekend Brighter</p>
+  <p class="subtitle">Android Dating &amp; Social Discovery App · Open Source · Flutter · Supabase</p>
+</header>
+
+<section class="grid2">
+  <article class="card">
+    <span class="src">GitHub repository traffic</span>
+    <h2>Repository visitors</h2>
+    <p class="big" id="vis-total">—</p>
+    <p class="big-label">Total recorded repository views</p>
+    <div class="metric"><span>Visitors today</span><strong id="vis-today">—</strong></div>
+    <div class="metric"><span>Visitors yesterday</span><strong id="vis-yest">—</strong></div>
+    <div class="metric"><span>Visitors this week</span><strong id="vis-week">—</strong></div>
+    <div class="metric"><span>Visitors this month</span><strong id="vis-month">—</strong></div>
+    <div class="metric"><span>Total recorded visitors</span><strong id="vis-uniq">—</strong></div>
+    <div class="metric"><span>Repository clones (7 days)</span><strong id="clones-week">—</strong></div>
+    <p class="hint" id="vis-hint">Loading…</p>
+  </article>
+  <article class="card">
+    <span class="src">GitHub release assets</span>
+    <h2>APK downloads</h2>
+    <p class="big" id="dl-total">—</p>
+    <p class="big-label">Total APK downloads (all releases)</p>
+    <div class="metric"><span>Downloads today</span><strong id="dl-today">—</strong></div>
+    <div class="metric"><span>Downloads yesterday</span><strong id="dl-yest">—</strong></div>
+    <div class="metric"><span>Downloads this week</span><strong id="dl-week">—</strong></div>
+    <div class="metric"><span>Downloads this month</span><strong id="dl-month">—</strong></div>
+    <div class="metric"><span>Latest release downloads</span><strong id="dl-latest">—</strong></div>
+    <p class="hint" id="dl-hint">Loading…</p>
+  </article>
+</section>
+
+<section class="grid2">
+  <article class="card">
+    <h3>Daily activity — repository views</h3>
+    <div id="chart-views" class="empty">Loading…</div>
+  </article>
+  <article class="card">
+    <h3>Daily activity — APK downloads</h3>
+    <div id="chart-dl" class="empty">Loading…</div>
+  </article>
+</section>
+
+<section class="card">
+  <h3>Latest release</h3>
+  <div class="release-rows">
+    <div><span>Latest release</span><strong id="rel-name">—</strong></div>
+    <div><span>APK</span><strong id="rel-apk">—</strong></div>
+    <div><span>SHA-256</span><code class="hash" id="rel-sha">—</code></div>
+    <div><span>Release date</span><strong id="rel-date">—</strong></div>
+    <div><span>APK downloads (this release)</span><strong id="rel-dl">—</strong></div>
+    <div><span>Dashboard updated</span><strong id="rel-upd">—</strong></div>
+  </div>
+</section>
+
+<section class="card notes">
+  <h3>About this data</h3>
+  <ul id="notes-list"><li>Loading…</li></ul>
+</section>
+
+<footer>
+  <a href="https://github.com/zypherlabs-bit/Weekend">Repository</a> ·
+  <a href="https://github.com/zypherlabs-bit/Weekend/releases">Releases</a> ·
+  <a href="https://github.com/zypherlabs-bit/Weekend/tree/master/docs">Documentation</a> ·
+  <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest">Download latest APK</a>
+</footer>
+</div>
+<script>
+(async () => {
+  const $ = id => document.getElementById(id);
+  const num = n => (n === null || n === undefined) ? 'N/A' : Number(n).toLocaleString('en-US');
+  const iso = d => d.toISOString().slice(0, 10);
+  const shift = (key, delta) => {
+    const d = new Date(key + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + delta);
+    return iso(d);
+  };
+  const today = iso(new Date());
+  let data;
+  try {
+    const res = await fetch('data/daily.json?t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    data = await res.json();
+  } catch (e) {
+    document.querySelectorAll('.big').forEach(el => { el.textContent = '\u2014'; });
+    ['vis-today','vis-yest','vis-week','vis-month','vis-uniq','clones-week',
+     'dl-today','dl-yest','dl-week','dl-month','dl-latest',
+     'rel-name','rel-apk','rel-sha','rel-date','rel-dl','rel-upd']
+      .forEach(id => { $(id).textContent = 'N/A'; });
+    $('chart-views').textContent = 'Analytics data unavailable (' + e.message + ').';
+    $('chart-dl').textContent = 'Analytics data unavailable (' + e.message + ').';
+    $('notes-list').innerHTML =
+      '<li>Analytics data is unavailable right now. Please refresh in a few minutes.</li>';
+    return;
+  }
+
+  const days = (data.days || []).slice().sort((a, b) => a.date < b.date ? -1 : 1);
+  const map = new Map(days.map(d => [d.date, d]));
+  const val = (key, field) => {
+    const d = map.get(key);
+    return d && d[field] !== null && d[field] !== undefined ? d[field] : null;
+  };
+  const period = (field, back) => {
+    let sum = 0, got = 0;
+    for (let i = 0; i < back; i++) {
+      const v = val(shift(today, -i), field);
+      if (v !== null) { sum += v; got++; }
+    }
+    if (got === 0) return 'N/A';
+    return num(sum) + (got < back
+      ? ' <small>' + got + '/' + back + ' days recorded</small>' : '');
+  };
+  const set = (id, html) => { $(id).innerHTML = html; };
+  const plain = v => (v === null || v === undefined) ? 'N/A' : num(v);
+
+  // --- Repository visitors (GitHub repository traffic) ---
+  set('vis-today', plain(val(today, 'repository_views')));
+  set('vis-yest', plain(val(shift(today, -1), 'repository_views')));
+  set('vis-week', period('repository_views', 7));
+  set('vis-month', period('repository_views', 30));
+  const totalViews = days.reduce((s, d) => s + (d.repository_views || 0), 0);
+  const totalUniq = days.reduce((s, d) => s + (d.repository_unique_visitors || 0), 0);
+  $('vis-total').textContent = num(totalViews);
+  set('vis-uniq', num(totalUniq) + ' <small>visitor-days (daily uniques summed)</small>');
+  set('clones-week', period('repository_clones', 7));
+  const win = data.traffic_window_totals;
+  const winTxt = win
+    ? num(win.views) + ' views / ' + num(win.unique_visitors) + ' unique visitors'
+    : 'unavailable';
+  $('vis-hint').textContent =
+    'Source: GitHub repository traffic API \u2014 rolling 14-day window at the last snapshot (' +
+    winTxt + '). Older days come from Weekend\u2019s stored snapshots. GitHub traffic can lag ' +
+    'up to ~2 days, so today/yesterday may show N/A until GitHub publishes them. ' +
+    'Clones: GitHub currently returns no clone data for this repository (N/A).';
+
+  // --- APK downloads (GitHub release assets) ---
+  const apk = data.apk || {};
+  const rel = data.release || {};
+  $('dl-total').textContent = num(
+    apk.total_downloads !== undefined ? apk.total_downloads : null);
+  set('dl-today', plain(val(today, 'apk_downloads_daily')));
+  set('dl-yest', plain(val(shift(today, -1), 'apk_downloads_daily')));
+  set('dl-week', period('apk_downloads_daily', 7));
+  set('dl-month', period('apk_downloads_daily', 30));
+  set('dl-latest', plain(rel.apk_downloads));
+  $('dl-hint').textContent =
+    'Source: GitHub release asset download counts. Daily values are snapshot-derived ' +
+    '(cumulative at this snapshot minus the previous snapshot); first tracked ' +
+    (data.tracking_started || 'N/A') + '. Total includes ' + num(apk.archived_downloads || 0) +
+    ' download(s) of a removed older asset, preserved from before v2.3.0.';
+
+  // --- Latest release card ---
+  $('rel-name').textContent = rel.tag ? 'Weekend ' + rel.tag : 'N/A';
+  $('rel-apk').textContent = rel.apk_asset || 'N/A';
+  $('rel-sha').textContent = rel.sha256 || 'N/A';
+  $('rel-date').textContent = rel.published_at ? rel.published_at.slice(0, 10) : 'N/A';
+  set('rel-dl', plain(rel.apk_downloads));
+  $('rel-upd').textContent = data.generated_at
+    ? data.generated_at.slice(0, 10) + ' ' + data.generated_at.slice(11, 16) + ' UTC'
+    : 'N/A';
+
+  // --- Daily activity charts (inline SVG, no external libraries) ---
+  const chart = (elId, field, color, label) => {
+    const el = $(elId);
+    const recs = days.filter(d => d[field] !== null && d[field] !== undefined)
+                     .slice(-14);
+    if (!recs.length) {
+      el.className = 'empty';
+      el.textContent = field === 'apk_downloads_daily'
+        ? 'No daily download snapshots yet \u2014 the first snapshot establishes the baseline (' +
+          (data.tracking_started || 'starting soon') + ').'
+        : 'No recorded data yet.';
+      return;
+    }
+    const max = Math.max.apply(null, recs.map(d => d[field]).concat([1]));
+    const W = 560, H = 190, padX = 10, padB = 26, padT = 8;
+    const bw = (W - padX * 2) / recs.length;
+    let svg = '';
+    recs.forEach((d, i) => {
+      const v = d[field];
+      const h = Math.max(v > 0 ? 2 : 1,
+                         Math.round((v / max) * (H - padT - padB)));
+      const x = padX + i * bw + 2;
+      const y = H - padB - h;
+      svg += '<rect x="' + x + '" y="' + y + '" width="' + Math.max(2, bw - 4) +
+             '" height="' + h + '" rx="3" fill="' + color + '"><title>' +
+             d.date + ': ' + v + ' ' + label + '</title></rect>';
+      if (i % 3 === 0) {
+        svg += '<text x="' + x + '" y="' + (H - 8) +
+               '" font-size="9" fill="#8b93a7">' + d.date.slice(5) + '</text>';
+      }
+    });
+    el.className = '';
+    el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H +
+      '" width="100%" role="img" aria-label="Daily ' + label +
+      ' for the last ' + recs.length + ' recorded days">' + svg + '</svg>';
+  };
+  chart('chart-views', 'repository_views', '#4ea1ff', 'views');
+  chart('chart-dl', 'apk_downloads_daily', '#3ddc84', 'downloads');
+
+  // --- About / provenance notes ---
+  const notes = [
+    'Visitors are <strong>GitHub repository traffic</strong> (page views of this repository on GitHub) \u2014 not Android app users. <strong>APK downloads</strong> come from GitHub release assets; the two metrics are never combined.',
+    'Daily APK downloads are <strong>snapshot-derived</strong>: cumulative downloads at the last snapshot minus the previous snapshot\u2019s cumulative count. Tracking started ' +
+      (data.tracking_started || 'N/A') + '; the first snapshot day has no baseline and shows N/A.',
+    'GitHub\u2019s traffic API only exposes a rolling <strong>14-day window</strong>. This dashboard stores one aggregated snapshot per day so history keeps accumulating beyond that window. Dates the system has never observed show <strong>N/A</strong> \u2014 no historical values are invented.',
+    'Metrics labelled \u201cGitHub repository traffic\u201d / \u201cGitHub release assets\u201d come from GitHub\u2019s API at the last snapshot' +
+      (data.traffic_fetched_at ? ' (' + data.traffic_fetched_at.slice(0, 10) + ')' : '') +
+      '; multi-day totals are computed from Weekend\u2019s stored snapshots in data/daily.json (' +
+      days.length + ' day(s) recorded so far).',
+    'Snapshots run daily at <strong>00:00 UTC (05:30 IST)</strong> via GitHub Actions, with manual workflow_dispatch supported. No tracking scripts, IPs, or personal data are collected on this page \u2014 only aggregated counters are stored.'
+  ];
+  $('notes-list').innerHTML = notes.map(n => '<li>' + n + '</li>').join('');
+})();
+</script>
+</body>
+</html>

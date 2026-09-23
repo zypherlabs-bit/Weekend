@@ -14,6 +14,7 @@ Free • Open Source • Android • Flutter • Supabase
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL%20%2B%20PostGIS-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![CI](https://github.com/zypherlabs-bit/Weekend/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/zypherlabs-bit/Weekend/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/zypherlabs-bit/Weekend?style=for-the-badge&color=blue)](https://github.com/zypherlabs-bit/Weekend/releases/latest)
+[![Analytics](https://img.shields.io/badge/Analytics-GitHub%20Pages%20Dashboard-ff69b4?style=for-the-badge)](https://zypherlabs-bit.github.io/Weekend/analytics/)
 [![License: MIT](https://img.shields.io/github/license/zypherlabs-bit/Weekend?style=for-the-badge&color=yellow)](LICENSE)
 
 </div>
@@ -76,7 +77,10 @@ location and personal data deliberately private.
 
 Download the latest Weekend Android APK from **GitHub Releases**.
 
+**Version: 2.3.0** (versionCode 5) · [📊 Analytics dashboard](https://zypherlabs-bit.github.io/Weekend/analytics/)
+
 <p align="center">
+
   <a href="https://github.com/zypherlabs-bit/Weekend/releases/latest">
     <img src="https://img.shields.io/badge/Download_Latest_APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download the latest Weekend Android APK">
   </a>
@@ -88,6 +92,7 @@ Download the latest Weekend Android APK from **GitHub Releases**.
 | [`Weekend-v2.3.0-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.3.0-release.apk) | Current production APK (~78 MB) |
 | [`Weekend-v2.3.0-release.apk.sha256`](https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.3.0-release.apk.sha256) | SHA-256 checksum for the current APK |
 | [All releases](https://github.com/zypherlabs-bit/Weekend/releases) | Full release history and notes |
+| [📊 **Analytics dashboard**](https://zypherlabs-bit.github.io/Weekend/analytics/) | Daily GitHub visitor and APK download statistics |
 
 **Requirements:** Android 7.0 (API 24) or newer · `arm64-v8a` / `armeabi-v7a` / `x86_64`
 

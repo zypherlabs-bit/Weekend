@@ -19,6 +19,24 @@ checksum.
   secrets are missing or still placeholders, so a release APK can never be an
   offline demo build.
 
+### Added - passkey plumbing
+
+- Credential-manager based passkey save/get in `auth_repository.dart`
+  (`credential_manager` 5.1.0).
+
+### Fixed - Android release build
+
+- `credential_manager_android` 4.1.0 configures `kotlin { ... }` in its own
+  `build.gradle` without ever applying the Kotlin plugin — it assumes AGP 9's
+  built-in Kotlin (its buildscript pins AGP 9.0.1). This project resolves the
+  Android Gradle plugin to 8.11.1, so `assembleRelease` died with
+  "Could not find method kotlin() ... on project ':credential_manager_android'".
+  The root `android/build.gradle.kts` now puts `kotlin-gradle-plugin:2.2.20`
+  (matching `settings.gradle.kts`) on the buildscript classpath inherited by
+  subprojects and applies `org.jetbrains.kotlin.android` to that module the
+  moment its Android library plugin is attached — before its script reaches the
+  `kotlin { ... }` block.
+
 ## [2.3.0] - 2026-09-22
 
 ### Fixed - signup, email confirmation and navigation

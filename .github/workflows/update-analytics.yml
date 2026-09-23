@@ -30,7 +30,12 @@ jobs:
 
       - name: Fetch GitHub analytics and update snapshot
         env:
-          GH_TOKEN: ${{ github.token }}
+          # The built-in GITHUB_TOKEN cannot read /traffic/* (HTTP 403),
+          # so prefer the ANALYTICS_TRAFFIC_TOKEN repository secret (a
+          # fine-grained/classic PAT with read access) when configured and
+          # fall back to github.token otherwise — release/download metrics
+          # still update without it. The value is masked in logs.
+          GH_TOKEN: ${{ secrets.ANALYTICS_TRAFFIC_TOKEN || github.token }}
         run: python3 .github/scripts/update-analytics.py
 
       - name: Commit and push analytics data only

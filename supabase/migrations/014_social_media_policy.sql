@@ -20,7 +20,7 @@ declare
     matches text[];
 begin
     if p_text is null or trim(p_text) = '' then
-        return jsonb_build_object('detected', false, 'matches', '[]'::text[]);
+        return jsonb_build_object('detected', false, 'matches', array[]::text[]);
     end if;
 
     lower_text := lower(p_text);
@@ -70,7 +70,7 @@ begin
         '(?:add|follow|friend)\s*(?:me|on)\s*(?:@|at\s*)',
         
         -- URL patterns
-        'https?://(?:www\.)?(?:instagram|telegram|snapchat|twitter|x\.com|tiktok|discord)',
+        'https?://(?:www\.)?(?:instagram|telegram|snapchat|twitter|x\.com|tiktok|discord)'
     ];
 
     matches := array[]::text[];
@@ -89,7 +89,7 @@ begin
         );
     end if;
 
-    return jsonb_build_object('detected', false, 'matches', '[]'::text[]);
+    return jsonb_build_object('detected', false, 'matches', array[]::text[]);
 end;
 $$;
 

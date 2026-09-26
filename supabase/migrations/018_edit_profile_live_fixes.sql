@@ -36,8 +36,20 @@ grant select, insert, update, delete on public.profile_photos to authenticated;
 grant usage, select on all sequences in schema public to authenticated;
 
 -- ============================================================
--- 2. interests master list: readable + extendable by signed-in users
+-- 2. interests master list: readable by signed-in users, and writable only
+--    through the paths the shipped client uses
 -- ============================================================
+-- RLS is switched ON here. Today it is OFF and `authenticated` holds the
+-- default ALL privileges, i.e. any signed-in client can insert, RENAME and
+-- DELETE any shared interest — this tightens that, it does not widen it.
+--
+-- The shipped app (v2.3.1) links interests with
+--     client.from('interests').upsert({'name': ...})
+-- which PostgREST sends as `INSERT ... ON CONFLICT (name) DO UPDATE`, so the
+-- INSERT path needs both INSERT and UPDATE. There is deliberately **no**
+-- DELETE policy: the master list stays append/rename-only from the client,
+-- and the supported `set_user_interests` RPC (005, SECURITY DEFINER, already
+-- granted) remains the atomic delete+insert alternative.
 alter table public.interests enable row level security;
 
 drop policy if exists "authenticated users can read interests"
@@ -54,10 +66,19 @@ create policy "authenticated users can add interests"
     for insert
     with check (auth.uid() is not null);
 
-grant select, insert on public.interests to authenticated;
+drop policy if exists "authenticated users can link existing interests"
+    on public.interests;
+create policy "authenticated users can link existing interests"
+    on public.interests
+    for update
+    using (auth.uid() is not null)
+    with check (auth.uid() is not null);
+
+grant select, insert, update on public.interests to authenticated;
 
 -- user_interests links stay owner-only (restated, not widened).
 grant select, insert, update, delete on public.user_interests to authenticated;
+
 
 -- ============================================================
 -- 3. Storage bucket + owner-folder policies (idempotent re-assert)

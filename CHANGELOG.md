@@ -22,6 +22,17 @@ checksum.
   list (links stay owner-only), idempotent re-assert of the private
   `profile-photos` bucket + owner-folder storage policies. Apply with
   `supabase db push` before testing the release APK.
+- New migration `019_weekend_availability_shape_fix.sql`: 016 guarded
+  `user_settings.weekend_availability` with JSONB *containment*
+  (`<@ '{"Saturday":true,"Sunday":true}'`), but containment compares values —
+  so the `false` the client writes for an unselected day raised
+  `23514 ... violates check constraint "user_settings_weekend_availability_shape"`
+  and the save failed. 019 replaces it with a key-set + value-type check
+  (`weekend_availability_is_valid`) that still refuses unknown keys and
+  non-boolean values.
+- Migrations **015–019 are now applied to the LIVE Supabase project**
+  (001–013 were already applied out-of-band and have been baselined in
+  `supabase_migrations.schema_migrations`, which did not exist before).
 
 ## [Unreleased]
 

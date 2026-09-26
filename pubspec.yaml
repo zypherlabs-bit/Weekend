@@ -1,7 +1,7 @@
 name: weekend
 description: "Weekend - Make Every Weekend Brighter. Free open-source dating & social discovery app"
 publish_to: 'none'
-version: 2.3.0+5
+version: 2.3.1+6
 
 environment:
   sdk: ^3.11.5

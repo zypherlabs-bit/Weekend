@@ -1,10 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
-class SafetyCenterDialog extends StatelessWidget {
+import '../../providers/weekend_provider.dart';
+
+/// Quick-access Safety Center.
+///
+/// Every action here goes to the same LIVE Supabase paths the full Safety
+/// Center screen uses. The previous version of this dialog was entirely
+/// decorative: the blocked-users list was a hard-coded string, "Report a User"
+/// showed a green "Report submitted" without any database call at all, and
+/// "Share My Date" discarded the text the user typed.
+class SafetyCenterDialog extends ConsumerWidget {
   const SafetyCenterDialog({super.key});
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Dialog(
       backgroundColor: const Color(0xFF1C162E),
       child: SingleChildScrollView(
@@ -38,7 +50,7 @@ class SafetyCenterDialog extends StatelessWidget {
                 subtitle: 'Manage your blocked users',
                 onTap: () {
                   Navigator.pop(context);
-                  _showBlockedUsers(context);
+                  _showBlockedUsers(context, ref);
                 },
               ),
               const SizedBox(height: 12),
@@ -46,9 +58,11 @@ class SafetyCenterDialog extends StatelessWidget {
                 icon: Icons.flag_rounded,
                 title: 'Report a User',
                 subtitle: 'Report inappropriate behavior',
+                // A report is always about one specific person, so the user
+                // is sent to the report flow that can identify them.
                 onTap: () {
                   Navigator.pop(context);
-                  _showReportDialog(context);
+                  context.push('/safety-center');
                 },
               ),
               const SizedBox(height: 12),
@@ -58,7 +72,7 @@ class SafetyCenterDialog extends StatelessWidget {
                 subtitle: 'Share your plans with trusted contacts',
                 onTap: () {
                   Navigator.pop(context);
-                  _showShareDateDialog(context);
+                  _showShareDateDialog(context, ref);
                 },
               ),
               const SizedBox(height: 12),
@@ -68,7 +82,7 @@ class SafetyCenterDialog extends StatelessWidget {
                 subtitle: 'Verify your profile photo',
                 onTap: () {
                   Navigator.pop(context);
-                  _showVerificationDialog(context);
+                  _showVerificationDialog(context, ref);
                 },
               ),
               const SizedBox(height: 12),
@@ -78,7 +92,7 @@ class SafetyCenterDialog extends StatelessWidget {
                 subtitle: 'Learn how to stay safe',
                 onTap: () {
                   Navigator.pop(context);
-                  context.go('/safety-center');
+                  context.push('/safety-center');
                 },
               ),
             ],
@@ -88,64 +102,223 @@ class SafetyCenterDialog extends StatelessWidget {
     );
   }
 
-  void _showBlockedUsers(BuildContext context) {
+  /// Real blocked users, read from the live `blocks` table.
+  void _showBlockedUsers(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text(
-          'Blocked Users',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'Your blocked users list will appear here.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Close',
-              style: TextStyle(color: Color(0xFFFF4B72)),
+      builder: (dialogContext) => FutureBuilder<List<String>>(
+        future: ref.read(weekendProvider.notifier).loadBlockedUserIds(),
+        builder: (context, snapshot) {
+          final blocked = snapshot.data ?? const <String>[];
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1C162E),
+            title: const Text(
+              'Blocked Users',
+              style: TextStyle(color: Colors.white),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showReportDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text(
-          'Report a User',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Select a reason for reporting:',
-              style: TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 16),
-            ..._reportReasons.map(
-              (reason) => ListTile(
-                title: Text(
-                  reason,
-                  style: const TextStyle(color: Colors.white),
+            content: switch (snapshot.connectionState) {
+              ConnectionState.waiting => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFFF4B72)),
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Report submitted: $reason'),
-                      backgroundColor: const Color(0xFF4CAF50),
+              _ when snapshot.hasError => const Text(
+                  'Could not load your blocked users. Please try again.',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+              _ when blocked.isEmpty => const Text(
+                  'You have not blocked anyone yet.',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              _ => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${blocked.length} blocked',
+                      style: const TextStyle(color: Colors.white70),
                     ),
-                  );
-                },
+                    const SizedBox(height: 8),
+                    ...blocked.map(
+                      (id) => ListTile(
+                        title: Text(
+                          id,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'Unblock',
+                          icon: const Icon(
+                            Icons.lock_open_rounded,
+                            color: Colors.white70,
+                          ),
+                          onPressed: () async {
+                            final messenger =
+                                ScaffoldMessenger.of(dialogContext);
+                            try {
+                              await ref
+                                  .read(weekendProvider.notifier)
+                                  .unblockUser(id);
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('Unblocked: $id'),
+                                  backgroundColor: const Color(0xFF4CAF50),
+                                ),
+                              );
+                              if (dialogContext.mounted) {
+                                Navigator.pop(dialogContext);
+                              }
+                            } catch (e) {
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Could not unblock this user. '
+                                    'Please try again.',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+            },
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(color: Color(0xFFFF4B72)),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// "Share My Date" hands the typed plan to the OS share sheet.
+  ///
+  /// The previous version just called `Navigator.pop`, so the text the user
+  /// entered was silently thrown away while the button implied it was shared.
+  void _showShareDateDialog(BuildContext context, WidgetRef ref) {
+    final contactCtrl = TextEditingController();
+    final venueCtrl = TextEditingController();
+    final timeCtrl = TextEditingController();
+    var isSharing = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1C162E),
+          title: const Text(
+            'Share My Date',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: contactCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Contact Name',
+                  labelStyle: TextStyle(color: Colors.white70),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: venueCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Venue',
+                  labelStyle: TextStyle(color: Colors.white70),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: timeCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Time',
+                  labelStyle: TextStyle(color: Colors.white70),
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSharing ? null : () => Navigator.pop(dialogContext),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: isSharing
+                  ? null
+                  : () async {
+                      final text = _dateSummary(
+                        contact: contactCtrl.text,
+                        venue: venueCtrl.text,
+                        time: timeCtrl.text,
+                      );
+                      if (text == null) {
+                        ScaffoldMessenger.of(dialogContext).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Add at least a contact name or a venue first.',
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                      setDialogState(() => isSharing = true);
+                      final messenger =
+                          ScaffoldMessenger.of(context);
+                      try {
+                        final result = await Share.share(text);
+                        if (result.status != ShareResultStatus.success) {
+                          // Dismissed: say so instead of claiming it was
+                          // shared.
+                          if (dialogContext.mounted) Navigator.pop(dialogContext);
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('Sharing was cancelled.'),
+                            ),
+                          );
+                          return;
+                        }
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Plan shared.'),
+                            backgroundColor: Color(0xFF4CAF50),
+                          ),
+                        );
+                      } catch (e) {
+                        setDialogState(() => isSharing = false);
+                        if (dialogContext.mounted) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Could not open the share sheet.',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF4B72),
+              ),
+              child: const Text(
+                'Share',
+                style: TextStyle(color: Colors.white),
               ),
             ),
           ],
@@ -154,106 +327,56 @@ class SafetyCenterDialog extends StatelessWidget {
     );
   }
 
-  static const List<String> _reportReasons = [
-    'Inappropriate photos',
-    'Harassment or bullying',
-    'Spam or scam',
-    'Fake profile',
-    'Inappropriate messages',
-    'Underage user',
-    'Other',
-  ];
-  void _showShareDateDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text(
-          'Share My Date',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Contact Name',
-                labelStyle: TextStyle(color: Colors.white70),
-                hintText: 'Who are you meeting?',
-                hintStyle: TextStyle(color: Colors.white38),
-              ),
-              style: const TextStyle(color: Colors.white),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Venue',
-                labelStyle: TextStyle(color: Colors.white70),
-                hintText: 'Where are you meeting?',
-                hintStyle: TextStyle(color: Colors.white38),
-              ),
-              style: const TextStyle(color: Colors.white),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Time',
-                labelStyle: TextStyle(color: Colors.white70),
-                hintText: 'When?',
-                hintStyle: TextStyle(color: Colors.white38),
-              ),
-              style: const TextStyle(color: Colors.white),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white70),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF4B72),
-            ),
-            child: const Text('Share', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+  /// Build the message body, or `null` when the user supplied nothing useful.
+  static String? _dateSummary({
+    required String contact,
+    required String venue,
+    required String time,
+  }) {
+    final parts = <String>['Weekend plan'];
+    if (contact.trim().isNotEmpty) parts.add('With: ${contact.trim()}');
+    if (venue.trim().isNotEmpty) parts.add('Where: ${venue.trim()}');
+    if (time.trim().isNotEmpty) parts.add('When: ${time.trim()}');
+    // "Weekend plan" alone carries no information the recipient did not have.
+    if (parts.length == 1) return null;
+    return parts.join('\n');
   }
 
-  void _showVerificationDialog(BuildContext context) {
+  /// Photo verification is a real backend flow that needs a signed-in user,
+  /// so it is opened in the Safety Center rather than faked with a toast.
+  void _showVerificationDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1C162E),
         title: const Text(
           'Photo Verification',
           style: TextStyle(color: Colors.white),
         ),
         content: const Text(
-          'Upload a selfie to verify your profile. This helps ensure a safe community.',
+          'Open the Safety Center to submit a selfie for photo verification. '
+          'Your selfie is uploaded to your private profile-photos bucket and '
+          'reviewed by the moderation service.',
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text(
               'Cancel',
               style: TextStyle(color: Colors.white70),
             ),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.push('/safety-center');
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF4B72),
             ),
             child: const Text(
-              'Upload Photo',
+              'Open Safety Center',
               style: TextStyle(color: Colors.white),
             ),
           ),

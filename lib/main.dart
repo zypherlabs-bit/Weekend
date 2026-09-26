@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,9 +12,13 @@ import 'features/auth/biometric_lock_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Supabase is only initialized when real credentials are supplied via
-  // `--dart-define`. A failure here must never freeze the app — the rest of
-  // the startup simply continues in offline demo mode.
+  // LIVE-ONLY: a release binary must never ship without live credentials.
+  // Debug and test runs may start unconfigured — every backend call is
+  // null-guarded and returns empty results (never fabricated data), which is
+  // how the test suite runs without a backend.
+  if (kReleaseMode && !SupabaseConfig.isConfigured) {
+    throw StateError(SupabaseConfig.configError);
+  }
   if (SupabaseConfig.isConfigured) {
     // LIVE-ONLY: never let a release binary silently run against placeholder
     // or loopback credentials. Release CI also fails before building when
@@ -28,7 +33,7 @@ Future<void> main() async {
         publishableKey: SupabaseConfig.anonKey,
       );
     } catch (e) {
-      debugPrint('Supabase initialization failed; running in demo mode: $e');
+      debugPrint('Supabase initialization failed; running unconfigured: $e');
     }
   }
   runApp(const ProviderScope(child: WeekendApp()));

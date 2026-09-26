@@ -14,7 +14,9 @@ class SafetyRepository {
   /// unique (blocker_id, blocked_id) constraint.
   Future<void> blockUser(String blockerId, String blockedId) async {
     final client = _client;
-    if (client == null) return;
+    if (client == null) {
+      throw StateError(SupabaseConfig.configError);
+    }
 
     try {
       await client.from('blocks').insert({
@@ -31,19 +33,38 @@ class SafetyRepository {
   }
 
   /// Remove a block the current user previously created.
+  ///
+  /// Throws on failure: a silent no-op here used to be reported to the user as
+  /// a successful unblock, so the person stayed blocked with no indication.
   Future<void> unblockUser(String blockerId, String blockedId) async {
     final client = _client;
-    if (client == null) return;
-
-    try {
-      await client
-          .from('blocks')
-          .delete()
-          .eq('blocker_id', blockerId)
-          .eq('blocked_id', blockedId);
-    } catch (e) {
-      // Best-effort: unblocking failure should not crash the UI.
+    if (client == null) {
+      throw StateError(SupabaseConfig.configError);
     }
+    await client
+        .from('blocks')
+        .delete()
+        .eq('blocker_id', blockerId)
+        .eq('blocked_id', blockedId);
+  }
+
+  /// The ids of the users [blockerId] has blocked, straight from the `blocks`
+  /// table. Throws on failure so the UI can distinguish "you have not blocked
+  /// anyone" from "the list could not be loaded".
+  Future<List<String>> fetchBlockedUserIds(String blockerId) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError(SupabaseConfig.configError);
+    }
+    final rows = await client
+        .from('blocks')
+        .select('blocked_id')
+        .eq('blocker_id', blockerId)
+        .order('created_at', ascending: false);
+    return [
+      for (final row in rows)
+        if (row['blocked_id'] is String) row['blocked_id'] as String,
+    ];
   }
 
   /// Submit a report about [reportedId]. Reports are write-once from the
@@ -59,7 +80,9 @@ class SafetyRepository {
     String? details,
   }) async {
     final client = _client;
-    if (client == null) return;
+    if (client == null) {
+      throw StateError(SupabaseConfig.configError);
+    }
 
     final description = details == null || details.isEmpty
         ? reason
@@ -74,8 +97,17 @@ class SafetyRepository {
     });
   }
 
+  /// Map the UI reason onto the `reports.report_type` enum.
+  ///
+  /// The enum has no dedicated "underage" bucket, so an underage report is
+  /// filed as `impersonation` — the closest category that routes to urgent
+  /// review — rather than silently falling through to the generic `profile`
+  /// type. The verbatim reason is always preserved in `description`.
   String _mapReportType(String reason) {
     final r = reason.toLowerCase();
+    if (r.contains('underage') || r.contains('minor') || r.contains('child')) {
+      return 'impersonation';
+    }
     if (r.contains('photo')) return 'photo';
     if (r.contains('harass') || r.contains('bully')) return 'harassment';
     if (r.contains('spam') || r.contains('scam')) return 'scam';

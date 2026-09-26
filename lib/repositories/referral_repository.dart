@@ -4,7 +4,7 @@ import '../config/supabase_config.dart';
 import '../models/models.dart';
 
 class ReferralRepository {
-  ReferralData _data = const ReferralData(code: 'WEEKEND-MX07');
+  ReferralData _data = const ReferralData(code: '');
 
   SupabaseClient? get _client => SupabaseConfig.client;
 
@@ -29,7 +29,7 @@ class ReferralRepository {
             .eq('referrer_id', userId);
 
         _data = ReferralData(
-          code: referral['referral_code'] ?? 'WEEKEND-MX07',
+          code: referral['referral_code'] ?? '',
           invitedCount: (count as List).length,
 
           verifiedCount: (count)

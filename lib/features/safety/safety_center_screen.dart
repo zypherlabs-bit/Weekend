@@ -5,7 +5,22 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../providers/weekend_provider.dart';
 import '../../config/supabase_config.dart';
-import '../../repositories/safety_repository.dart';
+import '../settings/settings_dialog.dart';
+
+/// The privacy flags stored on the user's live `user_settings` row.
+class _PrivacySettings {
+  final bool showMeInSearch;
+  final bool showDistance;
+  final bool crossedPaths;
+  final bool readReceipts;
+
+  const _PrivacySettings({
+    this.showMeInSearch = true,
+    this.showDistance = true,
+    this.crossedPaths = true,
+    this.readReceipts = true,
+  });
+}
 
 class SafetyCenterScreen extends ConsumerStatefulWidget {
   const SafetyCenterScreen({super.key});
@@ -274,57 +289,86 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
       builder: (context) => FutureBuilder<List<String>>(
         future: _blockedUserIds(),
         builder: (context, snapshot) {
-          final blocked = snapshot.data ?? const [];
+          final blocked = snapshot.data ?? const <String>[];
           return AlertDialog(
             backgroundColor: const Color(0xFF1C162E),
             title: const Text(
               'Blocked Users',
               style: TextStyle(color: Colors.white),
             ),
-            content: blocked.isEmpty
-                ? const Text(
-                    'No blocked users yet. Use the block button on any profile or in chat.',
-                    style: TextStyle(color: Colors.white70),
+            content: snapshot.connectionState == ConnectionState.waiting
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFFF4B72),
+                    ),
                   )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${blocked.length} blocked',
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                      const SizedBox(height: 8),
-                      ...blocked.map((id) => ListTile(
-                            title: Text(
-                              id,
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                            trailing: IconButton(
-                              icon: const Icon(
-                                Icons.lock_open_rounded,
-                                color: Colors.white70,
+                : snapshot.hasError
+                    // A failed read must never be rendered as "you have not
+                    // blocked anyone".
+                    ? Text(
+                        'Could not load your blocked users.\n'
+                        '${snapshot.error}',
+                        style: const TextStyle(color: Colors.redAccent),
+                      )
+                    : blocked.isEmpty
+                        ? const Text(
+                            'No blocked users yet. Use the block button on any profile or in chat.',
+                            style: TextStyle(color: Colors.white70),
+                          )
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${blocked.length} blocked',
+                                style: const TextStyle(color: Colors.white70),
                               ),
-                              onPressed: () async {
-                                final repo = SafetyRepository();
-                                await repo.unblockUser(
-                                  SupabaseConfig.currentUserId,
-                                  id,
-                                );
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Unblocked: $id'),
-                                      backgroundColor:
-                                          const Color(0xFF4CAF50),
+                              const SizedBox(height: 8),
+                              ...blocked.map((id) => ListTile(
+                                    title: Text(
+                                      id,
+                                      style: const TextStyle(color: Colors.white),
                                     ),
-                                  );
-                                }
-                              },
-                            ),
-                          )),
-                    ],
-                  ),
+                                    trailing: IconButton(
+                                      icon: const Icon(
+                                        Icons.lock_open_rounded,
+                                        color: Colors.white70,
+                                      ),
+                                      onPressed: () async {
+                                        try {
+                                          await ref
+                                              .read(weekendProvider.notifier)
+                                              .unblockUser(id);
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content:
+                                                    Text('Unblocked: $id'),
+                                                backgroundColor:
+                                                    const Color(0xFF4CAF50),
+                                              ),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: const Text(
+                                                  'Could not unblock this user. '
+                                                  'Please try again.',
+                                                ),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                  )),
+                            ],
+                          ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -341,17 +385,13 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
   }
 
   Future<List<String>> _blockedUserIds() async {
-    final client = SupabaseConfig.client;
-    if (client == null) return const [];
-    try {
-      final result = await client
-          .from('blocks')
-          .select('blocked_id')
-          .eq('blocker_id', SupabaseConfig.currentUserId);
-      return (result as List).map((r) => r['blocked_id'] as String).toList();
-    } catch (_) {
-      return const [];
-    }
+    // Rethrows so the dialog can show "could not load" instead of an empty
+    // list that looks like "nobody is blocked".
+    final blocked = await ref
+        .read(weekendProvider.notifier)
+        .loadBlockedUserIds();
+    if (blocked.isEmpty) return const [];
+    return blocked;
   }
 
   void _showReportDialog(BuildContext context) {
@@ -419,20 +459,35 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
             ElevatedButton(
               onPressed: targetCtrl.text.isNotEmpty && selectedReason != null
                   ? () async {
+                      final target = targetCtrl.text.trim();
+                      final reason = selectedReason!;
                       Navigator.pop(context);
-                      await ref
-                          .read(weekendProvider.notifier)
-                          .reportUser(
-                            targetCtrl.text.trim(),
-                            selectedReason!,
+                      try {
+                        await ref
+                            .read(weekendProvider.notifier)
+                            .reportUser(target, reason);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Report submitted: $reason'),
+                              backgroundColor: const Color(0xFF4CAF50),
+                            ),
                           );
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Report submitted: $selectedReason'),
-                            backgroundColor: const Color(0xFF4CAF50),
-                          ),
-                        );
+                        }
+                      } catch (e) {
+                        // reportUser rethrows, so "Report submitted" is only
+                        // ever shown for a write the database accepted.
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Your report could not be submitted. '
+                                'Please try again.',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
                       }
                     }
                   : null,
@@ -560,17 +615,63 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
   }
 
   void _showAccountSecurity(BuildContext context) {
-    context.push('/settings');
+    // '/settings' is not a registered route (the settings UI is a dialog opened
+    // from Profile), so pushing it threw a GoRouter "no routes for location"
+    // error instead of opening anything. Open the real settings surface.
+    showDialog(
+      context: context,
+      builder: (context) => const SettingsDialog(),
+    );
   }
 
-  void _showPrivacyControls(BuildContext context) {
+  /// The current `user_settings` privacy flags, read from LIVE Supabase.
+  Future<_PrivacySettings> _loadPrivacySettings() async {
+    const fallback = _PrivacySettings();
+    final client = SupabaseConfig.client;
+    final userId = SupabaseConfig.currentUserId;
+    if (client == null ||
+        userId == 'unauthenticated' ||
+        userId == 'me') {
+      return fallback;
+    }
+    try {
+      final row = await client
+          .from('user_settings')
+          .select(
+            'show_me_in_search, show_distance_enabled, crossed_paths_enabled, '
+            'read_receipts_enabled',
+          )
+          .eq('user_id', userId)
+          .maybeSingle();
+      if (row == null) return fallback;
+      return _PrivacySettings(
+        showMeInSearch: row['show_me_in_search'] as bool? ?? true,
+        showDistance: row['show_distance_enabled'] as bool? ?? true,
+        crossedPaths: row['crossed_paths_enabled'] as bool? ?? true,
+        readReceipts: row['read_receipts_enabled'] as bool? ?? true,
+      );
+    } catch (e) {
+      debugPrint('Could not load privacy settings: $e');
+      return fallback;
+    }
+  }
+
+  Future<void> _showPrivacyControls(BuildContext context) async {
+    // Seeded from the live user_settings row instead of literals, and only
+    // the columns the user actually toggled are written back. The previous
+    // version hard-coded true/true/25/[] and silently overwrote the discovery
+    // radius and gender preference the user had already set.
+    final loaded = await _loadPrivacySettings();
+    if (!context.mounted) return;
+
+    var showMeInSearch = loaded.showMeInSearch;
+    var showDistance = loaded.showDistance;
+    var crossedPaths = loaded.crossedPaths;
+    var readReceipts = loaded.readReceipts;
+
     showDialog(
       context: context,
       builder: (context) {
-        bool showMeInSearch = true;
-        bool showDistance = true;
-        bool crossedPaths = true;
-        bool readReceipts = false;
         return StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
             backgroundColor: const Color(0xFF1C162E),
@@ -578,74 +679,36 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
               'Privacy Controls',
               style: TextStyle(color: Colors.white),
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SwitchListTile(
-                  title: const Text(
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _privacyTile(
                     'Show me in search',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text(
                     'Allow others to find your profile',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 12,
-                    ),
+                    showMeInSearch,
+                    (v) => setDialogState(() => showMeInSearch = v),
                   ),
-                  value: showMeInSearch,
-                  onChanged: (v) => setDialogState(() => showMeInSearch = v),
-                  activeThumbColor: const Color(0xFFFF4B72),
-                ),
-                SwitchListTile(
-                  title: const Text(
+                  _privacyTile(
                     'Show distance',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text(
                     'Show approximate distance to others',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 12,
-                    ),
+                    showDistance,
+                    (v) => setDialogState(() => showDistance = v),
                   ),
-                  value: showDistance,
-                  onChanged: (v) => setDialogState(() => showDistance = v),
-                  activeThumbColor: const Color(0xFFFF4B72),
-                ),
-                SwitchListTile(
-                  title: const Text(
+                  _privacyTile(
                     'Crossed paths',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text(
                     "Match with people you've crossed paths with",
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 12,
-                    ),
+                    crossedPaths,
+                    (v) => setDialogState(() => crossedPaths = v),
                   ),
-                  value: crossedPaths,
-                  onChanged: (v) => setDialogState(() => crossedPaths = v),
-                  activeThumbColor: const Color(0xFFFF4B72),
-                ),
-                SwitchListTile(
-                  title: const Text(
+                  _privacyTile(
                     'Read receipts',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text(
                     'Let others see when you have read messages',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 12,
-                    ),
+                    readReceipts,
+                    (v) => setDialogState(() => readReceipts = v),
                   ),
-                  value: readReceipts,
-                  onChanged: (v) => setDialogState(() => readReceipts = v),
-                  activeThumbColor: const Color(0xFFFF4B72),
-                ),
-              ],
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -659,37 +722,85 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                 onPressed: () async {
                   Navigator.pop(context);
                   final client = SupabaseConfig.client;
-                  if (client != null) {
-                    final userId = SupabaseConfig.currentUserId;
-                    try {
-                      await client.from('user_settings').upsert({
-                        'user_id': userId,
-                        'show_me_in_search': showMeInSearch,
-                        'discovery_emails_enabled': true,
-                        'push_notifications_enabled': true,
-                        'max_distance_km': 25,
-                        'preferred_genders': <String>[],
-                      });
-                    } catch (_) {}
+                  final userId = SupabaseConfig.currentUserId;
+                  if (client == null ||
+                      userId == 'unauthenticated' ||
+                      userId == 'me') {
+                    _toast(
+                      'Privacy settings are not connected to a backend, so '
+                      'nothing was saved.',
+                      isError: true,
+                    );
+                    return;
                   }
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Privacy settings saved'),
-                        backgroundColor: Color(0xFF4CAF50),
-                      ),
+                  try {
+                    final updated = await client
+                        .from('user_settings')
+                        .upsert({
+                          'user_id': userId,
+                          'show_me_in_search': showMeInSearch,
+                          'show_distance_enabled': showDistance,
+                          'crossed_paths_enabled': crossedPaths,
+                          'read_receipts_enabled': readReceipts,
+                        })
+                        .select('user_id')
+                        .limit(1);
+                    if (updated.isEmpty) {
+                      throw StateError('The server saved nothing.');
+                    }
+                    _toast('Privacy settings saved');
+                  } catch (e) {
+                    debugPrint('Failed to save privacy settings: $e');
+                    _toast(
+                      'Privacy settings could not be saved. Please try again.',
+                      isError: true,
                     );
                   }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFF4B72),
                 ),
-                child: const Text('Save', style: TextStyle(color: Colors.white)),
+                child: const Text(
+                  'Save',
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _privacyTile(
+    String title,
+    String subtitle,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
+    return SwitchListTile(
+      title: Text(title, style: const TextStyle(color: Colors.white)),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.6),
+          fontSize: 12,
+        ),
+      ),
+      value: value,
+      onChanged: onChanged,
+      activeThumbColor: const Color(0xFFFF4B72),
+    );
+  }
+
+  void _toast(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : const Color(0xFF4CAF50),
+        duration: Duration(seconds: isError ? 5 : 3),
+      ),
     );
   }
 

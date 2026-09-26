@@ -593,9 +593,26 @@ class _FilterSheet extends ConsumerWidget {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: () {
-                ref.read(weekendProvider.notifier).saveLocationPreferences();
-                Navigator.pop(context);
+              onPressed: () async {
+                // Awaited and reported: closing the sheet used to happen even
+                // when the write to user_settings was dropped, so the slider
+                // silently reset on the next launch.
+                try {
+                  await ref
+                      .read(weekendProvider.notifier)
+                      .saveLocationPreferences();
+                  if (context.mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Filters could not be saved. Check your connection.',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF4B72),

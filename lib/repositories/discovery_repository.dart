@@ -7,9 +7,29 @@ import '../services/location_service.dart';
 import '../services/photo_url_service.dart';
 
 class DiscoveryRepository {
-  /// The live Supabase client, or `null` in offline demo mode.
+  /// The live Supabase client, or `null` when the app is unconfigured
+  /// (tests, or a build without the SUPABASE dart-defines).
   SupabaseClient? get _client => SupabaseConfig.client;
 
+  /// A name that is honest about being missing.
+  ///
+  /// Discovery cards previously fell back to the literal string "Unknown",
+  /// which reads like a real profile attribute. When the database has no
+  /// display name the card shows a neutral placeholder instead.
+  static String _displayName(Object? raw) {
+    final name = (raw as String? ?? '').trim();
+    return name.isEmpty ? 'Weekend member' : name;
+  }
+
+  /// Age derived from the stored birth date, or 0 when it is unknown.
+  ///
+  /// This replaces a hard-coded 25 that appeared on every profile the user
+  /// opened. Callers that show an age must treat 0 as "not stated".
+  static int _ageFromDateOfBirth(Object? raw) {
+    final dob = DateTime.tryParse(raw as String? ?? '');
+    if (dob == null) return 0;
+    return DateTime.now().difference(dob).inDays ~/ 365;
+  }
 
   /// Load profiles using the privacy-safe server-side RPC.
   /// The RPC `get_nearby_profiles` computes distance server-side and never
@@ -67,8 +87,10 @@ class DiscoveryRepository {
 
         return UserProfile(
           id: row['profile_id'] as String? ?? '',
-          name: row['display_name'] as String? ?? 'Unknown',
-          age: row['age'] as int? ?? 25,
+          // Blank -> "Weekend member" rather than a fabricated name, and a
+          // missing age stays 0 instead of asserting the person is 25.
+          name: _displayName(row['display_name']),
+          age: row['age'] as int? ?? 0,
           gender: row['gender'] as String? ?? 'Prefer not to say',
           photos: photoUrl == null ? const [] : [photoUrl],
           city: row['city'] as String? ?? '',
@@ -168,7 +190,7 @@ class DiscoveryRepository {
       final profile = await client
           .from('profiles')
           .select(
-            'id, display_name, gender, city, locality, country, bio, relationship_intent, is_photo_verified, trust_score, last_active_at',
+            'id, display_name, gender, city, locality, country, bio, relationship_intent, is_photo_verified, trust_score, last_active_at, date_of_birth',
           )
           .eq('id', userId)
           .maybeSingle();
@@ -188,8 +210,8 @@ class DiscoveryRepository {
 
       return UserProfile(
         id: profile['id'] as String? ?? userId,
-        name: profile['display_name'] as String? ?? 'Unknown',
-        age: 25,
+        name: _displayName(profile['display_name']),
+        age: _ageFromDateOfBirth(profile['date_of_birth']),
         gender: profile['gender'] as String? ?? 'Prefer not to say',
         photos: photos,
         city: profile['city'] as String? ?? '',
@@ -353,11 +375,15 @@ class DiscoveryRepository {
 
       await computeCrossedPaths(userId, geohash, city, locality, country);
     } catch (e) {
-      // ignore
+      // Rethrown: a lost location write means the user's position is stale,
+      // and reporting success while silently dropping it is misleading.
+      rethrow;
     }
   }
 
   /// Trigger crossed-paths computation via server-side RPC.
+  ///
+  /// Rethrows so a failed recomputation is visible rather than lost.
   Future<void> computeCrossedPaths(
     String userId,
     String geohash,
@@ -369,20 +395,16 @@ class DiscoveryRepository {
 
     if (client == null) return;
 
-    try {
-      await client.rpc(
-        'compute_crossed_paths',
-        params: {
-          'p_user_id': userId,
-          'p_geohash': geohash,
-          'p_city': city,
-          'p_locality': locality,
-          'p_country': country,
-        },
-      );
-    } catch (e) {
-      // ignore
-    }
+    await client.rpc(
+      'compute_crossed_paths',
+      params: {
+        'p_user_id': userId,
+        'p_geohash': geohash,
+        'p_city': city,
+        'p_locality': locality,
+        'p_country': country,
+      },
+    );
   }
 
   /// Fetch crossed paths for the current user.
@@ -444,7 +466,7 @@ class DiscoveryRepository {
         final result = await client
             .from('profiles')
             .select(
-              'id, display_name, gender, city, bio, relationship_intent, verification_status, trust_score, last_active_at',
+              'id, display_name, gender, city, bio, relationship_intent, verification_status, trust_score, last_active_at, date_of_birth',
             )
             .eq('city', city)
             .neq('id', userId)
@@ -469,8 +491,9 @@ class DiscoveryRepository {
     return rows.map((row) {
       return UserProfile(
         id: row['id'] as String? ?? '',
-        name: row['display_name'] as String? ?? 'Unknown',
-        age: 25,
+        name: _displayName(row['display_name']),
+        // Computed from the stored birth date instead of a hard-coded 25.
+        age: _ageFromDateOfBirth(row['date_of_birth']),
         gender: row['gender'] as String? ?? 'Prefer not to say',
         photos: const [],
         city: row['city'] as String? ?? '',

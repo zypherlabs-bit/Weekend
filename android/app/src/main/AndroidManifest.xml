@@ -4,7 +4,8 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
-    <!-- Camera - QR scanner (Weekend invitations) -->
+    <!-- Profile photos use the Android Photo Picker (no runtime permission
+         needed); image_picker handles selection. Camera for QR scanner. -->
     <uses-permission android:name="android.permission.CAMERA"/>
 
     <!-- Location - privacy-preserving nearby discovery -->

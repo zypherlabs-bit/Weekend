@@ -2,15 +2,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Central configuration for the Weekend backend (Supabase).
 //
-//
 // The app supports two run modes:
-///   1. **Production mode** — Supabase is configured via compile-time
+///   1. **Live mode** — Supabase is configured via compile-time
 ///      `--dart-define=SUPABASE_URL=...` / `SUPABASE_ANON_KEY=...`. Auth,
 ///      database, storage and realtime features connect to the live project.
-///   2. **Offline demo mode** — no credentials are supplied. The app runs
-///      purely on-device with sample data so the entire UI is navigable and
-///      demonstrable without a backend. No secret is ever read from an
-///      un-trusted source.
+///   2. **Unconfigured mode** — no credentials are supplied (the test suite,
+///      or a build without the dart-defines). Every backend call is
+///      null-guarded and returns empty results — there is no sample or
+///      fabricated data — so the app never invents content. No secret is ever
+///      read from an un-trusted source.
 class SupabaseConfig {
   static const String url = String.fromEnvironment(
     'SUPABASE_URL',
@@ -72,7 +72,8 @@ class SupabaseConfig {
     return 'Backend configuration error.';
   }
 
-  /// The live [SupabaseClient], or `null` when running in offline demo mode.
+  /// The live [SupabaseClient], or `null` when the app is unconfigured
+  /// (tests, or a build without the SUPABASE dart-defines).
   ///
   /// Accessing [Supabase.instance.client] before [Supabase.initialize] throws
   /// `SupabaseUninitializedError`. Every Supabase-dependent call site must

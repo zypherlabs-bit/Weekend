@@ -187,6 +187,19 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
   /// Load the authenticated user's real profile from Supabase and replace the
   /// neutral placeholder. Never fabricates data when the fetch fails — the UI
   /// simply keeps showing whatever is genuinely known.
+  /// Fetch and return the signed-in user's real profile row without touching
+  /// the shared deck/feed state.
+  ///
+  /// Returns `null` when there is no session or the read fails, so callers can
+  /// say "could not load" instead of rendering a placeholder as if it were the
+  /// user's data.
+  Future<UserProfile?> loadCurrentUserProfile() async {
+    if (!_hasBackend) return null;
+    final userId = SupabaseConfig.currentUserId;
+    if (userId == 'unauthenticated' || userId == 'me') return null;
+    return _profileRepo.fetchUserProfile(userId);
+  }
+
   Future<void> loadCurrentUser() async {
     if (!_hasBackend) return;
     final userId = SupabaseConfig.currentUserId;
@@ -313,22 +326,35 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     );
   }
 
+  /// Persist the in-memory location preferences to the live `user_settings`
+  /// row. Rethrows on failure — the discovery filter sheet used to close as if
+  /// the radius had been applied even when the write was dropped.
   Future<void> saveLocationPreferences() async {
     final client = _client;
 
-    if (client == null) return;
+    if (client == null) {
+      throw StateError(SupabaseConfig.configError);
+    }
 
     final userId = SupabaseConfig.currentUserId;
+    if (userId == 'me' || userId == 'unauthenticated') {
+      throw StateError('You are not signed in, so nothing was saved.');
+    }
 
     final prefs = state.locationPreferences;
-    try {
-      await client
-          .from('user_settings')
-          .update({'max_distance_km': prefs.discoveryRadiusKm})
-          .eq('user_id', userId);
-    } catch (e) {
-      // ignore
-    }
+    await client
+        .from('user_settings')
+        .upsert({
+          'user_id': userId,
+          'max_distance_km': prefs.discoveryRadiusKm,
+          'location_discovery_enabled': prefs.locationDiscoveryEnabled,
+          'nearby_discovery_enabled': prefs.nearbyDiscoveryEnabled,
+          'show_distance_enabled': prefs.showDistanceEnabled,
+          'travel_mode_enabled': prefs.travelModeEnabled,
+          'crossed_paths_enabled': prefs.crossedPathsEnabled,
+        })
+        .select('user_id')
+        .limit(1);
   }
 
   Future<void> updateLocationIfNeeded() async {
@@ -341,12 +367,14 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     final position = await LocationService.getCurrentPosition();
     if (position == null) return;
 
-    final city =
-        await LocationService.getCityName(
-          position.latitude,
-          position.longitude,
-        ) ??
-        'Unknown';
+    // A failed reverse geocode must not persist the literal string
+    // "Unknown" as the user's city: it becomes their real profile city and
+    // feeds every city-filtered discovery query.
+    final city = await LocationService.getCityName(
+      position.latitude,
+      position.longitude,
+    );
+    if (city == null || city.trim().isEmpty) return;
 
     final userId = SupabaseConfig.currentUserId;
 
@@ -354,7 +382,7 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
       userId: userId,
       lat: position.latitude,
       lon: position.longitude,
-      city: city,
+      city: city.trim(),
     );
 
     final crossed = await _discoveryRepo.fetchCrossedPaths(userId);
@@ -500,8 +528,18 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
 
   /// Block a user. Persisted to the `blocks` table; blocked users disappear
   /// from discovery and are prevented from messaging by server-side rules.
+  ///
+  /// Rethrows when the block could not be persisted. The UI used to close the
+  /// sheet and stay silent while this only printed to the console, which made
+  /// a failed block indistinguishable from a successful one.
   Future<void> blockUser(String userId) async {
     if (userId == 'me' || userId.isEmpty) return;
+
+    // Persist first: the local state below is an optimistic mirror of the
+    // database, never a substitute for it.
+    if (_hasBackend) {
+      await _safetyRepo.blockUser(SupabaseConfig.currentUserId, userId);
+    }
 
     state = state.copyWith(
       blockedUserIds: {...state.blockedUserIds, userId},
@@ -509,32 +547,45 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
           state.deckProfiles.where((p) => p.id != userId).toList(),
       matches: state.matches.where((m) => m.user.id != userId).toList(),
     );
-
-    if (!_hasBackend) return;
-
-    try {
-      await _safetyRepo.blockUser(SupabaseConfig.currentUserId, userId);
-    } catch (e) {
-      debugPrint('Failed to persist block for $userId: $e');
-    }
   }
 
   /// Report a user for [reason]. The report is persisted to the `reports`
   /// table for moderation, and the reported user is blocked as a safety
   /// measure.
+  ///
+  /// Rethrows when the report could not be persisted, so a caller never
+  /// announces "Report submitted" for a write the server rejected.
   Future<void> reportUser(String userId, String reason) async {
     if (_hasBackend && userId != 'me' && userId.isNotEmpty) {
-      try {
-        await _safetyRepo.reportUser(
-          SupabaseConfig.currentUserId,
-          userId,
-          reason,
-        );
-      } catch (e) {
-        debugPrint('Failed to persist report for $userId: $e');
-      }
+      await _safetyRepo.reportUser(
+        SupabaseConfig.currentUserId,
+        userId,
+        reason,
+      );
     }
     await blockUser(userId);
+  }
+
+  /// Remove a block previously created by the signed-in user.
+  Future<void> unblockUser(String userId) async {
+    if (_hasBackend && userId != 'me' && userId.isNotEmpty) {
+      await _safetyRepo.unblockUser(SupabaseConfig.currentUserId, userId);
+    }
+    state = state.copyWith(
+      blockedUserIds: {...state.blockedUserIds}..remove(userId),
+    );
+  }
+
+  /// The users the signed-in user has blocked, read from the live `blocks`
+  /// table. Returns an empty list when the backend is unreachable — callers
+  /// must show that as "could not load", never as "no blocked users".
+  Future<List<String>> loadBlockedUserIds() async {
+    if (!_hasBackend) return const [];
+    final userId = SupabaseConfig.currentUserId;
+    if (userId == 'me' || userId == 'unauthenticated') return const [];
+    final rows = await _safetyRepo.fetchBlockedUserIds(userId);
+    state = state.copyWith(blockedUserIds: {...rows});
+    return rows;
   }
 
   /// Create a Weekend Plan. Persisted to the `plans` table; the list is
@@ -632,11 +683,40 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     state = state.copyWith(recentMatchCelebration: null);
   }
 
-  Future<void> updateProfile(UserProfile profile) async {
+  /// Persist the signed-in user's profile to LIVE Supabase.
+  ///
+  /// Every write is addressed to the id from the Supabase **auth session**,
+  /// not to `profile.id`. `WeekendState.initial()` seeds a placeholder profile
+  /// with `id == 'me'`; writing to that id matches zero rows, and PostgREST
+  /// reports a zero-row UPDATE as a success — which is exactly how Edit
+  /// Profile could report "Profile updated successfully!" while persisting
+  /// nothing and never advancing.
+  ///
+  /// The `profiles` write is verified (`.select('id')`) before any dependent
+  /// writes run, and a failure is rethrown so the UI can show it. Local state
+  /// is only updated after the database confirmed the change.
+  ///
+  /// The secondary writes (interests, weekend availability) are reported
+  /// instead of thrown: they used to run inside this same try/catch, so a
+  /// single failing auxiliary write rolled back the *reported* outcome of a
+  /// profile save that had in fact succeeded, leaving the user stuck on the
+  /// screen with a "failed" message. The returned list is empty when every
+  /// part persisted.
+  Future<List<String>> updateProfile(UserProfile profile) async {
     final client = _client;
-    if (client == null) return;
+    if (client == null) {
+      throw StateError(SupabaseConfig.configError);
+    }
+    final authId = client.auth.currentUser?.id;
+    if (authId == null || authId == 'unauthenticated' || authId == 'me') {
+      throw StateError(
+        'You are not signed in, so the profile could not be saved.',
+      );
+    }
+
+    // ---- Primary write: the profile itself. Failing here is a real failure. --
     try {
-      await client
+      final updated = await client
           .from('profiles')
           .update({
             'display_name': profile.name,
@@ -649,82 +729,183 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
             'favorite_music': profile.favoriteMusic,
             'ideal_weekend': profile.idealWeekend,
           })
-          .eq('id', profile.id);
+          .eq('id', authId)
+          .select('id')
+          .limit(1);
 
-      // Update interests
-      await client.from('user_interests').delete().eq('user_id', profile.id);
-      for (final interest in profile.interests) {
-        // Get or create interest
-        final interestResult = await client
-            .from('interests')
-            .upsert({'name': interest})
-            .select()
-            .single();
-        await client.from('user_interests').insert({
-          'user_id': profile.id,
-          'interest_id': interestResult['id'],
-        });
+      if (updated.isEmpty) {
+        // RLS silently filters unmatched rows, so this is how a blocked or
+        // missing profile row surfaces. Never report it as a success.
+        throw StateError(
+          'The server did not save your profile. Please try again.',
+        );
       }
-
-      // Update weekend availability in user_settings
-      await client.from('user_settings').upsert({
-        'user_id': profile.id,
-        'weekend_availability': profile.weekendAvailability,
-      });
-      state = state.copyWith(currentUser: profile);
+    } on StateError {
+      rethrow;
     } catch (e) {
       debugPrint('Failed to update profile: $e');
-      rethrow;
+      // PostgREST failures arrive as opaque "server error" text. The two
+      // live causes are a schema/check mismatch (relationship-intent label,
+      // social-media bio trigger, column grant) and an RLS rejection — map
+      // them to something the user can act on.
+      throw StateError(_profileSaveErrorMessage(e));
     }
+
+    // ---- Secondary writes: reported, never silently swallowed. --------------
+    final warnings = <String>[];
+
+    if (profile.interests.isNotEmpty) {
+      try {
+        // The master list is shared, so an interest that does not exist yet is
+        // inserted and then linked to this user only.
+        await client.from('user_interests').delete().eq('user_id', authId);
+        for (final interest in profile.interests) {
+          final trimmed = interest.trim();
+          if (trimmed.isEmpty) continue;
+          final interestResult = await client
+              .from('interests')
+              .upsert({'name': trimmed})
+              .select('id')
+              .single();
+          await client.from('user_interests').insert({
+            'user_id': authId,
+            'interest_id': interestResult['id'],
+          });
+        }
+      } catch (e) {
+        debugPrint('Failed to update interests: $e');
+        warnings.add('Your interests were not saved.');
+      }
+    }
+
+    try {
+      await client.from('user_settings').upsert({
+        'user_id': authId,
+        'weekend_availability': profile.weekendAvailability,
+      });
+    } catch (e) {
+      debugPrint('Failed to update weekend availability: $e');
+      warnings.add('Your weekend availability was not saved.');
+    }
+
+    state = state.copyWith(currentUser: profile.copyWith(id: authId));
+    return warnings;
   }
 
+  /// Map a `profiles` UPDATE failure to actionable text.
+  ///
+  /// The save writes exactly the columns migration 006 grants to clients, so
+  /// a rejection is one of: an RLS/ownership rejection (stale session), a
+  /// CHECK violation (relationship-intent label or the social-media bio
+  /// trigger from 014), or a missing-column error when the live database is
+  /// behind the app's migrations. The raw PostgREST message would otherwise
+  /// surface as "unable to proceed".
+  static String _profileSaveErrorMessage(Object e) {
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('row-level security') ||
+        msg.contains('rls') ||
+        msg.contains('policy') ||
+        msg.contains('42501') ||
+        msg.contains('not authorized')) {
+      return 'Your profile could not be saved. Please sign out and sign back '
+          'in, then try again.';
+    }
+    if (msg.contains('relationship_intent') ||
+        msg.contains('check constraint') ||
+        msg.contains('23514')) {
+      return 'Your profile could not be saved. Please re-select your dating '
+          'preference and try again.';
+    }
+    if (msg.contains('social media') || msg.contains('validate_profile_bio')) {
+      return 'Your bio contains a social media handle or link, which is not '
+          'allowed. Please remove it and try again.';
+    }
+    if (msg.contains('does not exist') || msg.contains('42703')) {
+      return 'The app and the database are out of sync. Please update to the '
+          'latest version and try again.';
+    }
+    return 'Your profile could not be saved. Check your connection and try again.';
+  }
+
+  /// Reload the signed-in user's profile (and their just-uploaded photos) from
+  /// LIVE Supabase.
+  ///
+  /// Every field comes from the database, including the age derived from
+  /// `date_of_birth` and the weekend availability stored in `user_settings` —
+  /// this replaced hard-coded placeholders that made a freshly saved profile
+  /// render with stale or invented values.
   Future<void> refreshProfile() async {
     final client = _client;
     if (client == null) return;
     final userId = SupabaseConfig.currentUserId;
+    if (userId == 'unauthenticated' || userId == 'me') return;
     try {
       final response = await client
           .from('profiles')
           .select(
-            '''            id, display_name, gender, city, bio, relationship_intent,            occupation, education, favorite_music, ideal_weekend,            is_photo_verified, trust_score, last_active_at          ''',
+            'id, display_name, date_of_birth, gender, city, bio, '
+            'relationship_intent, occupation, education, favorite_music, '
+            'ideal_weekend, is_photo_verified, trust_score, referral_code, '
+            'last_active_at',
           )
           .eq('id', userId)
           .maybeSingle();
-      if (response != null) {
-        final photos = await _discoveryRepo.fetchProfilePhotos(userId);
-        final interests = await _discoveryRepo.fetchUserInterests(userId);
-        final crossedPaths = await _discoveryRepo.fetchCrossedPaths(userId);
-        final updatedUser = UserProfile(
-          id: response['id'] as String? ?? userId,
-          name: response['display_name'] as String? ?? 'User',
-          age: 25,
-          gender: response['gender'] as String? ?? 'Prefer not to say',
-          photos: photos,
-          city: response['city'] as String? ?? '',
-          distanceKm: 0,
-          bio: response['bio'] as String? ?? '',
-          occupation: response['occupation'] as String? ?? '',
-          education: response['education'] as String? ?? '',
-          relationshipIntent:
-              response['relationship_intent'] as String? ?? 'Dating',
-          interests: interests,
-          favoritePlaces: const [],
-          languages: const [],
-          prompts: const [],
-          isPhotoVerified: response['is_photo_verified'] as bool? ?? false,
-          trustScore: response['trust_score'] as int? ?? 50,
-          crossedPathsCount: crossedPaths.length,
-          favoriteMusic: response['favorite_music'] as String? ?? '',
-          idealWeekend: response['ideal_weekend'] as String? ?? '',
-          referralCode: state.currentUser.referralCode,
-          commonInterests: const [],
-          weekendAvailability: const {},
-          voiceIntroUrl: '',
-          compatibilityExplanation: '',
-          distanceDisplay: '',
-        );
-        state = state.copyWith(currentUser: updatedUser);
+      if (response == null) return;
+      final photos = await _discoveryRepo.fetchProfilePhotos(userId);
+      final interests = await _discoveryRepo.fetchUserInterests(userId);
+      final crossedPaths = await _discoveryRepo.fetchCrossedPaths(userId);
+      final dateOfBirth = DateTime.tryParse(
+        response['date_of_birth'] as String? ?? '',
+      );
+      Map<String, bool> availability = {};
+      try {
+        final settings = await client
+            .from('user_settings')
+            .select('weekend_availability')
+            .eq('user_id', userId)
+            .maybeSingle();
+        final raw = settings?['weekend_availability'];
+        if (raw is Map) {
+          availability = {
+            for (final entry in raw.entries)
+              if (entry.key is String) entry.key as String: entry.value == true,
+          };
+        }
+      } catch (_) {
+        // Non-critical: the chips simply render unselected.
       }
+      final updatedUser = UserProfile(
+        id: response['id'] as String? ?? userId,
+        name: response['display_name'] as String? ?? '',
+        age: dateOfBirth == null
+            ? 18
+            : DateTime.now().difference(dateOfBirth).inDays ~/ 365,
+        gender: response['gender'] as String? ?? 'Prefer not to say',
+        photos: photos,
+        city: response['city'] as String? ?? '',
+        distanceKm: 0,
+        bio: response['bio'] as String? ?? '',
+        occupation: response['occupation'] as String? ?? '',
+        education: response['education'] as String? ?? '',
+        relationshipIntent:
+            response['relationship_intent'] as String? ?? 'Dating',
+        interests: interests,
+        favoritePlaces: const [],
+        languages: const [],
+        prompts: const [],
+        isPhotoVerified: response['is_photo_verified'] as bool? ?? false,
+        trustScore: response['trust_score'] as int? ?? 50,
+        crossedPathsCount: crossedPaths.length,
+        favoriteMusic: response['favorite_music'] as String? ?? '',
+        idealWeekend: response['ideal_weekend'] as String? ?? '',
+        referralCode: response['referral_code'] as String? ?? '',
+        commonInterests: const [],
+        weekendAvailability: availability,
+        voiceIntroUrl: '',
+        compatibilityExplanation: '',
+        distanceDisplay: '',
+      );
+      state = state.copyWith(currentUser: updatedUser);
     } catch (e) {
       debugPrint('Failed to refresh profile: $e');
     }
@@ -760,10 +941,9 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
             code: row['referral_code'] as String? ?? state.referralData.code,
             invitedCount: row['invited_count'] as int? ?? 0,
             verifiedCount: row['verified_count'] as int? ?? 0,
-            badgeTitle: row['badge_title'] as String? ?? 'New Pioneer',
-            achievementTier:
-                row['achievement_tier'] as String? ?? 'Bronze Contributor',
-            linkUrl: row['link_url'] as String? ?? state.referralData.linkUrl,
+            badgeTitle: row['badge_title'] as String? ?? '',
+            achievementTier: row['achievement_tier'] as String? ?? '',
+            linkUrl: row['link_url'] as String? ?? '',
           ),
         );
       }

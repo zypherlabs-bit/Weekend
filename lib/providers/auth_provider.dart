@@ -82,6 +82,11 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
 
   StreamSubscription<AuthState>? _authSubscription;
 
+  /// Sign-up wizard answers (birthday / gender / goal) waiting for a session
+  /// to write them to `profiles`, plus the account they belong to.
+  Map<String, String>? _pendingSignupDetails;
+  String? _pendingSignupUserId;
+
   /// Mirror Supabase's own session stream.
   ///
   /// A session can appear outside this widget tree — the user confirms their
@@ -129,6 +134,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
         needsMfaChallenge: false,
         clearError: true,
       );
+      await _applyPendingSignupDetails(user.id);
       await _refreshMfaFlag();
       await _loadLocationPreferences(user.id);
       return;
@@ -162,7 +168,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       final client = _client;
 
       if (client == null) {
-        // Offline demo mode: no persisted session, so the user starts
+        // Unconfigured mode: no persisted session, so the user starts
         // unauthenticated and proceeds through onboarding → auth.
         state = const WeekendAuthState(isLoading: false, isAuthenticated: false);
         return;
@@ -209,13 +215,18 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
   Future<void> signUpWithEmail(
     String email,
     String password,
-    String fullName,
-  ) async {
+    String fullName, {
+    DateTime? dateOfBirth,
+    String? gender,
+    String? relationshipIntent,
+  }) async {
+    // A fresh attempt always owns the wizard-answer stash from here on.
+    _pendingSignupDetails = null;
+    _pendingSignupUserId = null;
     final client = _client;
     if (client == null) {
       state = state.copyWith(
         isLoading: false,
-        clearError: true,
         error:
             'Weekend is not connected to a backend. '
             'Build with SUPABASE_URL and SUPABASE_ANON_KEY to enable accounts.',
@@ -230,10 +241,23 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     );
 
     try {
+      // Wizard answers ride along in the signup metadata so the
+      // handle_new_user trigger (migration 015) persists them even if the app
+      // is killed before the confirmation link is opened. The goal is safe to
+      // include now too: 015 corrected the relationship-intent CHECK typo
+      // that used to abort the trigger's profile insert.
+      final metadata = <String, String>{'full_name': fullName};
+      if (dateOfBirth != null) {
+        metadata['date_of_birth'] = _dateOnly(dateOfBirth);
+      }
+      if (gender != null) metadata['gender'] = gender;
+      if (relationshipIntent != null && relationshipIntent.isNotEmpty) {
+        metadata['relationship_intent'] = relationshipIntent;
+      }
       final response = await client.auth.signUp(
         email: email,
         password: password,
-        data: {'full_name': fullName},
+        data: metadata,
         emailRedirectTo: SupabaseConfig.emailRedirectOrNull,
       );
 
@@ -245,6 +269,17 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
         );
         return;
       }
+
+      // The wizard's answers are held until a session exists to write them
+      // with (immediately below, or after the confirmation link later).
+      final pending = <String, String>{
+        if (dateOfBirth != null) 'date_of_birth': _dateOnly(dateOfBirth),
+        if (gender != null) 'gender': gender,
+        if (relationshipIntent != null)
+          'relationship_intent': relationshipIntent,
+      };
+      _pendingSignupDetails = pending.isEmpty ? null : pending;
+      _pendingSignupUserId = pending.isEmpty ? null : response.user!.id;
 
       // The SDK returns a session only when Supabase actually issued one. With
       // email confirmation enabled (mailer_autoconfirm = false) the account is
@@ -276,9 +311,16 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
         session: session.accessToken,
         clearError: true,
       );
+      if (response.user != null) {
+        await _applyPendingSignupDetails(response.user!.id);
+      }
       await _refreshMfaFlag();
       await _loadLocationPreferences(response.user!.id);
     } catch (e) {
+      // The account was never created — drop any wizard answers so they can
+      // not leak into a later sign-in of a different account.
+      _pendingSignupDetails = null;
+      _pendingSignupUserId = null;
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: false,
@@ -313,13 +355,40 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     }
   }
 
+  /// Write wizard answers captured during sign-up to `profiles` once the
+  /// user id has a session. Retried on the next session adoption on failure.
+  Future<void> _applyPendingSignupDetails(String userId) async {
+    final details = _pendingSignupDetails;
+    final client = _client;
+    if (details == null || details.isEmpty || client == null) return;
+    if (_pendingSignupUserId != userId) {
+      // The stash belongs to a different account (or a stale attempt): the
+      // signup metadata written at signUpWithEmail time is its fallback.
+      _pendingSignupDetails = null;
+      _pendingSignupUserId = null;
+      return;
+    }
+    try {
+      await client.from('profiles').update(details).eq('id', userId);
+      _pendingSignupDetails = null;
+      _pendingSignupUserId = null;
+    } catch (_) {
+      // Keep the stash; the next session adoption retries.
+    }
+  }
+
+  String _dateOnly(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
   /// Clear a displayed error (e.g. when the user switches forms).
   void dismissError() {
     if (state.error == null) return;
     state = state.clearError();
   }
 
-  /// Turns SDK errors into user-facing text without leaking credentials.
+  /// Turn SDK errors into user-facing text without leaking credentials.
   String _readableAuthError(Object e) {
     if (e is AuthException) {
       final code = e.code ?? '';
@@ -348,6 +417,28 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       return 'Could not reach Weekend. Check your connection and try again.';
     }
     return e.toString().replaceAll('Exception: ', '');
+  }
+
+  /// Explains a passkey failure without dumping a raw SDK/Edge Function error
+  /// at the user.
+  ///
+  /// The `passkey-register` / `passkey-authenticate` Edge Functions are not
+  /// deployed on the live project, so GoTrue answers 404. That is surfaced as a
+  /// clear "unavailable, use your password" message instead of pretending the
+  /// passkey flow worked.
+  String _readablePasskeyError(Object e, String action) {
+    final text = e.toString();
+    if (text.contains('404') ||
+        text.contains('FunctionsHttpError') ||
+        text.contains('not found') ||
+        text.contains('not deployed')) {
+      return 'Passkey $action is not available right now. '
+          'Please sign in with your email and password instead.';
+    }
+    if (text.contains('401') || text.contains('Unauthorized')) {
+      return 'That passkey could not be verified. Please try again.';
+    }
+    return _readableAuthError(e);
   }
 
   Future<void> signInWithEmail(String email, String password) async {
@@ -559,6 +650,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
         state = state.copyWith(
           isLoading: false,
           isAuthenticated: false,
+          needsMfaChallenge: false,
           error: result.error ?? 'Passkey registration failed.',
         );
       }
@@ -566,7 +658,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       state = state.copyWith(
         isLoading: false,
         isAuthenticated: false,
-        error: e.toString(),
+        error: _readablePasskeyError(e, 'registration'),
       );
     }
   }
@@ -614,7 +706,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
         isLoading: false,
         isAuthenticated: false,
         needsMfaChallenge: false,
-        error: e.toString(),
+        error: _readablePasskeyError(e, 'sign-in'),
       );
     }
   }
@@ -646,7 +738,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     final client = _client;
 
     if (client == null) {
-      // Demo mode: no backend to contact.
+      // Unconfigured mode: no backend to contact.
       return;
     }
     try {

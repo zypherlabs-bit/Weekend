@@ -10,6 +10,10 @@ class ImageOptimizer {
   static const int thumbnailDimension = 400;
   static const int mediumDimension = 800;
   static const int maxFileSizeBytes = 2 * 1024 * 1024;
+
+  /// Why the last [pickAndOptimizeImage] call returned `null`, or `null` when
+  /// the user simply cancelled. Callers surface this instead of guessing.
+  static String? lastError;
   static Future<Uint8List> optimizeImage(
     Uint8List bytes, {
     int? maxDimension,
@@ -32,7 +36,6 @@ class ImageOptimizer {
     final optimized = img.encodeJpg(resized, quality: 85);
     return Uint8List.fromList(optimized);
   }
-
   static Future<Uint8List> createThumbnail(Uint8List bytes) async {
     final image = img.decodeImage(bytes);
     if (image == null) return bytes;
@@ -67,7 +70,15 @@ class ImageOptimizer {
     return Uint8List.fromList(result);
   }
 
+  /// Pick an image and re-encode it as a valid, size-bounded JPEG.
+  ///
+  /// Returns `null` only when the user cancelled or the picker itself failed
+  /// (already reported through [lastError]). A file that cannot be decoded is
+  /// reported as an error instead of being passed through unchanged: a
+  /// HEIC/RAW/corrupt payload would be rejected by the bucket's
+  /// `allowed_mime_types` and surface later as an unexplained upload failure.
   static Future<File?> pickAndOptimizeImage() async {
+    lastError = null;
     try {
       final picker = ImagePicker();
       final XFile? image = await picker.pickImage(
@@ -78,15 +89,38 @@ class ImageOptimizer {
       );
       if (image == null) return null;
       final bytes = await image.readAsBytes();
+      if (bytes.isEmpty) {
+        lastError = 'That image could not be read. Please choose another.';
+        return null;
+      }
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null || decoded.width == 0 || decoded.height == 0) {
+        lastError =
+            'That file is not a supported image. Please choose a JPG, PNG or WebP.';
+        return null;
+      }
+      // Re-encode rather than passing bytes through: this normalises the
+      // format to JPEG (what the bucket accepts) and applies EXIF orientation.
       final optimized = await optimizeImage(bytes);
+      if (optimized.isEmpty) {
+        lastError = 'That image could not be processed. Please choose another.';
+        return null;
+      }
       final tempDir = await getTemporaryDirectory();
       final file = File(
-        '${tempDir.path}/optimized_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        '${tempDir.path}/optimized_${DateTime.now().microsecondsSinceEpoch}.jpg',
       );
-      await file.writeAsBytes(optimized);
+      await file.writeAsBytes(optimized, flush: true);
       return file;
     } on PlatformException catch (e) {
+      lastError = e.code == 'camera_access_denied'
+          ? 'Photo access was denied. Enable it in Settings to continue.'
+          : 'Could not open the image picker.';
       debugPrint('Image picker error: $e');
+      return null;
+    } catch (e) {
+      lastError = 'Could not read that image. Please choose another.';
+      debugPrint('Image pick failed: $e');
       return null;
     }
   }

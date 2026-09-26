@@ -7,6 +7,22 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are published as GitHub Releases with a versioned APK and a SHA-256
 checksum.
 
+## [2.3.1] - 2026-09-26
+
+### Fixed - Edit Profile photo upload + save
+
+- Photo upload maps Storage + `profile_photos` rejections to actionable
+  messages instead of opaque "server error"; `moderation_status` is no longer
+  sent from the client (server decides per 006/011).
+- Edit Profile save maps `profiles` UPDATE rejections (RLS/stale session,
+  relationship-intent CHECK, social-media bio trigger 014, missing-column
+  42703) to actionable messages; raw SDK prefixes stripped before display.
+- New migration `018_edit_profile_live_fixes.sql`: grants on
+  `profile_photos`/`interests`/`user_interests`, RLS for shared `interests`
+  list (links stay owner-only), idempotent re-assert of the private
+  `profile-photos` bucket + owner-folder storage policies. Apply with
+  `supabase db push` before testing the release APK.
+
 ## [Unreleased]
 
 ### Fixed - LIVE-only auth

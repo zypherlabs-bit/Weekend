@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../config/supabase_config.dart';
 import '../../providers/weekend_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/image_optimizer.dart';
@@ -18,6 +19,8 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _isUploadingPhoto = false;
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(weekendProvider);
@@ -63,7 +66,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     bottom: 8,
                     right: 8,
                     child: GestureDetector(
-                      onTap: _pickAndUploadPhoto,
+                      onTap: _isUploadingPhoto ? null : _pickAndUploadPhoto,
                       child: Container(
                         width: 36,
                         height: 36,
@@ -71,11 +74,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           color: Color(0xFFFF4B72),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.camera_alt_rounded,
-                          size: 18,
-                          color: Colors.white,
-                        ),
+                        child: _isUploadingPhoto
+                            ? const Padding(
+                                padding: EdgeInsets.all(9),
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.camera_alt_rounded,
+                                size: 18,
+                                color: Colors.white,
+                              ),
                       ),
                     ),
                   ),
@@ -344,23 +355,72 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _pickAndUploadPhoto() async {
-    final file = await ImageOptimizer.pickAndOptimizeImage();
-    if (file == null) return;
-
-    final bytes = await file.readAsBytes();
-    final userId = ref.read(weekendProvider).currentUser.id;
-
-    final repo = ProfileRepository();
-    await repo.uploadProfilePhoto(userId, bytes, true);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Photo uploaded! Pending verification.'),
-          backgroundColor: Color(0xFF4CAF50),
-        ),
-      );
+    if (_isUploadingPhoto) return;
+    // Upload under the auth session's id, not the (possibly still
+    // placeholder) id held in app state.
+    final authId = SupabaseConfig.client?.auth.currentUser?.id;
+    if (authId == null || authId.isEmpty || authId == 'unauthenticated') {
+      _showMessage('You are not signed in, so the photo was not uploaded.',
+          isError: true);
+      return;
     }
+
+    final file = await ImageOptimizer.pickAndOptimizeImage();
+    if (file == null) {
+      if (mounted && ImageOptimizer.lastError != null) {
+        _showMessage(ImageOptimizer.lastError!, isError: true);
+      }
+      return;
+    }
+
+    setState(() => _isUploadingPhoto = true);
+    try {
+      final bytes = await file.readAsBytes();
+      final repo = ProfileRepository();
+      // Throws unless Storage AND the profile_photos row both succeeded.
+      await repo.uploadProfilePhoto(authId, bytes, true);
+      // Re-read from the database so the avatar shows the real signed URL.
+      await ref.read(weekendProvider.notifier).refreshProfile();
+      if (mounted) {
+        _showMessage('Photo uploaded!', isError: false);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showMessage('Failed to upload photo. ${_readableError(e)}',
+            isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingPhoto = false);
+      }
+    }
+  }
+
+  /// Surfaces the real failure reason without leaking tokens or internals.
+  String _readableError(Object e) {
+    final text = e.toString();
+    if (e is StateError) return e.message;
+    if (text.contains('413') || text.contains('Payload too large')) {
+      return 'That image is too large. Please choose a smaller photo.';
+    }
+    if (text.contains('mime') || text.contains('mimeType')) {
+      return 'That file type is not accepted. Please choose a JPG, PNG or WebP.';
+    }
+    if (text.contains('42501') || text.contains('row-level security')) {
+      return 'The server rejected this upload for your account.';
+    }
+    return text.replaceAll('Exception: ', '').replaceFirst('Bad state: ', '');
+  }
+
+  void _showMessage(String message, {required bool isError}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : const Color(0xFF4CAF50),
+        duration: Duration(seconds: isError ? 5 : 3),
+      ),
+    );
   }
 
   void _showEditProfile(BuildContext context) {

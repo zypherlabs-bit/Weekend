@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../providers/auth_provider.dart';
+
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
   @override
@@ -50,7 +52,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 itemBuilder: (context, index) {
                   final page = _pages[index];
                   return Padding(
-                    padding: const EdgeInsets.all(40),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 24,
+                    ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -74,7 +79,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           ),
                           child: Icon(page.icon, size: 80, color: Colors.white),
                         ),
-                        const SizedBox(height: 48),
+                        const SizedBox(height: 32),
                         Text(
                           page.title,
                           style: const TextStyle(
@@ -132,9 +137,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         curve: Curves.easeInOut,
                       );
                     } else {
-                      // "Get Started" means "create an account": open the auth
-                      // screen directly on the sign-up form.
-                      context.go('/auth?mode=signup');
+                      // "Get Started" means "create an account": open the
+                      // Tinder-style sign-up wizard directly.
+                      context.go('/signup');
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -154,6 +159,50 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ),
                   ),
                 ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      ref.read(authStateProvider.notifier).dismissError();
+                      context.go('/auth');
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'Already have an account? Sign in',
+                      style: TextStyle(
+                        color: Color(0xFFFF4B72),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      await ref
+                          .read(authStateProvider.notifier)
+                          .signInAnonymously();
+                      if (!context.mounted) return;
+                      if (ref.read(authStateProvider).isAuthenticated) {
+                        context.go('/home');
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'Explore as Guest',
+                      style: TextStyle(color: Colors.white60, fontSize: 14),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

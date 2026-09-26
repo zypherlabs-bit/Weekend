@@ -5,7 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../services/qr_invitation_service.dart';
 import '../../services/secure_storage_service.dart';
-import '../../providers/auth_provider.dart';
+import '../../providers/weekend_provider.dart';
 
 class QRInviteScreen extends ConsumerStatefulWidget {
   const QRInviteScreen({super.key});
@@ -29,17 +29,30 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
       _error = null;
     });
     try {
-      final authState = ref.read(authStateProvider);
-      final user = authState.user;
-      if (user == null || user.referralCode.isEmpty) {
+      // The referral code lives on the authenticated user's `profiles` row.
+      // `authState.user.referralCode` was read here before, but that object is
+      // built from the auth session only and never carries a referral code, so
+      // the screen always failed with "No referral code available".
+      final profile = await ref.read(weekendProvider.notifier).loadCurrentUserProfile();
+      final user = profile;
+      if (user == null) {
         setState(() {
-          _error = 'No referral code available';
+          _error = 'Could not load your profile. Please try again.';
+          _isGenerating = false;
+        });
+        return;
+      }
+      if (user.referralCode.trim().isEmpty) {
+        setState(() {
+          _error =
+              'No referral code is available on your account yet. '
+              'Please try again in a moment.';
           _isGenerating = false;
         });
         return;
       }
       final invitation = await QRInvitationService.generateInvitation(
-        referralCode: user.referralCode,
+        referralCode: user.referralCode.trim(),
         inviterId: user.id,
         inviterName: user.name,
       );

@@ -76,11 +76,40 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  /// A relative label for the last message, derived from real database data.
+  /// Returns an explicit "unknown" rather than inventing a recency.
+  String _lastSeenLabel(MatchItem match) {
+    final value = match.lastMessageTime.trim();
+    if (value.isEmpty) return 'unknown';
+    if (value == 'No messages yet') return value;
+    return value;
+  }
+
+  void _notify(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : const Color(0xFF4CAF50),
+        duration: Duration(seconds: isError ? 5 : 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(weekendProvider);
 
-    final currentUserId = state.currentUser.id;
+    // Message ownership must come from the auth session. `state.currentUser.id`
+    // is the 'me' placeholder until the profile load resolves, which would
+    // render every bubble on the wrong side.
+    final authId = SupabaseConfig.client?.auth.currentUser?.id;
+    final currentUserId = (authId != null &&
+            authId.isNotEmpty &&
+            authId != 'unauthenticated' &&
+            authId != 'me')
+        ? authId
+        : state.currentUser.id;
 
     return Scaffold(
       backgroundColor: const Color(0xFF130E20),
@@ -93,31 +122,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         title: Row(
           children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: CachedNetworkImageProvider(
-                    widget.match.user.photos.firstOrNull ?? '',
-                  ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4CAF50),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFF130E20),
-                        width: 2,
-                      ),
+            CircleAvatar(
+              radius: 20,
+              backgroundImage: widget.match.user.photos.isEmpty
+                  ? null
+                  : CachedNetworkImageProvider(
+                      widget.match.user.photos.first,
                     ),
-                  ),
-                ),
-              ],
+              child: widget.match.user.photos.isEmpty
+                  ? const Icon(Icons.person_rounded, color: Colors.white38)
+                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -132,9 +146,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const Text(
-                    'Online now',
-                    style: TextStyle(color: Color(0xFF4CAF50), fontSize: 12),
+                  // No presence source exists in the backend, so no
+                  // fabricated "Online now" label or green dot is shown. The
+                  // only real activity timestamp available is the last
+                  // message, so it is labelled as exactly that.
+                  Text(
+                    'Last message: ${_lastSeenLabel(widget.match)}',
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -164,18 +185,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
             ],
             onSelected: (value) async {
-              switch (value) {
-                case 'block':
-                  await ref.read(weekendProvider.notifier).blockUser(widget.match.user.id);
-                  if (!mounted) return;
-                  if (context.mounted) Navigator.pop(context);
-                  break;
-                case 'report':
-                  await ref.read(weekendProvider.notifier).reportUser(widget.match.user.id, 'Inappropriate behavior');
-                  if (!mounted) return;
-                  if (context.mounted) Navigator.pop(context);
-                  break;
+              final otherId = widget.match.user.id;
+              final navigator = Navigator.of(context);
+              try {
+                switch (value) {
+                  case 'block':
+                    await ref
+                        .read(weekendProvider.notifier)
+                        .blockUser(otherId);
+                    if (mounted) _notify('User blocked.');
+                    break;
+                  case 'report':
+                    await ref
+                        .read(weekendProvider.notifier)
+                        .reportUser(otherId, 'Inappropriate behavior');
+                    if (mounted) _notify('Report submitted.');
+                    break;
+                }
+              } catch (e) {
+                // The write is no longer swallowed upstream, so a rejected
+                // block/report is reported instead of looking successful.
+                if (mounted) {
+                  _notify(
+                    'Could not save that action. Please try again.',
+                    isError: true,
+                  );
+                }
               }
+              if (navigator.canPop()) navigator.pop();
             },
           ),
         ],

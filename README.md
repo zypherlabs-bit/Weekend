@@ -89,7 +89,7 @@ Download the latest Weekend Android APK from **GitHub Releases**.
 | Link | Purpose |
 |------|---------|
 | [**Latest release page**](https://github.com/zypherlabs-bit/Weekend/releases/latest) | Always points at the newest stable Weekend release |
-| [`Weekend-v2.3.0-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.3.0-release.apk) | Current production APK (~78 MB) |
+| [`Weekend-v2.3.0-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.3.0-release.apk) | Current production APK (~79 MB) |
 | [`Weekend-v2.3.0-release.apk.sha256`](https://github.com/zypherlabs-bit/Weekend/releases/latest/download/Weekend-v2.3.0-release.apk.sha256) | SHA-256 checksum for the current APK |
 | [All releases](https://github.com/zypherlabs-bit/Weekend/releases) | Full release history and notes |
 | [📊 **Analytics dashboard**](https://zypherlabs-bit.github.io/Weekend/analytics/) | Daily GitHub visitor and APK download statistics |

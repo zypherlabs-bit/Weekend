@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/supabase_config.dart';
 import '../../providers/weekend_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/image_optimizer.dart';
@@ -31,6 +32,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   List<String> _selectedInterests = [];
   Map<String, bool> _weekendAvailability = {};
   bool _isSaving = false;
+  bool _isUploadingPhoto = false;
   final List<String> _availableGenders = [
     'Man',
     'Woman',
@@ -72,7 +74,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _loadCurrentProfile();
   }
 
-  void _loadCurrentProfile() {
+  Future<void> _loadCurrentProfile() async {
+    // Pull the saved row first: sign-up wizard answers (name, gender, goal)
+    // live in `profiles` and must prefill this form instead of the neutral
+    // placeholder from WeekendState.initial().
+    await ref.read(weekendProvider.notifier).loadCurrentUser();
+    if (!mounted) return;
     final user = ref.read(weekendProvider).currentUser;
     _nameController.text = user.name;
     _bioController.text = user.bio;
@@ -81,17 +88,68 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _educationController.text = user.education;
     _favoriteMusicController.text = user.favoriteMusic;
     _idealWeekendController.text = user.idealWeekend;
-    _selectedGender = user.gender;
-    _selectedRelationshipIntent = user.relationshipIntent;
+    // Normalise the two dropdown-backed values against their option lists.
+    // The neutral placeholder profile (or a legacy row) can carry a label the
+    // dropdown does not offer, which would leave an unselectable — and
+    // unvalidatable — field and make Save appear to do nothing.
+    _selectedGender = _availableGenders.contains(user.gender)
+        ? user.gender
+        : _availableGenders.first;
+    _selectedRelationshipIntent =
+        _availableRelationshipIntents.contains(user.relationshipIntent)
+            ? user.relationshipIntent
+            : _availableRelationshipIntents.first;
     _selectedInterests = List.from(user.interests);
     _weekendAvailability = Map.from(user.weekendAvailability);
     if (_weekendAvailability.isEmpty) {
       _weekendAvailability = {'Saturday': false, 'Sunday': false};
     }
+    // Rebuild so the freshly loaded values show (initState already built
+    // once while the load was in flight).
+    if (mounted) setState(() {});
+  }
+
+  /// The account every write is filed under.
+  ///
+  /// Taken from the Supabase auth session, never from `currentUser.id`, which
+  /// is the `'me'` placeholder until the profile load resolves.
+  String? get _authUserId {
+    final id = SupabaseConfig.client?.auth.currentUser?.id;
+    if (id == null || id.isEmpty || id == 'unauthenticated' || id == 'me') {
+      return null;
+    }
+    return id;
+  }
+
+  /// Human-readable reason a save failed, without leaking tokens or internals.
+  /// Repositories already map the common PostgREST/Storage failures to
+  /// actionable StateErrors; this only strips SDK prefixes and maps any
+  /// leftover network failure.
+  String _readableSaveError(Object e) {
+    final text = e
+        .toString()
+        .replaceFirst(RegExp(r'^(StateError|Exception)\s*:\s*'), '')
+        .replaceFirst('Bad state: ', '');
+    if (e is StateError || e is ArgumentError) return text;
+    final lower = text.toLowerCase();
+    if (lower.contains('network') ||
+        lower.contains('socket') ||
+        lower.contains('connection') ||
+        lower.contains('timeout')) {
+      return 'Network error. Check your connection and try again.';
+    }
+    return text;
   }
 
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_isSaving) return;
+
+    if (_authUserId == null) {
+      _showError('You are not signed in, so nothing was saved.');
+      return;
+    }
+
     setState(() => _isSaving = true);
     try {
       final user = ref.read(weekendProvider).currentUser;
@@ -108,37 +166,47 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         interests: _selectedInterests,
         weekendAvailability: _weekendAvailability,
       );
-      await ref.read(weekendProvider.notifier).updateProfile(updatedProfile);
-      // Personal Details saved for the authenticated user; re-evaluate
-      // onboarding state so first-time signups continue into the app.
+      // Awaited: the provider rethrows when the profile row itself was not
+      // written. Parts that failed are returned instead of thrown, so a saved
+      // profile is never reported as a failed one.
+      final warnings = await ref
+          .read(weekendProvider.notifier)
+          .updateProfile(updatedProfile);
+
+      // Re-evaluate onboarding state so first-time signups continue into the
+      // app. `refreshProfileSetup` reads the persisted row, so it only clears
+      // once the write is actually visible server-side.
       await ref.read(authStateProvider.notifier).refreshProfileSetup();
       await ref.read(weekendProvider.notifier).loadCurrentUser();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully!'),
-            backgroundColor: Color(0xFF4CAF50),
+      if (!mounted) return;
+
+      if (ref.read(authStateProvider).needsProfileSetup) {
+        // The write succeeded but the server still considers the profile
+        // incomplete. Say what is missing instead of leaving the user on a
+        // screen that silently refuses to advance.
+        _showError(_incompleteReason());
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            warnings.isEmpty
+                ? 'Profile updated successfully!'
+                : 'Profile saved, but ${warnings.join(' ')}',
           ),
-        );
-        if (ref.read(authStateProvider).needsProfileSetup) {
-          // Still incomplete — stay on Personal Details.
-          return;
-        }
-        if (context.canPop()) {
-          context.pop();
-        } else {
-          context.go('/home');
-        }
+          backgroundColor:
+              warnings.isEmpty ? const Color(0xFF4CAF50) : Colors.orange,
+          duration: Duration(seconds: warnings.isEmpty ? 3 : 6),
+        ),
+      );
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/home');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update profile: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (mounted) _showError('Failed to save your profile. ${_readableSaveError(e)}');
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -146,33 +214,80 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
+  /// Explains exactly which mandatory field the server is still missing.
+  String _incompleteReason() {
+    final missing = <String>[];
+    if (_nameController.text.trim().isEmpty) missing.add('Full Name');
+    if (_cityController.text.trim().isEmpty) missing.add('City');
+    if (missing.isEmpty) {
+      return 'Your profile was saved, but the server still reports it as '
+          'incomplete. Please contact support if this keeps happening.';
+    }
+    return 'Saved, but the server still needs: ${missing.join(' and ')}. '
+        'Please fill ${missing.length == 1 ? 'it' : 'them'} in and tap Save again.';
+  }
+
+  void _showError(String message) {
+    // Supabase/PostgREST failures arrive as raw `PostgrestException: ...`
+    // text ("server error"); strip the class name so users see the actionable
+    // message the repositories already mapped.
+    final clean =
+        message.replaceFirst(RegExp(r'^(StateError|Exception)\s*:\s*'), '');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(clean),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+      ),
+    );
+  }
+
   Future<void> _pickAndUploadPhoto() async {
-    final file = await ImageOptimizer.pickAndOptimizeImage();
-    if (file == null) return;
+    final authId = _authUserId;
+    if (authId == null) {
+      _showError('You are not signed in, so the photo was not uploaded.');
+      return;
+    }
+    if (_isUploadingPhoto) return;
+
+    final file = await ImageOptimizer.pickAndOptimizeImage();    // A null file is either a user cancellation or a real picker/decode
+    // failure. Only the latter is reported, and never as an upload success.
+    if (file == null) {
+      if (mounted && ImageOptimizer.lastError != null) {
+        _showError(ImageOptimizer.lastError!);
+      }
+      return;
+    }
+
+    setState(() => _isUploadingPhoto = true);
     try {
       final bytes = await file.readAsBytes();
-      final userId = ref.read(weekendProvider).currentUser.id;
       final repo = ProfileRepository();
-      await repo.uploadProfilePhoto(userId, bytes, true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Photo uploaded! Pending verification.'),
-            backgroundColor: Color(0xFF4CAF50),
-          ),
-        );
-
-        // Refresh the profile
-        ref.read(weekendProvider.notifier).refreshProfile();
+      // Throws unless BOTH the Storage object and the profile_photos row
+      // were written. The returned value is the private storage path, never
+      // a local file path.
+      final path = await repo.uploadProfilePhoto(authId, bytes, true);
+      if (path.isEmpty) {
+        throw StateError('The photo could not be saved. Please try again.');
       }
+
+      // Reload from the database so the avatar renders the real signed URL
+      // rather than an optimistic local path.
+      await ref.read(weekendProvider.notifier).refreshProfile();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Photo uploaded!'),
+          backgroundColor: Color(0xFF4CAF50),
+        ),
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to upload photo: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showError('Failed to upload photo. ${_readableSaveError(e)}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingPhoto = false);
       }
     }
   }
@@ -270,7 +385,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         bottom: 8,
                         right: 8,
                         child: GestureDetector(
-                          onTap: _pickAndUploadPhoto,
+                          onTap:
+                              _isUploadingPhoto ? null : _pickAndUploadPhoto,
                           child: Container(
                             width: 36,
                             height: 36,
@@ -278,11 +394,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               color: Color(0xFFFF4B72),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
-                              Icons.camera_alt_rounded,
-                              size: 18,
-                              color: Colors.white,
-                            ),
+                            child: _isUploadingPhoto
+                                ? const Padding(
+                                    padding: EdgeInsets.all(9),
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.camera_alt_rounded,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
                           ),
                         ),
                       ),
@@ -528,8 +652,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     required ValueChanged<String?> onChanged,
     required IconData icon,
   }) {
+    // A stored value that is not in the option list (an older label, a blank
+    // placeholder row, or a value the CHECK constraint used to reject) makes
+    // DropdownButtonFormField assert and render nothing at all — which reads
+    // as a dead form. The selection is normalised in _loadCurrentProfile;
+    // this is the last-resort fallback so the control always has a valid
+    // initial value.
+    final effective = items.contains(value) ? value : items.first;
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      initialValue: effective,
       style: const TextStyle(color: Colors.white),
       decoration: _inputDecoration(label, icon),
       dropdownColor: const Color(0xFF1C162E),

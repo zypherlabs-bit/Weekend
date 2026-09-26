@@ -4,7 +4,8 @@ import '../config/supabase_config.dart';
 import '../models/models.dart';
 
 class AdRepository {
-  /// The live Supabase client, or `null` when running in offline demo mode.
+  /// The live Supabase client, or `null` when the app is unconfigured
+  /// (tests, or a build without the SUPABASE dart-defines).
   SupabaseClient? get _client => SupabaseConfig.client;
 
   Future<(Advertisement?, AdConfig)> fetchAd(String userId) async {

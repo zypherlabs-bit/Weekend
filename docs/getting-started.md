@@ -149,7 +149,7 @@ For a signed release build, create `android/key.properties` from
 
 | Problem | Cause | Fix |
 |---------|-------|-----|
-| App shows sample people | Supabase credentials missing or placeholder | Re-run with `--dart-define` values |
+| Lists are empty / no people shown | Supabase credentials missing or placeholder | Re-run with `--dart-define` values |
 | `flutter analyze` fails on a CI-only warning | Missing asset directory in a fresh clone | Ensure `assets/images/` is tracked (it contains `placeholder_avatar.png`) |
 | Sign-up works but no email arrives | Email confirmation enabled in Supabase Auth | Confirm emails from the inbox, or relax the setting for development |
 | Nearby discovery empty | Location permission/services/radius | Grant permission, enable location, widen the radius |

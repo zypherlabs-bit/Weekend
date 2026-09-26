@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_provider.dart';
-import '../config/supabase_config.dart';
 import '../models/models.dart';
 
 import '../features/onboarding/onboarding_screen.dart';
@@ -11,6 +10,7 @@ import '../features/auth/auth_screen.dart';
 import '../features/auth/confirm_email_screen.dart';
 import '../features/auth/mfa_challenge_screen.dart';
 import '../features/auth/mfa_enrollment_screen.dart';
+import '../features/auth/signup_wizard_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/profile/profile_screen.dart';
 
@@ -66,12 +66,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isSplash = location == '/';
       final isOnboarding = location == '/onboarding';
       final isAuth = location == '/auth';
+      final isSignup = location == '/signup';
       final isMfa = location == '/mfa-challenge';
       final isConfirmEmail = location == '/confirm-email';
       final isPersonalDetails = location == '/edit-profile';
-
-      // While the session is being restored, keep the user on the splash.
-      if (isLoading) return isSplash ? null : '/';
 
       // A pending 2FA step-up stays on the challenge screen; nowhere else.
       if (authState.needsMfaChallenge && !isMfa) return '/mfa-challenge';
@@ -82,8 +80,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Screens a visitor may legitimately see with no session. The splash is
       // deliberately NOT one of them: it must hand off to onboarding once the
       // session check finishes, otherwise the app would sit on it forever.
-      final isGuestScreen = isOnboarding || isAuth || isConfirmEmail;
+      final isGuestScreen =
+          isOnboarding || isAuth || isSignup || isConfirmEmail;
       final isEntryScreen = isSplash || isGuestScreen;
+
+      // Legacy links (?mode=signup) open the dedicated sign-up wizard.
+      if (isAuth && state.uri.queryParameters['mode'] == 'signup') {
+        return '/signup?from=onboarding';
+      }
+
+      // While the session is being restored, keep the user on the splash.
+      // Guest screens may also stay put: an in-progress sign-in/sign-up flips
+      // `isLoading` on the very screen the user is typing on, and forcing it
+      // through splash (then onward to onboarding) was the defect that
+      // bounced people back to the start of the flow.
+      if (isLoading) {
+        final canHoldProgress = isSplash || isGuestScreen;
+        return canHoldProgress ? null : '/';
+      }
 
       if (!isAuthenticated) {
         if (isGuestScreen || isMfa) return null;
@@ -112,11 +126,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
         path: '/auth',
-        builder: (context, state) => AuthScreen(
-          // Arriving from onboarding means the visitor asked to create an
-          // account, so open on "Create Account" instead of showing the
-          // sign-in form first.
-          startOnSignUp: state.uri.queryParameters['mode'] == 'signup',
+        // Sign-in only: email/password or a passkey. Sign-up lives on its own
+        // Tinder-style wizard at /signup.
+        builder: (context, state) => const AuthScreen(),
+      ),
+      GoRoute(
+        path: '/signup',
+        builder: (context, state) => SignupWizardScreen(
+          // Where the first step's back arrow returns: onboarding's
+          // "Get Started" vs. the sign-in screen's "Sign up" link.
+          returnTo: state.uri.queryParameters['from'] == 'auth'
+              ? '/auth'
+              : '/onboarding',
         ),
       ),
 
@@ -201,9 +222,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: SupabaseConfig.isConfigured
-          ? const Color(0xFF130E20)
-          : const Color(0xFF130E20),
+      backgroundColor: const Color(0xFF130E20),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

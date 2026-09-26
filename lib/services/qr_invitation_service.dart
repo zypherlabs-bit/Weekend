@@ -77,6 +77,13 @@ class QRInvitationService {
     return QRInvitationResult.valid(invitation);
   }
 
+  /// Server-side confirmation that a scanned code is real and unredeemed.
+  ///
+  /// The inviter is resolved from `profiles.referral_code` via the
+  /// `lookup_referral_inviter` RPC. The previous implementation queried
+  /// `referrals`, which only holds one row per *redeemed* referral — so a
+  /// freshly issued code always looked "not found" and no invitation could
+  /// ever be redeemed.
   static Future<QRInvitationResult> validateInvitationServerSide(
     String payload,
   ) async {
@@ -90,17 +97,27 @@ class QRInvitationService {
     }
     final invitation = localResult.invitation!;
     try {
-      final response = await client
-          .from('referrals')
-          .select('id, status, referrer_id, referral_code')
-          .eq('referral_code', invitation.referralCode)
-          .eq('referrer_id', invitation.inviterId)
-          .maybeSingle();
-      if (response == null) {
+      final inviterId = await client.rpc<String?>(
+        'lookup_referral_inviter',
+        params: {'p_referral_code': invitation.referralCode},
+      );
+      if (inviterId == null || inviterId.isEmpty) {
         return QRInvitationResult.invalid('Referral code not found');
       }
-      final status = response['status'] as String?;
-      if (status == 'successful') {
+      // The code must belong to the inviter the QR payload claims. Without
+      // this a validly signed payload could name one user and carry another
+      // user's code.
+      if (inviterId != invitation.inviterId) {
+        return QRInvitationResult.invalid('Referral code does not match');
+      }
+      // Already credited to this account? A repeat scan is not an error.
+      final existing = await client
+          .from('referrals')
+          .select('id, status')
+          .eq('referrer_id', inviterId)
+          .eq('referee_id', client.auth.currentUser?.id ?? '')
+          .maybeSingle();
+      if (existing != null && existing['status'] == 'successful') {
         return QRInvitationResult.invalid(
           'This referral has already been used',
         );
@@ -111,6 +128,11 @@ class QRInvitationService {
     }
   }
 
+  /// Credit a scanned referral. Returns `true` when the referral is on record.
+  ///
+  /// The RPC is `record_referral` (migration 017). It re-derives the inviter
+  /// from the code and requires `p_referee_id = auth.uid()`, so the client
+  /// cannot credit a referral to another account.
   static Future<bool> recordReferral({
     required String referralCode,
     required String refereeId,
@@ -119,7 +141,7 @@ class QRInvitationService {
     final client = SupabaseConfig.client;
     if (client == null) return false;
     try {
-      await client.rpc(
+      final result = await client.rpc(
         'record_referral',
         params: {
           'p_referral_code': referralCode,
@@ -127,7 +149,7 @@ class QRInvitationService {
           'p_inviter_id': inviterId,
         },
       );
-      return true;
+      return result == true;
     } catch (e) {
       debugPrint('Failed to record referral: $e');
       return false;

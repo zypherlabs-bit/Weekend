@@ -360,13 +360,15 @@ class ReferralData {
   final String badgeTitle;
   final String achievementTier;
   final String linkUrl;
+  /// Counts, badge and link all come from the live `get_referral_stats`
+  /// RPC — defaults are neutral so nothing fabricated can ever render.
   const ReferralData({
     required this.code,
-    this.invitedCount = 7,
-    this.verifiedCount = 5,
-    this.badgeTitle = 'Founding Pioneer',
-    this.achievementTier = 'Silver Ambassador',
-    this.linkUrl = 'https://weekend.app/invite/',
+    this.invitedCount = 0,
+    this.verifiedCount = 0,
+    this.badgeTitle = '',
+    this.achievementTier = '',
+    this.linkUrl = '',
   });
   ReferralData copyWith({
     String? code,

@@ -43,13 +43,16 @@ class MatchRepository {
         final lastMessageAt = row['last_message_time'] as String?;
         final photoPath = row['primary_photo_path'] as String? ?? '';
         final photoUrl = photoUrls[photoPath];
+        // Blank rather than a fabricated "User"/25 when the RPC returned no
+        // name/age: an invented name on a dating card is worse than none.
+        final name = (row['display_name'] as String? ?? '').trim();
 
         return MatchItem(
           id: row['match_id'] as String? ?? '',
           user: UserProfile(
             id: row['other_user_id'] as String? ?? '',
-            name: row['display_name'] as String? ?? 'User',
-            age: row['age'] as int? ?? 25,
+            name: name.isEmpty ? 'Weekend member' : name,
+            age: row['age'] as int? ?? 0,
             gender: row['gender'] as String? ?? 'Prefer not to say',
             photos: photoUrl == null ? const [] : <String>[photoUrl],
             city: row['city'] as String? ?? '',
@@ -67,8 +70,10 @@ class MatchRepository {
               )?.millisecondsSinceEpoch ??
               0,
           lastMessage: row['last_message_text'] as String? ?? '',
+          // An absent last message means "no messages yet" — reporting it as
+          // "Just now" invented an activity timestamp that never happened.
           lastMessageTime: lastMessageAt == null
-              ? 'Just now'
+              ? 'No messages yet'
               : _formatRelativeTime(DateTime.parse(lastMessageAt)),
           unreadCount: row['unread_count'] as int? ?? 0,
           sharedInterests: shared,

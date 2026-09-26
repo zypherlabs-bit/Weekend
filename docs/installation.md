@@ -27,7 +27,7 @@ are only used for the features that need them.
 
 1. Open the [latest release](https://github.com/zypherlabs-bit/Weekend/releases/latest).
 2. Download the current APK asset, for example
-   `Weekend-v2.3.0-release.apk` (~78 MB).
+   `Weekend-v2.3.0-release.apk` (~79 MB).
 3. Optionally download the matching checksum file
    `Weekend-v2.3.0-release.apk.sha256`.
 

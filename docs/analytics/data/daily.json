@@ -2,13 +2,13 @@
   "schema_version": 1,
   "timezone": "UTC",
   "tracking_started": "2026-09-23",
-  "generated_at": "2026-09-25T03:26:56Z",
+  "generated_at": "2026-09-26T03:32:22Z",
   "apk": {
-    "live_downloads": 6,
+    "live_downloads": 5,
     "archived_downloads": 3,
-    "total_downloads": 9,
+    "total_downloads": 8,
     "asset_counts": {
-      "Weekend-v2.3.0-release.apk": 6
+      "Weekend-v2.3.0-release.apk": 5
     },
     "archived_note": "Weekend-v2.2.0-supabase.apk had download_count=3 when it was removed from release v2.2.0 on 2026-09-23; the count is kept here so cumulative totals stay accurate."
   },
@@ -17,8 +17,8 @@
     "version": "2.3.0",
     "published_at": "2026-09-23T07:21:29Z",
     "apk_asset": "Weekend-v2.3.0-release.apk",
-    "apk_downloads": 6,
-    "sha256": "bb738f3ea06fdd8852a91f9f28e2d4dba46c557a98a7ea692f9cdd9b65565b28"
+    "apk_downloads": 5,
+    "sha256": "d67a1198914590f6cb5ddc29b8cc5e589c5ccc8a07e815e7a79b9c088ebf588c"
   },
   "days": [
     {
@@ -182,11 +182,20 @@
       "repository_unique_cloners": null,
       "apk_downloads_daily": 0,
       "apk_downloads_cumulative": 9
+    },
+    {
+      "date": "2026-09-26",
+      "repository_views": null,
+      "repository_unique_visitors": null,
+      "repository_clones": null,
+      "repository_unique_cloners": null,
+      "apk_downloads_daily": 0,
+      "apk_downloads_cumulative": 8
     }
   ],
   "traffic_window_totals": {
     "views": 54,
     "unique_visitors": 10
   },
-  "traffic_fetched_at": "2026-09-25T03:26:56Z"
+  "traffic_fetched_at": "2026-09-26T03:32:21Z"
 }

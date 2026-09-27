@@ -1,9 +1,207 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
 import '../models/models.dart';
 import '../services/photo_url_service.dart';
+import 'profile_save_error.dart';
+
+/// Values the `profiles.gender` CHECK constraint accepts (migration 001).
+const Set<String> kAllowedGenders = {
+  'Man',
+  'Woman',
+  'Non-binary',
+  'Prefer not to say',
+};
+
+/// Values the `profiles.relationship_intent` CHECK constraint accepts
+/// (migration 015; the pre-015 typo'd label was migrated away).
+const Set<String> kAllowedRelationshipIntents = {
+  'Dating',
+  'Long-term relationship',
+  'New people & Friendships',
+  'Dating & Weekend Plans',
+};
+
+/// Builds the editable-columns payload for a profile save.
+///
+/// * Text fields are trimmed.
+/// * CHECK-constrained columns are only included when the value is in the
+///   allowed set; an invalid/empty value is **omitted** instead of written as
+///   NULL, so a save can neither violate a constraint nor erase good data
+///   that a placeholder model carried.
+/// * `id` is never part of the payload: ownership is always the authenticated
+///   session's id, applied by the store (see [ProfileStore.insertOwn]).
+@visibleForTesting
+Map<String, dynamic> buildProfilePayload(UserProfile profile) {
+  String clean(String value) => value.trim();
+  String? oneOf(String value, Set<String> allowed) {
+    final v = value.trim();
+    return allowed.contains(v) ? v : null;
+  }
+
+  final payload = <String, dynamic>{
+    'display_name': clean(profile.name),
+    'bio': clean(profile.bio),
+    'city': clean(profile.city),
+    'occupation': clean(profile.occupation),
+    'education': clean(profile.education),
+    'favorite_music': clean(profile.favoriteMusic),
+    'ideal_weekend': clean(profile.idealWeekend),
+  };
+  final gender = oneOf(profile.gender, kAllowedGenders);
+  if (gender != null) payload['gender'] = gender;
+  final intent = oneOf(profile.relationshipIntent, kAllowedRelationshipIntents);
+  if (intent != null) payload['relationship_intent'] = intent;
+  return payload;
+}
+
+/// The persistence operations the profile-save flow needs.
+///
+/// Extracted behind this seam so the orphan-recovery orchestration
+/// ([saveProfileWithRecovery]) can be unit-tested without a live Supabase
+/// client — the unit-test environment has none. Every method is scoped to a
+/// single `authId`: there is deliberately no "update any row" operation.
+abstract class ProfileStore {
+  /// UPDATE rows where `id == authId`; returns the rows actually changed
+  /// (PostgREST answers a zero-row UPDATE with an empty list, not an error).
+  Future<List<Map<String, dynamic>>> updateOwn(
+    String authId,
+    Map<String, dynamic> payload,
+  );
+
+  /// The caller's own profile id if the row exists, otherwise null.
+  Future<Map<String, dynamic>?> fetchOwn(String authId);
+
+  /// INSERT a row for `authId` (the store — not the caller — sets `id`).
+  Future<Map<String, dynamic>> insertOwn(
+    String authId,
+    Map<String, dynamic> payload,
+  );
+}
+
+/// [ProfileStore] backed by the real Supabase client.
+class SupabaseProfileStore implements ProfileStore {
+  SupabaseProfileStore(this._client);
+
+  final SupabaseClient _client;
+
+  @override
+  Future<List<Map<String, dynamic>>> updateOwn(
+    String authId,
+    Map<String, dynamic> payload,
+  ) async {
+    final rows = await _client
+        .from('profiles')
+        .update(payload)
+        .eq('id', authId)
+        .select('id')
+        .limit(1);
+    return rows;
+  }
+
+  @override
+  Future<Map<String, dynamic>?> fetchOwn(String authId) async {
+    final rows = await _client
+        .from('profiles')
+        .select('id')
+        .eq('id', authId)
+        .limit(1);
+    if (rows.isEmpty) return null;
+    return rows.first;
+  }
+
+  @override
+  Future<Map<String, dynamic>> insertOwn(
+    String authId,
+    Map<String, dynamic> payload,
+  ) async {
+    // `id` comes from the session-derived argument, never from the payload.
+    final rows = await _client
+        .from('profiles')
+        .insert({...payload, 'id': authId})
+        .select('id')
+        .limit(1);
+    if (rows.isEmpty) return const <String, dynamic>{};
+    return rows.first;
+  }
+}
+
+/// Saves [payload] for [authId], recovering from a missing profile row.
+///
+/// Flow:
+/// ```text
+/// UPDATE ... WHERE id = authId
+///   ├── rows returned ──────────────────► success
+///   └── 0 rows (PostgREST 200 [], the reported Edit Profile failure)
+///         ├── row confirmed missing ───► INSERT (RLS: own id only) ► success
+///         ├── row exists ──────────────► PROFILE_UPDATE_NO_ROW (honest failure)
+///         └── INSERT raced (23505) ────► retry UPDATE once
+/// ```
+///
+/// [authId] must come from the authenticated session; the payload never
+/// carries an id, so a client cannot file a profile under another user.
+/// Returns the number of rows written. Throws [ProfileSaveException] with a
+/// classified failure — never reports success for an unchanged database.
+Future<int> saveProfileWithRecovery({
+  required ProfileStore store,
+  required String authId,
+  required Map<String, dynamic> payload,
+}) async {
+  try {
+    // 1. Normal path: the profile row exists.
+    final rows = await store.updateOwn(authId, payload);
+    if (rows.isNotEmpty) return rows.length;
+
+    // 2. Zero rows matched. Confirm the row is genuinely missing before
+    //    inserting — a stale or filtered write must not fabricate data.
+    final existing = await store.fetchOwn(authId);
+    if (existing != null) {
+      throw const ProfileSaveException(
+        ProfileSaveFailure.noRow,
+        stage: 'profiles.update',
+      );
+    }
+
+    // 3. Orphaned auth user: create the missing row under our own id.
+    Map<String, dynamic> inserted;
+    try {
+      inserted = await store.insertOwn(authId, payload);
+    } on ProfileSaveException {
+      rethrow;
+    } catch (e) {
+      final raced = e is PostgrestException && e.code == '23505';
+      if (!raced) {
+        final classified = classifyProfileSaveError(
+          e,
+          stage: 'profiles.insert',
+        );
+        classified.log(e.runtimeType.toString());
+        throw classified;
+      }
+      // A concurrent save inserted the row first: retry the UPDATE once.
+      final retried = await store.updateOwn(authId, payload);
+      if (retried.isNotEmpty) return retried.length;
+      throw const ProfileSaveException(
+        ProfileSaveFailure.noRow,
+        stage: 'profiles.insert.retry',
+      );
+    }
+
+    // 4. Verify the persisted row really belongs to this session's user.
+    if (inserted['id'] == authId) return 1;
+    throw const ProfileSaveException(
+      ProfileSaveFailure.noRow,
+      stage: 'profiles.insert.verify',
+    );
+  } on ProfileSaveException {
+    rethrow;
+  } catch (e) {
+    final classified = classifyProfileSaveError(e, stage: 'profiles.save');
+    classified.log(e.runtimeType.toString());
+    throw classified;
+  }
+}
 
 class ProfileRepository {
   SupabaseClient? get _client => SupabaseConfig.client;
@@ -104,12 +302,15 @@ class ProfileRepository {
   /// `WeekendState.initial()` placeholder (`id == 'me'`) when the profile has
   /// not loaded yet, and updating that would silently write to zero rows.
   ///
-  /// Returns the number of rows the database actually changed. PostgREST
-  /// answers an UPDATE that matches no rows with `200 []` rather than an
-  /// error, so a zero here means "the save did NOT happen" and must never be
-  /// reported to the user as a success.
+  /// A zero-row UPDATE (PostgREST `200 []` — the reported Edit Profile
+  /// failure) no longer ends the save: [saveProfileWithRecovery] confirms the
+  /// row is missing and creates it under the session's own id first. The
+  /// returned count is always > 0 on success; a save that changed nothing
+  /// throws a classified [ProfileSaveException] instead of reporting success.
   ///
-  /// Throws when the backend is unreachable or rejects the write.
+  /// Throws [ProfileSaveException] (classified: RLS / constraint / validation
+  /// / network / auth / no-row) when the backend rejects the write, and
+  /// [StateError] when the app is not configured with live credentials.
   Future<int> updateProfile(UserProfile profile) async {
     final client = _client;
     if (client == null) {
@@ -117,34 +318,19 @@ class ProfileRepository {
     }
     final authId = client.auth.currentUser?.id;
     if (authId == null || authId == 'unauthenticated' || authId == 'me') {
-      throw StateError(
-        'You are not signed in, so the profile could not be saved.',
+      const error = ProfileSaveException(
+        ProfileSaveFailure.auth,
+        stage: 'auth.session',
       );
+      error.log('no authenticated user');
+      throw error;
     }
 
-    final rows = await client
-        .from('profiles')
-        .update({
-          'display_name': profile.name,
-          'bio': profile.bio,
-          'city': profile.city,
-          'gender': profile.gender,
-          'relationship_intent': profile.relationshipIntent,
-          'occupation': profile.occupation,
-          'education': profile.education,
-          'favorite_music': profile.favoriteMusic,
-          'ideal_weekend': profile.idealWeekend,
-        })
-        .eq('id', authId)
-        .select('id')
-        .limit(1);
-
-    if (rows.isEmpty) {
-      throw StateError(
-        'The server did not save your profile. Check your connection and try again.',
-      );
-    }
-    return rows.length;
+    return saveProfileWithRecovery(
+      store: SupabaseProfileStore(client),
+      authId: authId,
+      payload: buildProfilePayload(profile),
+    );
   }
 
   /// Upload a profile photo for the authenticated user and register it in

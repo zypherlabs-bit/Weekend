@@ -36,6 +36,37 @@ checksum.
 
 ## [Unreleased]
 
+### Fixed - Edit Profile save failure for orphaned accounts
+
+- Root cause: an authenticated user missing their `public.profiles` row made
+  the save's `UPDATE ... WHERE id = auth.uid()` match zero rows — PostgREST
+  answers that with `200 []`, surfaced as "The server did not save your
+  profile".
+- `ProfileRepository.updateProfile` now runs UPDATE → (zero rows) → confirm →
+  INSERT under the session's own id → verify, so a missing profile row is
+  repaired on save instead of failing. Ownership stays derived from the auth
+  session; the payload never carries an `id`.
+- `WeekendNotifier.updateProfile` delegates the primary write to the
+  repository, restores a missing `preferences` row, upserts `user_settings`
+  with an explicit `onConflict: 'user_id'`, and pre-checks bios against the
+  014 `detect_social_media_in_text` RPC (the DB trigger stays the enforcement
+  authority).
+- New `ProfileSaveException` with stable `PROFILE_UPDATE_*` diagnostic codes:
+  failures are classified (auth / RLS / constraint / validation / network /
+  schema / no-row / unknown), logged as code+stage only, and shown to users as
+  actionable text — never raw PostgREST/row data, never a fake success.
+- New migration `020_orphan_profile_repair.sql` (idempotent): backfills
+  `profiles`/`user_settings`/`preferences` for orphaned auth users using only
+  validated signup metadata (malformed values become NULL, never a failed
+  migration), hardens `handle_new_user` (conflict-safe inserts, exception-safe
+  date parsing — fixes the live HTTP 500 signups caused by malformed
+  `date_of_birth`/`gender` metadata), re-asserts the `on_auth_user_created`
+  trigger and RLS. After applying, run `supabase/test/orphan_audit.sql` and
+  expect all three orphan counts to be 0.
+- New `test/profile_save_recovery_test.dart`: payload/ownership, INSERT
+  recovery, 23505 race retry, honest no-row failure, and error-classification
+  contract tests.
+
 ### Fixed - LIVE-only auth
 
 - Auth repository auth calls now throw a clear "not connected to a backend"

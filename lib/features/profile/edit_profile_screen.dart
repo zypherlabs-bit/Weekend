@@ -6,6 +6,7 @@ import '../../providers/weekend_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/image_optimizer.dart';
 import '../../repositories/profile_repository.dart';
+import '../../repositories/profile_save_error.dart';
 
 /// Personal Details (onboarding + edit profile).
 ///
@@ -122,10 +123,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   /// Human-readable reason a save failed, without leaking tokens or internals.
-  /// Repositories already map the common PostgREST/Storage failures to
-  /// actionable StateErrors; this only strips SDK prefixes and maps any
-  /// leftover network failure.
+  /// Classified [ProfileSaveException]s already carry actionable text plus a
+  /// diagnostic code that was logged at the throw site; this strips SDK
+  /// prefixes from anything else and maps leftover network failures.
   String _readableSaveError(Object e) {
+    if (e is ProfileSaveException) return e.message;
     final text = e
         .toString()
         .replaceFirst(RegExp(r'^(StateError|Exception)\s*:\s*'), '')

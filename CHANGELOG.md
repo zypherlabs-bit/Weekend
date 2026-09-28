@@ -10,6 +10,93 @@ handful of conventions that are worth stating once:
 - **Server-side enforcement.** Search filters, distance computation and access
   control live in PostgreSQL, not in the client.
 
+## [2.5.1] - 2026-09-29
+
+Bugfix release. Every change below was in the working tree and in no published
+APK, which is why the installed app still behaved as it did in 2.5.0.
+
+### Fixed - the biometric app lock could never open a prompt on Android
+
+`MainActivity` extended `FlutterActivity`, which extends `android.app.Activity`,
+not `FragmentActivity`. `local_auth_android` hosts the AndroidX
+`BiometricPrompt` through a fragment and checks the foreground activity before
+it will show anything, so it refused every attempt:
+
+```
+LocalAuthException(code: uiUnavailable,
+                   description: 'The current Activity must be a FragmentActivity.')
+```
+
+`MainActivity` now extends `FlutterFragmentActivity`, the class AndroidX itself
+documents for `BiometricPrompt`. The predictive-back comment block was rewritten
+to match: `enableOnBackInvokedCallback` lives on `ComponentActivity`, which
+`FlutterFragmentActivity` already extends, so the original justification for
+staying on `FlutterActivity` no longer applies and the biometric requirement
+outranks it. Back gestures still route into Dart through GoRouter.
+
+### Fixed - biometric failures reported raw plugin strings
+
+`BiometricAuthService` caught `PlatformException` and switched on `local_auth` 2.x
+string codes (`'NotAvailable'`, `'NotEnrolled'`, ...). `local_auth` 3.x throws
+`LocalAuthException` with a typed `LocalAuthExceptionCode`, so that handler never
+matched a real plugin failure. Every failure fell through to a bare `catch` that
+returned `e.toString()`, and the lock screen showed the user a raw
+`LocalAuthException(code ..., ...)` string.
+
+All of `LocalAuthExceptionCode` is now mapped explicitly, with the distinction
+that matters most:
+
+- `uiUnavailable` no longer masquerades as "no biometrics enrolled". Reporting it
+  as `notEnrolled` sent the user to change settings that were already correct.
+- `userRequestedFallback` is treated as a cancellation, so the retry button is
+  offered instead of an error the user cannot act on.
+- No code returns the plugin's own text. `test/biometric_error_mapping_test.dart`
+  iterates every value in `LocalAuthExceptionCode` and asserts each one maps to
+  an error code without leaking its description, so a future `local_auth` release
+  cannot reopen the gap.
+
+### Changed - intro videos run full-bleed on onboarding and sign-in
+
+The clips were still boxed into a 180px panel above the sign-in form, and sat in
+a column on the onboarding slides.
+
+- Both screens now stack the player edge to edge behind the content, with a
+  gradient scrim so the copy stays readable on the brighter frames.
+- The scrim is wrapped in `IgnorePointer`, which is required rather than
+  cosmetic: `RenderDecoratedBox` reports `hitTestSelf == true`, so without it
+  the scrim would sit over the form and swallow taps meant for the text fields.
+- Onboarding copy is `IgnorePointer`-wrapped too, so a horizontal swipe that
+  starts on the text still turns the `PageView`.
+- `IntroVideoPlayer` takes a `fit` parameter, and its fallback now honours the
+  widget's `borderRadius` instead of a hardcoded 24, which is what full-bleed
+  slides need.
+
+### Fixed - the download links pointed at an APK that no longer exists
+
+`README.md` and `docs/installation.md` advertised
+`Weekend-v2.3.0-release.apk` through `releases/latest/download/`. That form is
+broken by construction: `latest` resolves the tag dynamically, but the filename
+in the path is static, so the link 404s as soon as the next release ships. Both
+now name the current release against a pinned tag
+(`releases/download/v2.5.1/...`).
+
+`tests/python/test_release.py` gains two static checks that keep this from
+rotting, and would have caught the state described above:
+
+- `test_documented_version_matches_pubspec` - every `Weekend-vX.Y.Z-release.apk`
+  named in a marketing doc must match the version in `pubspec.yaml`, because a
+  stale name points at an asset that returns 404.
+- `test_download_urls_are_not_pinned_to_a_stale_release` - rejects a versioned
+  filename under `releases/latest/download/`.
+
+### Verified
+
+- `flutter analyze`: no issues
+- `flutter test`: 208 passed
+- The biometric fix is verified on the emulator rather than a device; the
+  `DEVICE`-evidence checks in `python tests/python/run_all_tests.py` remain
+  NOT VERIFIED here.
+
 ## [2.5.0] - 2026-09-28
 
 ### Added - intro videos on onboarding and sign-in

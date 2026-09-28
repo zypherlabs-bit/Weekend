@@ -62,6 +62,7 @@ class IntroVideoPlayer extends StatefulWidget {
     this.autoplay = true,
     this.borderRadius = 24,
     this.fallbackIcon = Icons.weekend_rounded,
+    this.fit = BoxFit.cover,
   });
 
   final IntroClip clip;
@@ -74,6 +75,13 @@ class IntroVideoPlayer extends StatefulWidget {
 
   final double borderRadius;
   final IconData fallbackIcon;
+
+  /// How the clip fills the box it is given.
+  ///
+  /// [BoxFit.cover] (the default) fills edge to edge and crops the overflow,
+  /// which is what a full-screen background wants. [BoxFit.contain] would
+  /// letterbox instead, so it is only appropriate if letterboxing is intended.
+  final BoxFit fit;
 
   @override
   State<IntroVideoPlayer> createState() => _IntroVideoPlayerState();
@@ -168,19 +176,24 @@ class _IntroVideoPlayerState extends State<IntroVideoPlayer> {
     final theme = Theme.of(context);
     // Respect the OS-level reduced-motion preference: show a still frame
     // rather than autoplaying an animation the user has asked to avoid.
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final controller = _controller;
     final ready = controller != null && controller.value.isInitialized;
     final playing = ready && !_failed;
 
     final Widget content;
     if (_failed || !ready) {
-      content = _Fallback(icon: widget.fallbackIcon, theme: theme);
+      content = _Fallback(
+        icon: widget.fallbackIcon,
+        theme: theme,
+        borderRadius: widget.borderRadius,
+      );
     } else {
       content = ClipRRect(
         borderRadius: BorderRadius.circular(widget.borderRadius),
         child: FittedBox(
-          fit: BoxFit.cover,
+          fit: widget.fit,
           // Crop the tall 9:16 source to whatever box it is given rather
           // than letterboxing it with black bars.
           clipBehavior: Clip.hardEdge,
@@ -251,16 +264,21 @@ class _IntroVideoPlayerState extends State<IntroVideoPlayer> {
 
 /// Shown while the clip loads, or instead of it when the asset cannot play.
 class _Fallback extends StatelessWidget {
-  const _Fallback({required this.icon, required this.theme});
+  const _Fallback({
+    required this.icon,
+    required this.theme,
+    required this.borderRadius,
+  });
 
   final IconData icon;
   final ThemeData theme;
+  final double borderRadius;
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(borderRadius),
         gradient: const LinearGradient(
           colors: [AppTheme.sunsetCoral, AppTheme.goldenPeach],
           begin: Alignment.topLeft,

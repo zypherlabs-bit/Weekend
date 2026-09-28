@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import urllib.request
 
 from weekend_checks import (
@@ -265,6 +266,105 @@ def test_readme_documents_product() -> CheckResult:
         status=Status.PASS if ok else Status.FAIL,
         evidence=Evidence.STATIC,
         detail="passkey + privacy + stack" if ok else "sections missing",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Version drift between the docs and the shipped build
+# ---------------------------------------------------------------------------
+
+#: Docs that advertise the download to end users. All of them must agree.
+MARKETING_DOCS = (
+    "README.md",
+    "docs/installation.md",
+    "docs/getting-started.md",
+)
+
+#: Matches an advertised APK asset name, e.g. ``Weekend-v2.3.0-release.apk``.
+APK_NAME_RE = re.compile(r"Weekend-v(\d+)\.(\d+)\.(\d+)-release\.apk")
+
+
+def _pubspec_version() -> str | None:
+    """The app version declared in pubspec.yaml, without the build number."""
+    pubspec = read_text(REPO_ROOT / "pubspec.yaml")
+    m = re.search(r"^version:\s*(\d+\.\d+\.\d+)", pubspec, re.MULTILINE)
+    return m.group(1) if m else None
+
+
+def test_documented_version_matches_pubspec() -> CheckResult:
+    """STATIC: every documented APK name matches the version in pubspec.yaml.
+
+    Release assets embed their version in the filename
+    (``Weekend-v<version>-release.apk``), so a doc that names a stale version
+    points at an asset that does not exist and returns 404. This is the check
+    that was missing when the README kept advertising v2.3.0 after v2.5.0
+    shipped.
+    """
+    current = _pubspec_version()
+    if not current:
+        return CheckResult(
+            name="Documented version matches build",
+            status=Status.NOT_VERIFIED,
+            evidence=Evidence.STATIC,
+            detail="could not read version from pubspec.yaml",
+        )
+
+    stale: list[str] = []
+    for rel in MARKETING_DOCS:
+        path = REPO_ROOT / rel
+        if not path.exists():
+            continue
+        for major, minor, patch in APK_NAME_RE.findall(read_text(path)):
+            named = f"{major}.{minor}.{patch}"
+            if named != current:
+                stale.append(f"{rel} -> v{named}")
+
+    if stale:
+        return CheckResult(
+            name="Documented version matches build",
+            status=Status.FAIL,
+            evidence=Evidence.STATIC,
+            detail=f"pubspec is {current}; stale: {'; '.join(stale)}",
+        )
+    return CheckResult(
+        name="Documented version matches build",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail=f"all docs name v{current}",
+    )
+
+
+def test_download_urls_are_not_pinned_to_a_stale_release() -> CheckResult:
+    """STATIC: docs do not hardcode a versioned ``/releases/latest/download/``.
+
+    ``releases/latest/download/<name>`` resolves the tag dynamically but the
+    filename in <name> is still static, so pinning a version there breaks on
+    the very next release. The safe form is the release page or the plain
+    asset name, never a versioned one under ``latest``.
+    """
+    offenders: list[str] = []
+    for rel in MARKETING_DOCS:
+        path = REPO_ROOT / rel
+        if not path.exists():
+            continue
+        for match in re.finditer(
+            r"releases/latest/download/(\S+)", read_text(path)
+        ):
+            if APK_NAME_RE.search(match.group(1)):
+                offenders.append(f"{rel} -> {match.group(1)}")
+
+    if offenders:
+        return CheckResult(
+            name="Download URLs not version-pinned",
+            status=Status.FAIL,
+            evidence=Evidence.STATIC,
+            detail="; ".join(offenders),
+        )
+    return CheckResult(
+        name="Download URLs not version-pinned",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="no stale latest/download pins",
     )
 
 

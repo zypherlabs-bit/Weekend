@@ -167,6 +167,56 @@ checksum.
 
 
 <<<<<<< HEAD
+## [2.4.1] - 2026-09-28
+
+Reconciles the parallel v2.4.0 work with the hard-filter and photo-minimum
+branch. Both sides independently fixed the same discovery defects, so this
+release carries the union rather than choosing a side.
+
+### Added
+
+- **Preferred Match screen** (`/preferred-match`): gender, age range, distance,
+  city, location mode, relationship intent, interests, lifestyle and
+  languages. Every selection is a hard filter and the screen says so.
+- **Minimum 4 photos**, enforced on both sides. `minimum_profile_photos()` is
+  the single source of truth in SQL; a trigger keeps
+  `profiles.dating_profile_activated` in sync and discovery excludes any
+  profile that has not met it.
+- **`get_my_profile_completion` RPC**, so the UI and the filter can never
+  disagree about what is complete.
+- **Open Source screen** with a QR code resolving to this repository
+  (Settings -> Open Source).
+
+### Security
+
+- **`search_path` pinned on every SECURITY DEFINER function** (migration 024).
+  Thirteen functions - including the `handle_new_user` auth trigger and the
+  search RPCs added in 020-022 - were created without `set search_path`, which
+  lets an attacker shadow an unqualified name with an object in a writable
+  schema and run code as the definer. The sweep is driven from
+  `pg_proc.prosecdef` so a function added tomorrow cannot be missed, and it
+  raises if anything is left unpinned.
+- Removed a live Supabase anon key committed to `.vscode/launch.json`.
+
+### Fixed
+
+- **The Profile screen never displayed the user's age.** Name and age are now
+  rendered together, with the city on its own line rather than crammed into
+  the relationship-intent pill.
+- **The image pipeline declared a size budget but never enforced it.**
+  `optimize()` now steps the quality tier down until the payload fits instead
+  of letting a multi-megabyte file fail at Storage with an opaque error, and
+  rejects sources below a minimum resolution so a 64px icon cannot be
+  upscaled into a blurry "profile photo".
+- **The security scan matched its own detection patterns.** It now excludes
+  itself from the file walk.
+
+### Not verified on a device
+
+Passkey registration, the four-photo upload flow on a real handset, and
+Google Play Console review all require hardware or a console and are reported
+as NOT VERIFIED by the verification suite.
+
 ## [2.4.0] - 2026-09-28
 
 Exact-match discovery, a real Preferred Match screen, and four defects that

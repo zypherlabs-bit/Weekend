@@ -96,8 +96,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Name and age together, per the dating-card hierarchy.
+                  // The age is omitted entirely when unknown rather than
+                  // showing a fabricated number.
                   Text(
-                    user.name,
+                    user.age > 0
+                        ? '${user.name}, ${user.age}'
+                        : user.name,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -114,24 +119,49 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ],
               ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
+              // City on its own line, clearly visible and separate from the
+              // relationship intent.
+              if (user.city.trim().isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 16,
+                      color: Colors.white54,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      user.city,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
                 ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFF4B72).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '${user.relationshipIntent} · ${user.city}',
-                  style: const TextStyle(
-                    color: Color(0xFFFF9966),
-                    fontSize: 14,
+              ],
+              if (user.relationshipIntent.trim().isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF4B72).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    user.relationshipIntent,
+                    style: const TextStyle(
+                      color: Color(0xFFFF9966),
+                      fontSize: 14,
+                    ),
                   ),
                 ),
-              ),
+              ],
               const SizedBox(height: 24),
               _StatCard(
                 icon: Icons.verified_user_rounded,

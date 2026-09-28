@@ -18,6 +18,11 @@ class AppTheme {
   static const Color lightSurfaceVariant = Color(0xFFF6ECE9);
   static const Color lightOnBackground = Color(0xFF211A20);
   static const Color lightOnSurface = Color(0xFF211A20);
+  /// Error / destructive accent. Used for destructive confirmations and
+  /// failure states so they never rely on the primary coral, which is the
+  /// app's action colour and must not read as "delete".
+  static const Color errorRed = Color(0xFFE5484D);
+  static const Color successGreen = Color(0xFF4CAF50);
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,

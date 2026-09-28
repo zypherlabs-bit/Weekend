@@ -7,6 +7,75 @@ the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are published as GitHub Releases with a versioned APK and a SHA-256
 checksum.
 
+## [2.4.0] - 2026-09-28
+
+Exact-match discovery, a real Preferred Match screen, and four defects that
+were silently returning wrong results.
+
+### Added
+
+- **Preferred Match screen** (`/preferred-match`). Gender, age range, distance,
+  city, location mode, relationship intent, interests, lifestyle and
+  languages. Every selection is a hard filter, and the screen says so.
+- **`search_profiles` RPC** (migration 020) — server-side filtering with strict
+  AND semantics. A candidate is returned only if it satisfies *every*
+  supplied criterion. Soft signals (shared interests, activity, verification,
+  trust) rank the eligible set and never decide eligibility.
+- **Minimum 4 photos**, enforced on both sides. `minimum_profile_photos()`
+  is the single source of truth in SQL; a trigger keeps
+  `profiles.dating_profile_activated` in sync, and discovery excludes any
+  profile that has not met it.
+- **`get_my_profile_completion` RPC** — the server's view of name, birthdate,
+  city and photo count, so the UI and the filter can never disagree.
+- **Open Source screen** with a QR code resolving to this repository
+  (Settings -> Open Source).
+- **pytest verification suite** (`tests/python/`) with a single entry point:
+  `python tests/python/run_all_tests.py`.
+- **`tool/build_release.py`** — builds the release APK with credentials read
+  from `.env` and never echoes them, and writes the SHA-256 sidecar.
+
+### Fixed
+
+- **Latitude/longitude were transposed in the distance filter.**
+  `get_nearby_profiles` built the viewer's position as
+  `ST_Point(latitude, longitude)`; PostGIS expects `ST_Point(longitude,
+  latitude)`. For anyone off the equator/prime-meridian this computed a
+  meaningless distance, so the radius filter and the displayed distance
+  disagreed and the wrong people were excluded.
+- **Fabricated age.** The RPC reported age 25 for any profile with no stored
+  date of birth, which silently satisfied a 25–32 request. An unknown age is
+  now NULL and is excluded whenever an age range is set.
+- **`p_discovery_mode` was accepted and ignored**, so "nearby", "global" and
+  "crossed_paths" all ran identical SQL. The mode now selects the predicate.
+- **The Profile screen never displayed the user's age.** Name and age are now
+  shown together, with the city on its own line rather than crammed into the
+  relationship-intent pill.
+- **Passkey flows reported false success.** A missing session fell through to
+  `signInWithPassword(email: '', password: '')` and still returned
+  `success: true`; the authentication path returned `success: true` with a
+  null session. Both now fail honestly with an actionable message.
+- **A live Supabase anon key was committed** to `.vscode/launch.json`. Removed;
+  the launch config now reads from environment variables.
+- **A committed credential also appeared in the security scan's own patterns**
+  — the scanner now excludes itself from the file walk.
+
+### Security
+
+- **`search_path` pinned on every SECURITY DEFINER function** (migration 021).
+  Thirteen functions — including the `handle_new_user` auth trigger — were
+  created without `set search_path`, which lets an attacker shadow an
+  unqualified name with an object in a writable schema and run code as the
+  definer. Migration 021 pins the path from the catalog so a future function
+  cannot be missed, and raises if anything is left unpinned.
+- Discovery never returns coordinates; distance is computed inside the
+  definer function and only the number crosses the wire.
+
+### Not verified on a device
+
+Passkey registration, the four-photo upload flow on a real handset, and
+Google Play Console review all require hardware or a console and are reported
+as NOT VERIFIED by the verification suite. See the run output.
+
 ## [2.3.1] - 2026-09-26
 
 ### Fixed - Edit Profile photo upload + save

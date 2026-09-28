@@ -341,6 +341,22 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               ),
             ),
             const SizedBox(height: 24),
+            // The full filter set lives on its own screen; this sheet only
+            // offers the radius, which is the one control worth adjusting
+            // inline.
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.tune_rounded),
+              title: const Text('Preferred Match'),
+              subtitle: const Text(
+                'Gender, age, distance, city, intent, interests, lifestyle',
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () {
+                Navigator.pop(context);
+                context.go('/preferred-match');
+              },
+            ),
             LocationRadiusFilter(
               currentRadiusKm: ref
                   .watch(weekendProvider)

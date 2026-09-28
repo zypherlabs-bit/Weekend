@@ -16,6 +16,7 @@ import '../features/profile/profile_screen.dart';
 
 import '../features/profile/edit_profile_screen.dart';
 import '../features/discovery/explore_screen.dart';
+import '../features/discovery/preferred_match_screen.dart';
 
 import '../features/discovery/location_permission_screen.dart';
 
@@ -174,6 +175,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       GoRoute(
+        path: '/preferred-match',
+        builder: (context, state) => const PreferredMatchScreen(),
+      ),
+
+      GoRoute(
         path: '/location-permission',
         builder: (context, state) => const LocationPermissionScreen(),
       ),
@@ -190,6 +196,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/qr-scanner',
         builder: (context, state) => const QRScannerScreen(),
+      ),
+      GoRoute(
+        path: '/open-source',
+        builder: (context, state) => const AboutOpenSourceScreen(),
       ),
       GoRoute(
         path: '/safety-center',

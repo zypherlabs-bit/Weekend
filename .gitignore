@@ -46,3 +46,16 @@ FINAL_VERIFICATION_REPORT.md
 # Local VS Code launch config (may hold backend credentials)
 /.vscode/launch.json
 
+
+# Python verification suite
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Release artifacts (built by tool/build_release.py, uploaded to GitHub Releases)
+*.apk
+*.sha256
+
+# Stray build/verification logs from local runs
+build_*.log
+release_report.txt

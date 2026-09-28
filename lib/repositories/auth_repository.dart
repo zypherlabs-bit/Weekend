@@ -255,17 +255,27 @@ class AuthRepository {
     }
 
     try {
-      // Step 1: Get registration options from Supabase
-      final registrationOptions = await _getPasskeyRegistrationOptions(email, fullName);
-      if (registrationOptions == null) {
+      // Step 1: Enroll WebAuthn factor with Supabase MFA
+      final enrollResponse = await client.auth.mfa.enroll(
+        factorType: FactorType.webauthn,
+        issuer: _rpName,
+        friendlyName: email,
+      );
+
+      // Extract credential creation options from enroll response
+      final webAuthnData = _extractWebAuthnData(enrollResponse);
+      if (webAuthnData == null) {
+        log('WebAuthn data not found in MFA enroll response');
         return PasskeyRegistrationResult(
           success: false,
-          error: 'Failed to get registration options from server.',
+          error: 'Failed to get passkey registration options.',
         );
       }
 
+      final creationOptions = CredentialCreationOptions.fromJson(webAuthnData);
+
       // Step 2: Create passkey using platform authenticator (Android Credential Manager)
-      final credential = await _createPasskeyCredential(registrationOptions);
+      final credential = await _createPasskeyCredential(creationOptions);
       if (credential == null) {
         return PasskeyRegistrationResult(
           success: false,
@@ -273,22 +283,66 @@ class AuthRepository {
         );
       }
 
-      // Step 3: Verify registration with Supabase
-      final session = await _verifyPasskeyRegistration(
-        email: email,
-        fullName: fullName,
-        credential: credential,
+      // Step 3: Verify the enrollment with Supabase
+      // For WebAuthn, we need to challenge and verify
+      final challengeResponse = await client.auth.mfa.challenge(factorId: enrollResponse.id);
+      
+      // The verify method expects the attestation as the code parameter
+      final response = credential.response;
+      if (response == null || response.attestationObject == null || response.clientDataJSON == null) {
+        return PasskeyRegistrationResult(
+          success: false,
+          error: 'Invalid credential response.',
+        );
+      }
+
+      final attestation = _base64UrlEncode(response.attestationObject!);
+      final clientDataJson = _base64UrlEncode(response.clientDataJSON!);
+      
+      // Combine attestation and client data for verification
+      final verificationCode = jsonEncode({
+        'attestation': attestation,
+        'client_data_json': clientDataJson,
+      });
+
+      await client.auth.mfa.verify(
+        factorId: enrollResponse.id,
+        challengeId: challengeResponse.id,
+        code: verificationCode,
       );
 
-      return PasskeyRegistrationResult(
-        success: true,
-        session: session,
-      );
+      // Step 4: Obtain the session.
+      //
+      // Supabase's `mfa.verify` returns a session in its response and
+      // installs it on the client, so a promoted AAL2 session is available
+      // here. An earlier revision called
+      //   signInWithPassword(email: email, password: '')
+      // when the session was missing: that always fails, throws inside the
+      // try, and was followed by a `success: true` return anyway - reporting
+      // a successful sign-in for an unauthenticated user. Failing honestly is
+      // strictly better than a fake success.
+      final session = client.auth.currentSession;
+      if (session == null) {
+        return const PasskeyRegistrationResult(
+          success: false,
+          error:
+              'Your passkey was created, but the session could not be '
+              'established. Please sign in with your email and password.',
+        );
+      }
+
+      return PasskeyRegistrationResult(success: true, session: session);
     } on CredentialException catch (e) {
       if (e.code == 601) {
-        return PasskeyRegistrationResult(success: false, error: 'User cancelled passkey creation');
+        return const PasskeyRegistrationResult(
+          success: false,
+          error: 'User cancelled passkey creation',
+        );
       }
-      return PasskeyRegistrationResult(success: false, error: 'Passkey creation failed: ${e.message}');
+      return PasskeyRegistrationResult(
+        success: false,
+        error: 'Passkey creation failed: ${e.message}',
+      );
     } catch (e) {
       return PasskeyRegistrationResult(
         success: false,
@@ -309,17 +363,36 @@ class AuthRepository {
     }
 
     try {
-      // Step 1: Get authentication options from Supabase
-      final authenticationOptions = await _getPasskeyAuthenticationOptions();
-      if (authenticationOptions == null) {
+      // Step 1: List MFA factors to find WebAuthn factors
+      final factors = await client.auth.mfa.listFactors();
+      final webauthnFactors = _getWebAuthnFactors(factors);
+      
+      if (webauthnFactors.isEmpty) {
         return PasskeyAuthenticationResult(
           success: false,
           error: 'No passkey found. Please sign up first.',
         );
       }
 
-      // Step 2: Get passkey assertion using platform authenticator
-      final credential = await _getPasskeyAssertion(authenticationOptions);
+      // Use the first verified WebAuthn factor
+      final factor = webauthnFactors.first;
+
+      // Step 2: Challenge the factor to get credential request options
+      final challenge = await client.auth.mfa.challenge(factorId: factor.id);
+      
+      final requestOptions = _extractCredentialRequestOptions(challenge);
+      if (requestOptions == null) {
+        log('Credential request options not found in MFA challenge response');
+        return PasskeyAuthenticationResult(
+          success: false,
+          error: 'Failed to get passkey sign-in options.',
+        );
+      }
+
+      final loginOptions = CredentialLoginOptions.fromJson(requestOptions);
+
+      // Step 3: Get passkey assertion using platform authenticator
+      final credential = await _getPasskeyAssertion(loginOptions);
       if (credential == null) {
         return PasskeyAuthenticationResult(
           success: false,
@@ -327,18 +400,62 @@ class AuthRepository {
         );
       }
 
-      // Step 3: Verify assertion with Supabase
-      final session = await _verifyPasskeyAuthentication(credential);
+      // Step 4: Verify the assertion with Supabase
+      final response = credential.response;
+      if (response == null || 
+          response.authenticatorData == null || 
+          response.clientDataJSON == null || 
+          response.signature == null) {
+        return PasskeyAuthenticationResult(
+          success: false,
+          error: 'Invalid credential response.',
+        );
+      }
 
-      return PasskeyAuthenticationResult(
-        success: true,
-        session: session,
+      final authenticatorData = _base64UrlEncode(response.authenticatorData!);
+      final clientDataJson = _base64UrlEncode(response.clientDataJSON!);
+      final signature = _base64UrlEncode(response.signature!);
+      
+      final verificationCode = jsonEncode({
+        'authenticator_data': authenticatorData,
+        'client_data_json': clientDataJson,
+        'signature': signature,
+      });
+
+      await client.auth.mfa.verify(
+        factorId: factor.id,
+        challengeId: challenge.id,
+        code: verificationCode,
       );
+
+      // Step 5: Obtain the session.
+      //
+      // `mfa.verify` promotes the session to AAL2 and installs it on the
+      // client. Returning `success: true` with a null session would tell the
+      // caller the user is signed in when no one is, so the missing session
+      // is reported as a failure with an actionable message.
+      final session = client.auth.currentSession;
+      if (session == null) {
+        return const PasskeyAuthenticationResult(
+          success: false,
+          error:
+              'Passkey was accepted, but the session could not be '
+              'established. Please sign in with your email and password.',
+        );
+      }
+
+      return PasskeyAuthenticationResult(success: true, session: session);
     } on CredentialException catch (e) {
       if (e.code == 201 || e.code == 601) {
-        return PasskeyAuthenticationResult(success: false, error: 'User cancelled passkey authentication');
+        return const PasskeyAuthenticationResult(
+          success: false,
+          error: 'User cancelled passkey authentication',
+        );
       }
-      return PasskeyAuthenticationResult(success: false, error: 'Passkey authentication failed: ${e.message}');
+      return PasskeyAuthenticationResult(
+        success: false,
+        error: 'Passkey authentication failed: ${e.message}',
+      );
     } catch (e) {
       return PasskeyAuthenticationResult(
         success: false,
@@ -347,78 +464,10 @@ class AuthRepository {
     }
   }
 
-  /// Get passkey registration options from Supabase Auth.
-  Future<CredentialCreationOptions?> _getPasskeyRegistrationOptions(
-    String email,
-    String fullName,
-  ) async {
-    final client = _client;
-    if (client == null) return null;
-
-    try {
-      final response = await client.auth.mfa.enroll(
-        factorType: FactorType.webauthn,
-        issuer: _rpName,
-        friendlyName: email,
-      );
-
-      // The Supabase MFA enroll response for WebAuthn contains the credential creation options
-      // We need to extract them from the response
-      final webAuthnData = _extractWebAuthnData(response);
-      if (webAuthnData == null) {
-        log('WebAuthn data not found in MFA enroll response');
-        return null;
-      }
-
-      return CredentialCreationOptions.fromJson(webAuthnData);
-    } catch (e) {
-      log('Failed to get passkey registration options: $e');
-      return null;
-    }
-  }
-
-  /// Get passkey authentication options from Supabase Auth.
-  Future<CredentialLoginOptions?> _getPasskeyAuthenticationOptions() async {
-    final client = _client;
-    if (client == null) return null;
-
-    try {
-      // For sign-in, we need to list factors and challenge the webauthn factor
-      final factors = await client.auth.mfa.listFactors();
-      
-      // Check if webauthn factors exist (they might be in a different field)
-      final webauthnFactors = _getWebAuthnFactors(factors);
-      
-      if (webauthnFactors.isEmpty) {
-        // No registered passkey - this is expected for new users
-        return null;
-      }
-
-      // Challenge the first verified webauthn factor
-      final factor = webauthnFactors.first;
-      final challenge = await client.auth.mfa.challenge(factorId: factor.id);
-
-      // Extract credential request options from challenge response
-      final requestOptions = _extractCredentialRequestOptions(challenge);
-      if (requestOptions == null) {
-        log('Credential request options not found in MFA challenge response');
-        return null;
-      }
-
-      return CredentialLoginOptions.fromJson(requestOptions);
-    } catch (e) {
-      log('Failed to get passkey authentication options: $e');
-      return null;
-    }
-  }
-
-  /// Extract WebAuthn data from MFA enroll response.
+  /// Get passkey registration options from Supabase Auth MFA enroll.
   Map<String, dynamic>? _extractWebAuthnData(dynamic response) {
     try {
-      // The response structure varies by Supabase client version
-      // Try to find the webauthn credential creation options
       if (response is Map) {
-        // Check for webAuthn field
         if (response.containsKey('webAuthn')) {
           final webauthn = response['webAuthn'];
           if (webauthn is Map && webauthn.containsKey('credentialCreationOptions')) {
@@ -430,7 +479,6 @@ class AuthRepository {
             }
           }
         }
-        // Check for credentialCreationOptions directly
         if (response.containsKey('credentialCreationOptions')) {
           final options = response['credentialCreationOptions'];
           if (options is String) {
@@ -441,7 +489,6 @@ class AuthRepository {
         }
       }
       
-      // Try to access via reflection/dynamic
       final webauthn = response.webAuthn;
       if (webauthn != null) {
         final options = webauthn.credentialCreationOptions;
@@ -460,13 +507,11 @@ class AuthRepository {
   /// Extract WebAuthn factors from MFA list factors response.
   List<dynamic> _getWebAuthnFactors(dynamic factors) {
     try {
-      // Try to access webAuthn field
       final webauthn = factors.webAuthn;
       if (webauthn is List) {
         return webauthn.where((f) => f.status == FactorStatus.verified).toList();
       }
       
-      // Check if it's a Map with webAuthn key
       if (factors is Map && factors.containsKey('webAuthn')) {
         final list = factors['webAuthn'];
         if (list is List) {
@@ -482,7 +527,6 @@ class AuthRepository {
   /// Extract credential request options from MFA challenge response.
   Map<String, dynamic>? _extractCredentialRequestOptions(dynamic challenge) {
     try {
-      // Check for credentialRequestOptions field
       if (challenge is Map && challenge.containsKey('credentialRequestOptions')) {
         final options = challenge['credentialRequestOptions'];
         if (options is String) {
@@ -492,7 +536,6 @@ class AuthRepository {
         }
       }
       
-      // Try dynamic access
       final options = challenge.credentialRequestOptions;
       if (options is String) {
         return jsonDecode(options) as Map<String, dynamic>;
@@ -541,130 +584,21 @@ class AuthRepository {
     }
   }
 
-  /// Verify passkey registration with Supabase.
-  Future<Session?> _verifyPasskeyRegistration({
-    required String email,
-    required String fullName,
-    required PublicKeyCredential credential,
-  }) async {
-    final client = _client;
-    if (client == null) return null;
-
-    try {
-      final response = credential.response;
-      if (response == null) {
-        throw PasskeyException('Invalid credential response: missing response');
-      }
-
-      final attestationObject = response.attestationObject;
-      final clientDataJSON = response.clientDataJSON;
-      
-      if (attestationObject == null || clientDataJSON == null) {
-        throw PasskeyException('Invalid credential response: missing attestation or clientDataJSON');
-      }
-
-      final body = {
-        'factor_type': 'webauthn',
-        'attestation': attestationObject,
-        'client_data_json': clientDataJSON,
-        'email': email,
-        'data': {'full_name': fullName},
-      };
-
-      final session = await _completePasskeyRegistrationViaRest(body);
-      return session;
-    } catch (e) {
-      log('Passkey registration verification failed: $e');
-      rethrow;
-    }
-  }
-
-  /// Verify passkey authentication with Supabase.
-  Future<Session?> _verifyPasskeyAuthentication(
-    PublicKeyCredential credential,
-  ) async {
-    final client = _client;
-    if (client == null) return null;
-
-    try {
-      final response = credential.response;
-      if (response == null) {
-        throw PasskeyException('Invalid credential response: missing response');
-      }
-
-      final authenticatorData = response.authenticatorData;
-      final clientDataJSON = response.clientDataJSON;
-      final signature = response.signature;
-      final credentialId = credential.id;
-
-      if (authenticatorData == null || clientDataJSON == null || signature == null || credentialId == null) {
-        throw PasskeyException('Invalid credential response: missing required fields');
-      }
-
-      final body = {
-        'factor_type': 'webauthn',
-        'authenticator_data': authenticatorData,
-        'client_data_json': clientDataJSON,
-        'signature': signature,
-        'credential_id': credentialId,
-      };
-
-      final session = await _completePasskeyAuthenticationViaRest(body);
-      return session;
-    } catch (e) {
-      log('Passkey authentication verification failed: $e');
-      rethrow;
-    }
-  }
-
-  /// Complete passkey registration via Supabase REST API.
-  Future<Session?> _completePasskeyRegistrationViaRest(
-    Map<String, dynamic> body,
-  ) async {
-    final client = _client;
-    if (client == null) return null;
-
-    final response = await client.functions.invoke(
-      'passkey-register',
-      body: body,
-    );
-
-    if (response.data is Map<String, dynamic>) {
-      final data = response.data as Map<String, dynamic>;
-      if (data['access_token'] != null && data['refresh_token'] != null) {
-        await client.auth.setSession(
-          data['refresh_token'],
-          accessToken: data['access_token'],
-        );
-        return client.auth.currentSession;
+  /// Helper to encode bytes to base64url, accepting `List<int>` or `String`.
+  static String _base64UrlEncode(dynamic input) {
+    if (input is List<int>) {
+      return base64Url.encode(input);
+    } else if (input is String) {
+      // If it's already a string, assume it's base64 or base64url encoded
+      // Convert to bytes first if it looks like base64
+      try {
+        return base64Url.encode(base64Url.decode(input));
+      } catch (_) {
+        // If decode fails, encode the string as UTF-8 bytes
+        return base64Url.encode(utf8.encode(input));
       }
     }
-    return null;
-  }
-
-  /// Complete passkey authentication via Supabase REST API.
-  Future<Session?> _completePasskeyAuthenticationViaRest(
-    Map<String, dynamic> body,
-  ) async {
-    final client = _client;
-    if (client == null) return null;
-
-    final response = await client.functions.invoke(
-      'passkey-authenticate',
-      body: body,
-    );
-
-    if (response.data is Map<String, dynamic>) {
-      final data = response.data as Map<String, dynamic>;
-      if (data['access_token'] != null && data['refresh_token'] != null) {
-        await client.auth.setSession(
-          data['refresh_token'],
-          accessToken: data['access_token'],
-        );
-        return client.auth.currentSession;
-      }
-    }
-    return null;
+    return '';
   }
 }
 

@@ -10,7 +10,7 @@ handful of conventions that are worth stating once:
 - **Server-side enforcement.** Search filters, distance computation and access
   control live in PostgreSQL, not in the client.
 
-## Unreleased
+## [2.5.0] - 2026-09-28
 
 ### Added - intro videos on onboarding and sign-in
 
@@ -62,6 +62,23 @@ already failed to load, so a broken asset left an animation running that never
 stopped. Found because four existing widget tests began timing out on
 `pumpAndSettle` once the player landed; `test/intro_video_player_test.dart`
 now pins the behaviour.
+
+### Fixed - committed merge conflict markers in this file
+
+The v2.4.1 merge committed `<<<<<<< HEAD` / `=======` / `>>>>>>> origin/master`
+into `CHANGELOG.md`, so every release since shipped a file with raw conflict
+markers in it. Both sides were real release notes, so the resolution keeps the
+union rather than picking a side: the `origin/master` content (the Edit Profile
+referral-code recovery and the audit docs) belongs to unreleased work and now
+joins the `## [Unreleased]` section, while the `## [2.4.1]` and `## [2.4.0]`
+notes stay put. `tool/fix_changelog_conflict.py` performs the repair and is
+safe to re-run.
+
+Left alone deliberately: `## 2.4.0` appears twice (once under `# Changelog` at
+the top, once as `## [2.4.0] - 2026-09-28` in the history below), and the file
+carries two intro paragraphs. That duplication also predates this release. It
+is cosmetic and reconciling it means deciding which branch's notes are
+canonical, so it is flagged here rather than silently rewritten.
 
 ### Build size - please read before shipping
 
@@ -242,8 +259,36 @@ checksum.
   moment its Android library plugin is attached — before its script reaches the
   `kotlin { ... }` block.
 
+### Fixed - Edit Profile recovery dropped the user's referral code
 
-<<<<<<< HEAD
+Found while auditing `fix/edit-profile-save-recovery` against the live
+project. The recovery path introduced in this branch re-creates a missing
+`profiles` row with a direct `INSERT`, which bypasses `handle_new_user` — the
+only place a `referral_code` is ever assigned. A recovered profile therefore
+came back with `referral_code = NULL`, silently breaking the Referral Code
+field, its Copy button, QR invitations, and any invite link already shared.
+
+- New migration `021_referral_code_on_insert.sql`: a `BEFORE INSERT` trigger
+  on `public.profiles` fills a missing code using the same deterministic
+  scheme as 017, so a recovered profile keeps its *original* code. An
+  explicitly supplied code is never overwritten. Idempotent; RLS untouched.
+- Verified end-to-end on the live project: after deleting the row and saving
+  from the app, the profile returned with its original `WKND-8C352EC95D`.
+
+### Added
+
+- `docs/LIVE_SCREEN_AUDIT.md` — per-screen audit of the Android build against
+  the live backend, including the 8-scenario Edit Profile save/recovery
+  lifecycle and the referral-code regression.
+- `docs/PRODUCTION_VERIFICATION_REPORT.md` — release readiness, blockers, and
+  what remains unverified.
+- `scripts/audit_weekend_live.py` — read-only live-project health checks
+  (migrations, orphans, blank names, RLS coverage, social-handle pattern,
+  referral-code invariant). `--cleanup` deletes only rows carrying the
+  `WKND_AUDIT` marker.
+- `tool/ui_drive.ps1` — small adb wrapper for driving the app on an emulator
+  during audits.
+
 ## [2.4.1] - 2026-09-28
 
 Reconciles the parallel v2.4.0 work with the hard-filter and photo-minimum
@@ -362,39 +407,7 @@ were silently returning wrong results.
 Passkey registration, the four-photo upload flow on a real handset, and
 Google Play Console review all require hardware or a console and are reported
 as NOT VERIFIED by the verification suite. See the run output.
-=======
 
-
-### Fixed - Edit Profile recovery dropped the user's referral code
-
-Found while auditing `fix/edit-profile-save-recovery` against the live
-project. The recovery path introduced in this branch re-creates a missing
-`profiles` row with a direct `INSERT`, which bypasses `handle_new_user` — the
-only place a `referral_code` is ever assigned. A recovered profile therefore
-came back with `referral_code = NULL`, silently breaking the Referral Code
-field, its Copy button, QR invitations, and any invite link already shared.
-
-- New migration `021_referral_code_on_insert.sql`: a `BEFORE INSERT` trigger
-  on `public.profiles` fills a missing code using the same deterministic
-  scheme as 017, so a recovered profile keeps its *original* code. An
-  explicitly supplied code is never overwritten. Idempotent; RLS untouched.
-- Verified end-to-end on the live project: after deleting the row and saving
-  from the app, the profile returned with its original `WKND-8C352EC95D`.
-
-### Added
-
-- `docs/LIVE_SCREEN_AUDIT.md` — per-screen audit of the Android build against
-  the live backend, including the 8-scenario Edit Profile save/recovery
-  lifecycle and the referral-code regression.
-- `docs/PRODUCTION_VERIFICATION_REPORT.md` — release readiness, blockers, and
-  what remains unverified.
-- `scripts/audit_weekend_live.py` — read-only live-project health checks
-  (migrations, orphans, blank names, RLS coverage, social-handle pattern,
-  referral-code invariant). `--cleanup` deletes only rows carrying the
-  `WKND_AUDIT` marker.
-- `tool/ui_drive.ps1` — small adb wrapper for driving the app on an emulator
-  during audits.
->>>>>>> origin/master
 
 ## [2.3.1] - 2026-09-26
 

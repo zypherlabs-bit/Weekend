@@ -28,6 +28,11 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   bool _isLoadingBiometric = true;
   bool _isMfaEnabled = false;
   bool _isLoadingMfa = true;
+
+  /// Passkeys registered to the signed-in account.
+  bool _isLoadingPasskeys = true;
+  int _passkeyCount = 0;
+
   final _authRepository = AuthRepository();
 
   @override
@@ -35,6 +40,109 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
     super.initState();
     _loadBiometricSetting();
     _loadMfaStatus();
+    _loadPasskeys();
+  }
+
+  /// Read how many passkeys the account has.
+  ///
+  /// Failure is not surfaced: "0 passkeys" simply shows the add affordance,
+  /// and a transient network error should not block the settings sheet.
+  Future<void> _loadPasskeys() async {
+    try {
+      final passkeys = await _authRepository.listPasskeys();
+      if (mounted) {
+        setState(() {
+          _passkeyCount = passkeys.length;
+          _isLoadingPasskeys = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingPasskeys = false);
+    }
+  }
+
+  /// Offer to register a new passkey, or remove an existing one.
+  Future<void> _openPasskeys() async {
+    if (_passkeyCount == 0) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Add a passkey?'),
+          content: const Text(
+            'Your phone will ask for your fingerprint, face or device PIN. '
+            'The passkey is stored in this device\'s secure hardware and can '
+            'sign you in without a password.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+
+      final ok = await ref
+          .read(authStateProvider.notifier)
+          .registerPasskey(friendlyName: 'Weekend on this device');
+      if (!mounted) return;
+      await _loadPasskeys();
+      // Re-checked after the second await: the state may have been disposed
+      // while the passkey list was being refetched.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? 'Passkey added. You can now sign in without a password.'
+                // The notifier already set a user-safe message; reuse it.
+                : ref.read(authStateProvider).error ??
+                      'Could not add a passkey.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Existing passkeys: offer removal of the most recent one.
+    final passkeys = await _authRepository.listPasskeys();
+    if (!mounted || passkeys.isEmpty) return;
+    final target = passkeys.first;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove passkey?'),
+        content: Text(
+          'This removes "${target.friendlyName ?? 'Passkey'}" from your '
+          'account. You can add it again later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final result = await _authRepository.deletePasskey(target.id);
+    if (!mounted) return;
+    await _loadPasskeys();
+    // Re-checked after the second await: the state may have been disposed
+    // while the passkey list was being refetched.
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result.message.isEmpty ? 'Passkey removed' : result.message)),
+    );
   }
 
   Future<void> _loadBiometricSetting() async {
@@ -213,6 +321,30 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
               color: Colors.white60,
             ),
             onTap: _openSecurity,
+          ),
+          ListTile(
+            title: const Text(
+              'Passkeys',
+              style: TextStyle(color: Colors.white),
+            ),
+            subtitle: Text(
+              _isLoadingPasskeys
+                  ? 'Checking…'
+                  : (_passkeyCount == 0
+                        ? 'Sign in without a password using your fingerprint, '
+                              'face or device PIN'
+                        : '$_passkeyCount passkey${_passkeyCount == 1 ? '' : 's'} '
+                              'on this account'),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 12,
+              ),
+            ),
+            trailing: const Icon(
+              Icons.key_rounded,
+              color: Colors.white60,
+            ),
+            onTap: _isLoadingPasskeys ? null : _openPasskeys,
           ),
           ListTile(
             title: const Text(

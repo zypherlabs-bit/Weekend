@@ -392,6 +392,13 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                     ),
                   if (state.deckProfiles.isNotEmpty)
                     IconButton(
+                      tooltip: 'Advanced search and filters',
+                      onPressed: () => context.push('/search'),
+                      icon: const Icon(Icons.tune_rounded, color: Colors.white),
+                    ),
+                  if (state.deckProfiles.isNotEmpty)
+                    IconButton(
+                      tooltip: 'Discovery radius',
                       onPressed: () {
                         showModalBottomSheet(
                           context: context,
@@ -402,7 +409,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                           ),
                         );
                       },
-                      icon: const Icon(Icons.tune_rounded, color: Colors.white),
+                      icon: const Icon(
+                        Icons.social_distance_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                 ],
               ),

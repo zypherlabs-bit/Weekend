@@ -46,3 +46,7 @@ FINAL_VERIFICATION_REPORT.md
 # Local VS Code launch config (may hold backend credentials)
 /.vscode/launch.json
 
+
+# Python bytecode from the verification suite
+__pycache__/
+*.pyc

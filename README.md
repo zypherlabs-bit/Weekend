@@ -205,8 +205,119 @@ where you are, while the location data itself stays private.
 Implementation: `lib/services/location_service.dart`,
 `lib/features/discovery/`, `lib/widgets/location_radius_filter.dart`,
 `supabase/migrations/003_database_functions.sql`,
-`supabase/migrations/008_advertisements_rls_and_functions.sql`.
+`supabase/migrations/008_advertisements_rls_and_functions.sql`,
+`supabase/migrations/022_advanced_search.sql`.
 Details: [docs/location-discovery.md](docs/location-discovery.md).
+
+### Advanced search — server-side hard filters
+
+A dedicated **Discover / Search Filters** screen lets you narrow results by
+several criteria at once. The important part is *where* that filtering happens.
+
+**Every hard filter is enforced in PostgreSQL**, inside the `search_profiles`
+function, with `AND` semantics. The app does not download a broad result set
+and narrow it locally — that would be slow, and it would let a modified client
+show you profiles that violate the filters you chose.
+
+| Filter | Server parameter | Notes |
+| --- | --- | --- |
+| Gender / Interested in | `p_genders`, `p_interested_in` | |
+| Age range | `p_age_min`, `p_age_max` | A profile with no stated age is **excluded**, not passed |
+| Distance | `p_max_distance_km` | PostGIS `ST_DWithin`, rounded to 0.1 km |
+| Relationship intent | `p_relationship_intents` | |
+| City | `p_cities` | Case-insensitive |
+| Interests | `p_interests` | ANY semantics |
+| Languages | `p_languages` | ANY semantics |
+| Lifestyle | `p_smoking`, `p_drinking`, `p_exercise`, `p_children`, `p_pets` | |
+
+Guarantees this design provides:
+
+- If you search *Female, 25–32, ≤ 50 km, long-term*, **every** returned profile
+  satisfies all four. The server cannot return anything else.
+- Blocked accounts (in both directions), deleted accounts, banned accounts and
+  profiles that opted out of discovery are always excluded.
+- **"No profiles match all your filters" is truthful.** The app offers *Adjust
+  filters*, *Increase distance* and *Expand age range* as explicit,
+  user-initiated actions. It never quietly relaxes a filter behind your back.
+- Soft signals (shared interests, intent match, profile completeness,
+  verification, recency) affect `ORDER BY` only. They can reorder the results;
+  they can never admit a profile that a hard filter rejected.
+
+Result: rounded distance in kilometres plus a coarse label. **No coordinates of
+any other user are ever returned to the client.**
+
+Implementation: `supabase/migrations/022_advanced_search.sql`,
+`lib/models/models.dart` (`SearchFilters`),
+`lib/repositories/discovery_repository.dart` (`searchProfiles`),
+`lib/providers/search_provider.dart`, `lib/features/discovery/search_screen.dart`.
+
+### Passkeys (WebAuthn / Credential Manager)
+
+Weekend supports **real, standards-based passkey authentication** through
+Supabase Auth's native passkey API and the Android Credential Manager. The full
+WebAuthn ceremony runs for every sign-in:
+
+1. `auth.passkey.startRegistration()` / `startAuthentication()` — the server
+   issues a challenge.
+2. Android Credential Manager — the system prompts for fingerprint, face or
+   device PIN, and the device signs the challenge.
+3. `auth.passkey.verifyRegistration()` / `verifyAuthentication()` — the server
+   validates the signature and issues a real session.
+
+Key properties:
+
+- **The session is real.** It is issued and persisted by Supabase; nothing is
+  faked locally. Successful authentication goes straight into the app and never
+  back to the sign-in screen.
+- **No passkey is ever stored in the app.** The private key stays in the
+  device's secure hardware-backed keystore; the app only handles the challenge.
+- **User verification is required** — a passkey cannot be created or used
+  without a biometric or device-PIN check.
+- **Fallback** — email and password remain available, and passkey errors are
+  mapped to honest messages rather than pretending to succeed.
+
+Passkeys also require the project setting
+*Authentication → Passkeys → Enable Passkey authentication* together with a
+WebAuthn relying-party ID, plus Digital Asset Links (`assetlinks.json`) on the
+relying-party domain.
+
+> ### ⚠️ Current status: passkeys are NOT enabled on the live project
+>
+> The client implementation is complete and the challenge endpoint is live, but
+> as of this release the Supabase project still answers `passkey_disabled`.
+> **Passkey sign-in does not work yet.** The app detects this and tells the
+> user to use email and password — it never pretends a passkey succeeded.
+>
+> To finish the rollout, in Supabase Dashboard:
+>
+> 1. **Authentication → Passkeys** → enable *Passkey authentication*.
+> 2. Set **Relying Party ID** to the bare domain (no scheme, port or path).
+> 3. Add the Android app origin `android:apk-key-hash:<base64url SHA-256 of
+>    your signing certificate>` to **Relying Party Origins**.
+> 4. Serve a matching `/.well-known/assetlinks.json` from that domain.
+>
+> Verify with:
+>
+> ```bash
+> python tests/python/run_all_tests.py
+> # "Passkeys enabled on project" must read PASS before shipping passkeys.
+> ```
+>
+> Even after that, an on-device passkey registration and sign-in must be
+> confirmed on physical Android hardware. The suite reports
+> `PASSKEY DEVICE TEST: NOT VERIFIED` until that happens, and an emulator is
+> not accepted as a substitute. See [Verification status](#verification-status).
+
+Implementation: `lib/repositories/auth_repository.dart` (`registerPasskey`,
+`signInWithPasskey`, `_runRegistrationCeremony`, `_runAuthenticationCeremony`),
+`lib/providers/auth_provider.dart`, `lib/features/auth/auth_screen.dart`.
+
+> **Status:** the client implementation is complete and the challenge endpoint
+> is reachable, but the live project still answers `passkey_disabled`, so
+> **passkey sign-in does not work yet**. A full on-device passkey sign-up and
+> sign-in additionally requires physical Android hardware. The suite reports
+> both gaps honestly - see [Verification status](#verification-status).
+
 
 ### Matchmaking
 
@@ -706,6 +817,46 @@ flutter test test/geohash_test.dart   # a single suite
 CI (`.github/workflows/ci.yml`) runs `flutter pub get`, `flutter analyze`,
 `flutter test` and a release APK build on every push and pull request. Details:
 [docs/testing.md](docs/testing.md).
+
+### Verification status
+
+A second suite verifies the *repository and backend* rather than the Dart
+code. It deliberately distinguishes three kinds of evidence, because conflating
+them is how projects end up claiming things that were never tested:
+
+| Evidence | Meaning |
+| --- | --- |
+| `STATIC` | Proved by reading the repository (a migration defines the policy, a source file calls the API). Says nothing about runtime. |
+| `RUNTIME` | Something actually executed — a live query, a real `flutter analyze`/`flutter test`, a downloaded artefact. |
+| `DEVICE` | Only confirmable on real Android hardware. |
+
+```bash
+python tests/python/run_all_tests.py              # full suite
+python tests/python/run_all_tests.py --skip-slow  # skip the Flutter toolchain probes
+python -m pytest tests/python -q                   # via pytest
+```
+
+Every check reports exactly one of `PASS`, `FAIL` or `NOT VERIFIED`.
+
+**`NOT VERIFIED` is a real answer, not a soft pass.** It means the evidence
+required to make the claim does not exist. A feature is only reported as
+working when the corresponding line says `PASS`, and a `PASS` in the
+`STATIC` row (a file exists, a package is installed) is never treated as
+proof that the feature runs.
+
+Two checks are permanently `NOT VERIFIED` until a human runs the app on
+hardware, and no amount of automation will change that:
+
+```
+PASSKEY DEVICE TEST       NOT VERIFIED   no device evidence recorded
+PHYSICAL DEVICE TESTS     NOT VERIFIED   no physical device attached
+```
+
+Emulator runs deliberately do **not** satisfy them: an emulator's software
+fingerprint, photo picker and Credential Manager are not evidence that a
+biometric prompt, a hardware-backed keystore or the Android Photo Picker work
+on a real handset. Record results in `docs/device_test_evidence.json` after a
+physical run and both become `PASS`.
 
 ---
 

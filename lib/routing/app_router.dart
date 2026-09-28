@@ -20,6 +20,7 @@ import '../features/discovery/explore_screen.dart';
 import '../features/discovery/location_permission_screen.dart';
 
 import '../features/discovery/location_settings_screen.dart';
+import '../features/discovery/search_screen.dart';
 import '../features/qr/qr.dart';
 import '../features/safety/safety_center_screen.dart';
 
@@ -191,6 +192,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/qr-scanner',
         builder: (context, state) => const QRScannerScreen(),
       ),
+      GoRoute(
+        path: '/search',
+        builder: (context, state) => const SearchScreen(),
+      ),
+
       GoRoute(
         path: '/safety-center',
         builder: (context, state) => const SafetyCenterScreen(),

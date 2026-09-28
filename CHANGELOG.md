@@ -1,11 +1,141 @@
 # Changelog
 
+All notable changes to Weekend are documented here. This project follows a
+handful of conventions that are worth stating once:
+
+- **Every change is verifiable.** A feature is only listed as working when the
+  matching check in `python tests/python/run_all_tests.py` reports `PASS`.
+  Anything that could not be proven is listed under *Not verified* with the
+  evidence that is missing, rather than being quietly dropped.
+- **Server-side enforcement.** Search filters, distance computation and access
+  control live in PostgreSQL, not in the client.
+
+## 2.4.0
+
+### Added — Advanced search with server-side hard filters
+
+- **`search_profiles` Postgres function** (migration 022). Enforces every hard
+  filter with `AND` semantics in the database: gender / interested-in, age
+  range, distance, relationship intent, city, interests, languages and the
+  lifestyle attributes (smoking, drinking, exercise, children, pets). Soft
+  signals (shared interests, intent match, completeness, verification, recency)
+  affect `ORDER BY` only and can never admit a profile a hard filter rejected.
+- **Discover / Search Filters screen** (`/search`, also reachable from the tune
+  icon on Discover) with radius, gender, age, intent, city, interests,
+  languages and lifestyle controls, plus removable filter chips.
+- **Truthful empty state**: "No profiles match all your filters" with explicit
+  *Adjust filters*, *Increase distance* and *Expand age range* actions. The app
+  never relaxes a filter on its own.
+- **New profile columns**: `interested_in`, `languages`, `smoking`, `drinking`,
+  `exercise`, `pets`, `children`, `height_cm`, `prompts`, with CHECK
+  constraints and GIN/btree indexes for the new predicates.
+- **`SearchFilters` model**, `searchProvider`, and
+  `DiscoveryRepository.searchProfiles`.
+- Deleted, banned, rejected and opted-out accounts are excluded from search via
+  the new `auth_user_state` view.
+
+### Added — Verification suite
+
+- `tests/python/` — a pytest-compatible suite that separates **STATIC**,
+  **RUNTIME** and **DEVICE** evidence and reports only `PASS`, `FAIL` or
+  `NOT VERIFIED`.
+  - `test_project_structure.py`, `test_security.py`, `test_passkey.py`,
+    `test_location.py`, `test_filter_logic.py`, `test_navigation.py`,
+    `test_supabase.py`, `test_release.py`, `run_all_tests.py`.
+  - `test_filter_logic.py` includes an executable reference implementation of
+    the hard-filter contract, exercised with the specification's own fixture
+    data (profiles A–D).
+  - Emulator runs are explicitly **not** accepted as device evidence.
+- `test/search_filters_test.dart` — 16 unit tests for the `SearchFilters`
+  contract.
+- `tool/apply_one_migration.ps1` — applies a migration statement-by-statement
+  with a pre-flight structural check, so a truncated function body can never
+  half-apply against the live project.
+
+### Fixed
+
+- **Fabricated age removed.** `get_nearby_profiles` and `get_matches_for_user`
+  both ended their age expression with `else 25`, inventing an age of 25 for
+  every profile without a stated birthday. Age is now `NULL`, and the UI
+  renders "Age not stated".
+- **Age hard filter can no longer be bypassed.** The old predicate kept
+  profiles whose age was unknown (`date_of_birth is null or ...`). Because an
+  unknown age cannot satisfy a requested range, those profiles are now
+  excluded instead of passed.
+- **Discovery modes are honoured.** `p_discovery_mode` was accepted and then
+  ignored; `global` and `city` now actually ignore the radius.
+- **`get_matches_for_user` excludes deleted accounts** and a blocked match.
+- **Passkey implementation replaced.** The previous code drove the WebAuthn
+  *MFA factor* API (`mfa.enroll(factorType: webauthn)` / `mfa.listFactors()`),
+  both of which require an already-authenticated session — impossible during
+  sign-up, and impossible during usernameless sign-in. It then posted the
+  ceremony to `passkey-register` / `passkey-authenticate` Edge Functions that
+  do not exist in this repository. It is now a real WebAuthn flow built on
+  Supabase's native passkey API and the Android Credential Manager.
+- **Passkey management UI** (Settings → Passkeys) to register, list and remove
+  passkeys.
+- GoTrue error codes are mapped to safe, actionable messages instead of raw
+  SDK text.
+
+### Changed
+
+- `supabase_flutter` raised to `^2.15.0`, the minimum that exposes
+  `client.auth.passkey`. The old `2.8.4` pin could not have supported passkeys.
+- Release builds now record their SHA-256 to `build/release/apk.sha256` so the
+  verification suite can compare the local artefact against what GitHub
+  actually serves.
+- README documents the advanced-search filter contract, the passkey flow and
+  the verification-status model.
+
+### Not verified
+
+- **Passkeys are not enabled on the live Supabase project.** The client is
+  complete and the challenge endpoint is reachable, but the project answers
+  `passkey_disabled`, so passkey sign-in does not work yet. The app says so
+  rather than pretending. See the README for the dashboard steps.
+- **No physical-device testing was performed.** No Android handset was
+  connected; only an emulator was available, which is not accepted as evidence
+  for Credential Manager, a real biometric prompt or the Android Photo Picker.
+  `PASSKEY DEVICE TEST` and `PHYSICAL DEVICE TESTS` report `NOT VERIFIED`.
+
 All notable changes to **Weekend** are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Releases are published as GitHub Releases with a versioned APK and a SHA-256
 checksum.
+
+## [Unreleased]
+
+### Fixed - Edit Profile recovery dropped the user's referral code
+
+Found while auditing `fix/edit-profile-save-recovery` against the live
+project. The recovery path introduced in this branch re-creates a missing
+`profiles` row with a direct `INSERT`, which bypasses `handle_new_user` — the
+only place a `referral_code` is ever assigned. A recovered profile therefore
+came back with `referral_code = NULL`, silently breaking the Referral Code
+field, its Copy button, QR invitations, and any invite link already shared.
+
+- New migration `021_referral_code_on_insert.sql`: a `BEFORE INSERT` trigger
+  on `public.profiles` fills a missing code using the same deterministic
+  scheme as 017, so a recovered profile keeps its *original* code. An
+  explicitly supplied code is never overwritten. Idempotent; RLS untouched.
+- Verified end-to-end on the live project: after deleting the row and saving
+  from the app, the profile returned with its original `WKND-8C352EC95D`.
+
+### Added
+
+- `docs/LIVE_SCREEN_AUDIT.md` — per-screen audit of the Android build against
+  the live backend, including the 8-scenario Edit Profile save/recovery
+  lifecycle and the referral-code regression.
+- `docs/PRODUCTION_VERIFICATION_REPORT.md` — release readiness, blockers, and
+  what remains unverified.
+- `scripts/audit_weekend_live.py` — read-only live-project health checks
+  (migrations, orphans, blank names, RLS coverage, social-handle pattern,
+  referral-code invariant). `--cleanup` deletes only rows carrying the
+  `WKND_AUDIT` marker.
+- `tool/ui_drive.ps1` — small adb wrapper for driving the app on an emulator
+  during audits.
 
 ## [2.3.1] - 2026-09-26
 

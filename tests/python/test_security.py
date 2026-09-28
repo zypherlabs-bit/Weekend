@@ -33,6 +33,15 @@ DOC_SUFFIXES = (".md", ".txt", ".lock")
 #: committed and `git ls-files` cover separately.
 IGNORED_NAMES = {".env", "key.properties"}
 
+#: Binary artefacts. A compiled APK legitimately contains the public anon key
+#: (it must, or the app cannot reach Supabase) plus a compressed code section
+#: whose bytes coincidentally match key-shaped patterns. Scanning a binary
+#: produces nothing but false positives, so they are skipped - what matters for
+#: an APK is that it contains no SERVICE-ROLE key, which is checked separately
+#: by test_service_role_key_not_in_client against the Dart sources.
+BINARY_SUFFIXES = (".apk", ".aab", ".jar", ".png", ".jpg", ".jpeg", ".gif", ".webp",
+                   ".ico", ".so", ".dex", ".zip", ".keystore", ".jks", ".pdf")
+
 
 def _is_source_file(path) -> bool:
     """True for shipped source, false for docs/examples/lockfiles."""
@@ -57,9 +66,10 @@ def test_no_committed_secrets() -> CheckResult:
             continue
         if not _is_source_file(path):
             continue
-        # A git-ignored local credential file is expected to hold a key; what
-        # matters is that git does not track it. Verified separately.
         if path.name in IGNORED_NAMES:
+            continue
+        # Binary blobs are not source and produce only regex false positives.
+        if path.suffix.lower() in BINARY_SUFFIXES:
             continue
         text = read_text(path)
         if text and SECRET_VALUE_RE.search(text):
@@ -73,6 +83,39 @@ def test_no_committed_secrets() -> CheckResult:
             "no key-shaped values committed"
             if not findings
             else f"review: {', '.join(sorted(set(findings))[:5])}"
+        ),
+    )
+
+
+def test_no_service_role_key_in_apk() -> CheckResult:
+    """RUNTIME: the built APK does not contain a service-role key.
+
+    The anon/publishable key is *supposed* to be in the APK - the app cannot
+    reach Supabase without it - so scanning for "is there a key" is the wrong
+    question. What must never appear is the service-role key, which bypasses
+    RLS entirely and would hand every user full database access.
+    """
+    apk = REPO_ROOT / "build" / "app" / "outputs" / "flutter-apk" / "app-release.apk"
+    if not apk.exists():
+        return CheckResult(
+            name="No service-role key in APK",
+            status=Status.NOT_VERIFIED,
+            evidence=Evidence.RUNTIME,
+            detail="no release APK built yet",
+        )
+    raw = apk.read_bytes()
+    # Supabase service-role keys are JWTs whose payload carries this claim.
+    service_role_marker = b'"role":"service_role"'
+    legacy_marker = b"service_role"
+    hit = service_role_marker in raw or legacy_marker in raw
+    return CheckResult(
+        name="No service-role key in APK",
+        status=Status.FAIL if hit else Status.PASS,
+        evidence=Evidence.RUNTIME,
+        detail=(
+            "service_role marker absent from the binary"
+            if not hit
+            else "SERVICE-ROLE KEY FOUND IN APK"
         ),
     )
 

@@ -1,5 +1,6 @@
 export 'auth_repository.dart';
 export 'profile_repository.dart';
+export 'profile_save_error.dart';
 export 'discovery_repository.dart';
 export 'match_repository.dart';
 export 'message_repository.dart';

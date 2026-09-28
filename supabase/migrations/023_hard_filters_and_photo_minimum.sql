@@ -1,4 +1,4 @@
--- Migration: 020_hard_filters_and_photo_minimum.sql
+-- Migration: 023_hard_filters_and_photo_minimum.sql
 -- Server-side 100% hard filtering + the minimum-4-photos profile rule.
 --
 -- Defects this migration corrects

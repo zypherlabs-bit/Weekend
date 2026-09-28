@@ -1,4 +1,4 @@
--- Migration: 021_pin_search_path.sql
+-- Migration: 024_pin_search_path.sql
 -- Pin `search_path` on every SECURITY DEFINER function.
 --
 -- The vulnerability

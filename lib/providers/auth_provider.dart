@@ -419,15 +419,16 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     return e.toString().replaceAll('Exception: ', '');
   }
 
-  /// Explains a passkey failure without dumping a raw SDK/Edge Function error
-  /// at the user.
+  /// Explains a passkey failure without dumping a raw SDK error at the user.
   ///
-  /// The `passkey-register` / `passkey-authenticate` Edge Functions are not
-  /// deployed on the live project, so GoTrue answers 404. That is surfaced as a
-  /// clear "unavailable, use your password" message instead of pretending the
-  /// passkey flow worked.
+  /// The repository already maps GoTrue error codes to safe wording; this is
+  /// the last-resort net for anything that escapes it.
   String _readablePasskeyError(Object e, String action) {
     final text = e.toString();
+    if (text.contains('passkey_disabled')) {
+      return 'Passkeys are not enabled for Weekend yet. '
+          'Please sign in with your email and password instead.';
+    }
     if (text.contains('404') ||
         text.contains('FunctionsHttpError') ||
         text.contains('not found') ||
@@ -612,58 +613,36 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     }
   }
 
-  /// Sign up with a passkey (WebAuthn).
-  Future<void> signUpWithPasskey({
-    required String email,
-    required String fullName,
-  }) async {
-    final client = _client;
-    if (client == null) {
+  /// Register a passkey for the signed-in user (Settings -> Passkeys).
+  ///
+  /// Supabase only allows passkey registration for an existing, confirmed,
+  /// non-anonymous account, so this runs after sign-in and is deliberately NOT
+  /// part of sign-up.
+  Future<bool> registerPasskey({String? friendlyName}) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final result = await _repo.registerPasskey(friendlyName: friendlyName);
+      if (result.success) {
+        state = state.copyWith(isLoading: false);
+        return true;
+      }
       state = state.copyWith(
         isLoading: false,
-        error:
-            'Weekend is not connected to a backend. '
-            'Build with SUPABASE_URL and SUPABASE_ANON_KEY to enable accounts.',
+        error: result.error ?? 'Passkey registration failed.',
       );
-      return;
-    }
-    state = state.copyWith(isLoading: true, error: null);
-
-    try {
-      final result = await _repo.signUpWithPasskey(
-        email: email,
-        fullName: fullName,
-      );
-
-      if (result.success && result.session != null) {
-        final user = client.auth.currentUser;
-        state = state.copyWith(
-          isLoading: false,
-          isAuthenticated: true,
-          user: user != null ? _profileFromAuth(user, fullName) : null,
-          session: result.session!.accessToken,
-          emailVerified: user?.emailConfirmedAt != null,
-          needsProfileSetup: true,
-        );
-        if (user != null) await _loadLocationPreferences(user.id);
-      } else {
-        state = state.copyWith(
-          isLoading: false,
-          isAuthenticated: false,
-          needsMfaChallenge: false,
-          error: result.error ?? 'Passkey registration failed.',
-        );
-      }
+      return false;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        isAuthenticated: false,
         error: _readablePasskeyError(e, 'registration'),
       );
+      return false;
     }
   }
 
-  /// Sign in with a passkey (WebAuthn).
+  /// Sign in with a passkey (discoverable credential, no email required).
+  ///
+  /// On success the user goes STRAIGHT to the app - never back to sign-in.
   Future<void> signInWithPasskey() async {
     final client = _client;
     if (client == null) {
@@ -675,32 +654,37 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       );
       return;
     }
-    state = state.copyWith(isLoading: true, error: null, needsMfaChallenge: false);
+    state = state.copyWith(isLoading: true, clearError: true, needsMfaChallenge: false);
 
     try {
       final result = await _repo.signInWithPasskey();
 
-      if (result.success && result.session != null) {
+      if (result.success) {
+        // verifyAuthentication persists the session and fires the SDK's
+        // signedIn event, so read the user from the client rather than
+        // assuming anything.
         final user = client.auth.currentUser;
         state = state.copyWith(
           isLoading: false,
           isAuthenticated: true,
           user: user != null ? _profileFromAuth(user, 'User') : null,
-          session: result.session!.accessToken,
+          session: result.session?.accessToken,
           emailVerified: user?.emailConfirmedAt != null,
           needsMfaChallenge: false,
           needsProfileSetup:
               user != null ? await _profileNeedsSetup(user.id) : true,
+          clearError: true,
         );
         if (user != null) await _loadLocationPreferences(user.id);
-      } else {
-        state = state.copyWith(
-          isLoading: false,
-          isAuthenticated: false,
-          needsMfaChallenge: false,
-          error: result.error ?? 'Passkey sign-in failed.',
-        );
+        return;
       }
+
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: false,
+        needsMfaChallenge: false,
+        error: result.error ?? 'Passkey sign-in failed.',
+      );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,

@@ -1,20 +1,22 @@
-import 'dart:convert';
-import 'dart:developer';
-import 'package:supabase_flutter/supabase_flutter.dart';
+﻿import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:credential_manager/credential_manager.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import '../config/supabase_config.dart';
+
+// Supabase's native passkey API is still marked `@experimental` upstream. It is
+// a deliberate, reviewed dependency of Weekend's passkey support, so the
+// opt-in is granted once here rather than at every call site.
+// ignore_for_file: experimental_member_use
 
 /// Data source for authentication, sessions and Supabase MFA (TOTP 2FA).
 ///
 /// 2FA uses Supabase Auth's native MFA implementation:
-/// enroll → challenge → verify. No secret ever leaves Supabase except the
+/// enroll -> challenge -> verify. No secret ever leaves Supabase except the
 /// single enrollment payload shown once to the enrolling user; the client
 /// never persists raw TOTP secrets.
 class AuthRepository {
   SupabaseClient? get _client => SupabaseConfig.client;
-
-  /// The relying party ID for WebAuthn (matches the app's domain).
-  static const String _rpName = 'Weekend';
 
   /// Sign up with email + password.
   ///
@@ -217,7 +219,7 @@ class AuthRepository {
     return true;
   }
 
-  /// Challenge + verify during login when AAL1 → AAL2 is required.
+  /// Challenge + verify during login when AAL1 â†’ AAL2 is required.
   Future<bool> verifyLoginCode({
     required String factorId,
     required String code,
@@ -238,394 +240,306 @@ class AuthRepository {
     await client.auth.mfa.unenroll(factorId);
   }
 
-  // ----------------------------------------------------------- PASSKEYS (WebAuthn via Credential Manager)
+  // ----------------------------------------------------------- PASSKEYS (WebAuthn via Android Credential Manager)
+  //
+  // These use Supabase Auth's NATIVE passkey API (`client.auth.passkey.*`),
+  // the standards-based WebAuthn flow:
+  //
+  //   1. startRegistration / startAuthentication   -> server issues a challenge
+  //   2. Android Credential Manager ceremony      -> the device signs it
+  //   3. verifyRegistration / verifyAuthentication -> server validates and
+  //                                                    returns a real session
+  //
+  // The previous implementation in this file was NOT a passkey flow and could
+  // never have worked. It drove the WebAuthn *MFA factor* API
+  // (`mfa.enroll(factorType: webauthn)` / `mfa.listFactors()`), both of which
+  // require an already-authenticated session - impossible during sign-up, and
+  // impossible during sign-in because there is no session to list factors with.
+  // It then posted the ceremony result to `passkey-register` /
+  // `passkey-authenticate` Edge Functions that do not exist in this repository
+  // (supabase/functions/ contains no such function), so the round trip could
+  // only ever fail.
+  //
+  // Passkeys also require the project setting
+  // Authentication -> Passkeys -> "Enable Passkey authentication" plus a
+  // WebAuthn relying-party ID. Until that is configured the server answers
+  // `passkey_disabled` and the user gets a clear message pointing at email
+  // sign-in - never a fake success.
 
-  /// Register a new passkey for sign-up.
-  /// Returns the authenticated session on success.
-  Future<PasskeyRegistrationResult> signUpWithPasskey({
-    required String email,
-    required String fullName,
-  }) async {
+  /// Register a passkey for the CURRENTLY SIGNED IN user.
+  ///
+  /// Supabase requires an existing, confirmed, non-anonymous account before a
+  /// passkey can be created, so this is a post-sign-up step, not a way to
+  /// create an account. Creating the account is [signUpWithEmail]'s job.
+  Future<PasskeyOperationResult> registerPasskey({String? friendlyName}) async {
     final client = _client;
     if (client == null) {
-      return PasskeyRegistrationResult(
-        success: false,
-        error: 'Weekend is not connected to a backend.',
+      return const PasskeyOperationResult.failure(
+        'Weekend is not connected to a backend.',
+      );
+    }
+    if (client.auth.currentSession == null) {
+      return const PasskeyOperationResult.failure(
+        'Sign in first, then add a passkey.',
       );
     }
 
     try {
-      // Step 1: Enroll WebAuthn factor with Supabase MFA
-      final enrollResponse = await client.auth.mfa.enroll(
-        factorType: FactorType.webauthn,
-        issuer: _rpName,
-        friendlyName: email,
+      // Step 1 - server challenge (W3C PublicKeyCredentialCreationOptionsJSON).
+      final start = await client.auth.passkey.startRegistration(
+        friendlyName: friendlyName,
       );
 
-      // Extract credential creation options from enroll response
-      final webAuthnData = _extractWebAuthnData(enrollResponse);
-      if (webAuthnData == null) {
-        log('WebAuthn data not found in MFA enroll response');
-        return PasskeyRegistrationResult(
-          success: false,
-          error: 'Failed to get passkey registration options.',
-        );
-      }
+      // Step 2 - Android Credential Manager ceremony. The system prompts for
+      // fingerprint / face / device PIN.
+      final credential = await _runRegistrationCeremony(start.options);
 
-      final creationOptions = CredentialCreationOptions.fromJson(webAuthnData);
-
-      // Step 2: Create passkey using platform authenticator (Android Credential Manager)
-      final credential = await _createPasskeyCredential(creationOptions);
-      if (credential == null) {
-        return PasskeyRegistrationResult(
-          success: false,
-          error: 'Passkey creation was cancelled or failed.',
-        );
-      }
-
-      // Step 3: Verify the enrollment with Supabase
-      // For WebAuthn, we need to challenge and verify
-      final challengeResponse = await client.auth.mfa.challenge(factorId: enrollResponse.id);
-      
-      // The verify method expects the attestation as the code parameter
-      final response = credential.response;
-      if (response == null || response.attestationObject == null || response.clientDataJSON == null) {
-        return PasskeyRegistrationResult(
-          success: false,
-          error: 'Invalid credential response.',
-        );
-      }
-
-      final attestation = _base64UrlEncode(response.attestationObject!);
-      final clientDataJson = _base64UrlEncode(response.clientDataJSON!);
-      
-      // Combine attestation and client data for verification
-      final verificationCode = jsonEncode({
-        'attestation': attestation,
-        'client_data_json': clientDataJson,
-      });
-
-      await client.auth.mfa.verify(
-        factorId: enrollResponse.id,
-        challengeId: challengeResponse.id,
-        code: verificationCode,
+      // Step 3 - server validates the attestation and stores the credential.
+      final passkey = await client.auth.passkey.verifyRegistration(
+        challengeId: start.challengeId,
+        credential: credential,
       );
-
-      // Step 4: Obtain the session.
-      //
-      // Supabase's `mfa.verify` returns a session in its response and
-      // installs it on the client, so a promoted AAL2 session is available
-      // here. An earlier revision called
-      //   signInWithPassword(email: email, password: '')
-      // when the session was missing: that always fails, throws inside the
-      // try, and was followed by a `success: true` return anyway - reporting
-      // a successful sign-in for an unauthenticated user. Failing honestly is
-      // strictly better than a fake success.
-      final session = client.auth.currentSession;
-      if (session == null) {
-        return const PasskeyRegistrationResult(
-          success: false,
-          error:
-              'Your passkey was created, but the session could not be '
-              'established. Please sign in with your email and password.',
-        );
-      }
-
-      return PasskeyRegistrationResult(success: true, session: session);
+      return PasskeyOperationResult.success(
+        message: 'Passkey added',
+        passkeyId: passkey.id,
+      );
     } on CredentialException catch (e) {
-      if (e.code == 601) {
-        return const PasskeyRegistrationResult(
-          success: false,
-          error: 'User cancelled passkey creation',
-        );
-      }
-      return PasskeyRegistrationResult(
-        success: false,
-        error: 'Passkey creation failed: ${e.message}',
-      );
+      return PasskeyOperationResult.failure(_credentialErrorMessage(e));
     } catch (e) {
-      return PasskeyRegistrationResult(
-        success: false,
-        error: 'Passkey registration failed: ${e.toString()}',
-      );
+      return PasskeyOperationResult.failure(_mapPasskeyError(e));
     }
   }
 
-  /// Sign in with an existing passkey.
-  /// Returns the authenticated session on success.
-  Future<PasskeyAuthenticationResult> signInWithPasskey() async {
+  /// Sign in with a passkey (discoverable credential - no email required).
+  Future<PasskeyOperationResult> signInWithPasskey() async {
     final client = _client;
     if (client == null) {
-      return PasskeyAuthenticationResult(
-        success: false,
-        error: 'Weekend is not connected to a backend.',
+      return const PasskeyOperationResult.failure(
+        'Weekend is not connected to a backend.',
       );
     }
 
     try {
-      // Step 1: List MFA factors to find WebAuthn factors
-      final factors = await client.auth.mfa.listFactors();
-      final webauthnFactors = _getWebAuthnFactors(factors);
-      
-      if (webauthnFactors.isEmpty) {
-        return PasskeyAuthenticationResult(
-          success: false,
-          error: 'No passkey found. Please sign up first.',
-        );
-      }
+      // Step 1 - server challenge. This endpoint is UNAUTHENTICATED, which is
+      // exactly what makes usernameless sign-in possible.
+      final start = await client.auth.passkey.startAuthentication();
 
-      // Use the first verified WebAuthn factor
-      final factor = webauthnFactors.first;
+      // Step 2 - Credential Manager picks the credential and signs the
+      // challenge with user verification (biometrics or device PIN).
+      final credential = await _runAuthenticationCeremony(start.options);
 
-      // Step 2: Challenge the factor to get credential request options
-      final challenge = await client.auth.mfa.challenge(factorId: factor.id);
-      
-      final requestOptions = _extractCredentialRequestOptions(challenge);
-      if (requestOptions == null) {
-        log('Credential request options not found in MFA challenge response');
-        return PasskeyAuthenticationResult(
-          success: false,
-          error: 'Failed to get passkey sign-in options.',
-        );
-      }
-
-      final loginOptions = CredentialLoginOptions.fromJson(requestOptions);
-
-      // Step 3: Get passkey assertion using platform authenticator
-      final credential = await _getPasskeyAssertion(loginOptions);
-      if (credential == null) {
-        return PasskeyAuthenticationResult(
-          success: false,
-          error: 'Passkey authentication was cancelled or failed.',
-        );
-      }
-
-      // Step 4: Verify the assertion with Supabase
-      final response = credential.response;
-      if (response == null || 
-          response.authenticatorData == null || 
-          response.clientDataJSON == null || 
-          response.signature == null) {
-        return PasskeyAuthenticationResult(
-          success: false,
-          error: 'Invalid credential response.',
-        );
-      }
-
-      final authenticatorData = _base64UrlEncode(response.authenticatorData!);
-      final clientDataJson = _base64UrlEncode(response.clientDataJSON!);
-      final signature = _base64UrlEncode(response.signature!);
-      
-      final verificationCode = jsonEncode({
-        'authenticator_data': authenticatorData,
-        'client_data_json': clientDataJson,
-        'signature': signature,
-      });
-
-      await client.auth.mfa.verify(
-        factorId: factor.id,
-        challengeId: challenge.id,
-        code: verificationCode,
+      // Step 3 - server validates the assertion and issues a real session,
+      // which the SDK persists and broadcasts on the auth stream.
+      final response = await client.auth.passkey.verifyAuthentication(
+        challengeId: start.challengeId,
+        credential: credential,
       );
-
-      // Step 5: Obtain the session.
-      //
-      // `mfa.verify` promotes the session to AAL2 and installs it on the
-      // client. Returning `success: true` with a null session would tell the
-      // caller the user is signed in when no one is, so the missing session
-      // is reported as a failure with an actionable message.
-      final session = client.auth.currentSession;
+      final session = response.session;
       if (session == null) {
-        return const PasskeyAuthenticationResult(
-          success: false,
-          error:
-              'Passkey was accepted, but the session could not be '
-              'established. Please sign in with your email and password.',
+        return const PasskeyOperationResult.failure(
+          'Sign-in did not return a session. Please try again.',
         );
       }
-
-      return PasskeyAuthenticationResult(success: true, session: session);
-    } on CredentialException catch (e) {
-      if (e.code == 201 || e.code == 601) {
-        return const PasskeyAuthenticationResult(
-          success: false,
-          error: 'User cancelled passkey authentication',
-        );
-      }
-      return PasskeyAuthenticationResult(
-        success: false,
-        error: 'Passkey authentication failed: ${e.message}',
+      return PasskeyOperationResult.success(
+        message: 'Signed in',
+        session: session,
       );
+    } on CredentialException catch (e) {
+      return PasskeyOperationResult.failure(_credentialErrorMessage(e));
     } catch (e) {
-      return PasskeyAuthenticationResult(
-        success: false,
-        error: 'Passkey sign-in failed: ${e.toString()}',
+      return PasskeyOperationResult.failure(_mapPasskeyError(e));
+    }
+  }
+
+  /// Passkeys registered to the signed-in user (Settings -> Passkeys).
+  Future<List<Passkey>> listPasskeys() async {
+    final client = _client;
+    if (client == null) return const [];
+    if (client.auth.currentSession == null) return const [];
+    try {
+      return await client.auth.passkey.list();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Remove a passkey from the signed-in user.
+  Future<PasskeyOperationResult> deletePasskey(String passkeyId) async {
+    final client = _client;
+    if (client == null) {
+      return const PasskeyOperationResult.failure(
+        'Weekend is not connected to a backend.',
       );
     }
-  }
-
-  /// Get passkey registration options from Supabase Auth MFA enroll.
-  Map<String, dynamic>? _extractWebAuthnData(dynamic response) {
     try {
-      if (response is Map) {
-        if (response.containsKey('webAuthn')) {
-          final webauthn = response['webAuthn'];
-          if (webauthn is Map && webauthn.containsKey('credentialCreationOptions')) {
-            final options = webauthn['credentialCreationOptions'];
-            if (options is String) {
-              return jsonDecode(options) as Map<String, dynamic>;
-            } else if (options is Map<String, dynamic>) {
-              return options;
-            }
-          }
-        }
-        if (response.containsKey('credentialCreationOptions')) {
-          final options = response['credentialCreationOptions'];
-          if (options is String) {
-            return jsonDecode(options) as Map<String, dynamic>;
-          } else if (options is Map<String, dynamic>) {
-            return options;
-          }
-        }
-      }
-      
-      final webauthn = response.webAuthn;
-      if (webauthn != null) {
-        final options = webauthn.credentialCreationOptions;
-        if (options is String) {
-          return jsonDecode(options) as Map<String, dynamic>;
-        } else if (options is Map<String, dynamic>) {
-          return options;
-        }
-      }
+      await client.auth.passkey.delete(passkeyId: passkeyId);
+      return const PasskeyOperationResult.success(message: 'Passkey removed');
     } catch (e) {
-      log('Error extracting WebAuthn data: $e');
+      return PasskeyOperationResult.failure(_mapPasskeyError(e));
     }
-    return null;
   }
 
-  /// Extract WebAuthn factors from MFA list factors response.
-  List<dynamic> _getWebAuthnFactors(dynamic factors) {
-    try {
-      final webauthn = factors.webAuthn;
-      if (webauthn is List) {
-        return webauthn.where((f) => f.status == FactorStatus.verified).toList();
-      }
-      
-      if (factors is Map && factors.containsKey('webAuthn')) {
-        final list = factors['webAuthn'];
-        if (list is List) {
-          return list.where((f) => f['status'] == 'verified' || f.status == FactorStatus.verified).toList();
-        }
-      }
-    } catch (e) {
-      log('Error extracting WebAuthn factors: $e');
-    }
-    return [];
+  /// True when this build can attempt a passkey ceremony at all.
+  ///
+  /// Credential Manager has no capability probe of its own, so this reports
+  /// what is actually knowable client-side: that the platform plugin
+  /// initialised and the Supabase client is configured. It is NOT a claim that
+  /// a passkey is enrolled, nor that the project has passkeys enabled.
+  static Future<bool> isPasskeySupported() async {
+    if (!SupabaseConfig.isConfigured) return false;
+    if (SupabaseConfig.client == null) return false;
+    return defaultTargetPlatform == TargetPlatform.android;
   }
 
-  /// Extract credential request options from MFA challenge response.
-  Map<String, dynamic>? _extractCredentialRequestOptions(dynamic challenge) {
-    try {
-      if (challenge is Map && challenge.containsKey('credentialRequestOptions')) {
-        final options = challenge['credentialRequestOptions'];
-        if (options is String) {
-          return jsonDecode(options) as Map<String, dynamic>;
-        } else if (options is Map<String, dynamic>) {
-          return options;
-        }
-      }
-      
-      final options = challenge.credentialRequestOptions;
-      if (options is String) {
-        return jsonDecode(options) as Map<String, dynamic>;
-      } else if (options is Map<String, dynamic>) {
-        return options;
-      }
-    } catch (e) {
-      log('Error extracting credential request options: $e');
-    }
-    return null;
-  }
+  // ---------------------------------------------------------------------
+  // WebAuthn ceremonies
+  // ---------------------------------------------------------------------
 
-  /// Create a passkey credential using Android Credential Manager.
-  Future<PublicKeyCredential?> _createPasskeyCredential(
-    CredentialCreationOptions options,
+  /// `navigator.credentials.create()` equivalent on Android.
+  ///
+  /// Supabase returns W3C `PublicKeyCredentialCreationOptionsJSON` with
+  /// base64url binary fields, which is the shape Android Credential Manager
+  /// expects, so the options are handed over almost unchanged. The one
+  /// adjustment is `userVerification`, forced to `required` so a passkey can
+  /// never be created without a biometric / device-PIN check.
+  Future<Map<String, dynamic>> _runRegistrationCeremony(
+    Map<String, dynamic> options,
   ) async {
-    try {
-      final credentialManager = CredentialManagerPlatform.instance;
-      final credential = await credentialManager.savePasskeyCredentials(request: options);
-      return credential;
-    } on CredentialException catch (e) {
-      if (e.code == 601) {
-        throw PasskeyException('User cancelled passkey creation');
-      }
-      throw PasskeyException('Failed to create passkey: ${e.message}');
-    } catch (e) {
-      throw PasskeyException('Passkey creation error: $e');
-    }
+    final prepared = Map<String, dynamic>.from(options);
+    final selection = Map<String, dynamic>.from(
+      (options['authenticatorSelection'] as Map?) ?? const {},
+    );
+    selection['userVerification'] = 'required';
+    prepared['authenticatorSelection'] = selection;
+
+    final request = CredentialCreationOptions.fromJson(prepared);
+    final credential = await CredentialManagerPlatform.instance
+        .savePasskeyCredentials(request: request);
+    return _credentialToJson(credential);
   }
 
-  /// Get a passkey assertion using Android Credential Manager.
-  Future<PublicKeyCredential?> _getPasskeyAssertion(
-    CredentialLoginOptions options,
+  /// `navigator.credentials.get()` equivalent on Android.
+  Future<Map<String, dynamic>> _runAuthenticationCeremony(
+    Map<String, dynamic> options,
   ) async {
-    try {
-      final credentialManager = CredentialManagerPlatform.instance;
-      final credentials = await credentialManager.getCredentials(passKeyOption: options);
-      return credentials.publicKeyCredential;
-    } on CredentialException catch (e) {
-      if (e.code == 201 || e.code == 601) {
-        throw PasskeyException('User cancelled passkey authentication');
-      }
-      throw PasskeyException('Failed to get passkey assertion: ${e.message}');
-    } catch (e) {
-      throw PasskeyException('Passkey authentication error: $e');
+    final request = CredentialLoginOptions.fromJson(
+      Map<String, dynamic>.from(options),
+    );
+    final result = await CredentialManagerPlatform.instance
+        .getCredentials(passKeyOption: request);
+
+    final credential = result.publicKeyCredential;
+    if (credential == null) {
+      throw PasskeyException('Passkey sign-in returned no credential.');
+    }
+    return _credentialToJson(credential);
+  }
+
+  /// Convert the plugin's credential into the W3C JSON shape GoTrue verifies.
+  ///
+  /// The plugin already returns camelCase field names matching
+  /// `PublicKeyCredential.toJSON()`, so this is a straight serialisation.
+  /// `authenticatorAttachment` is included because GoTrue's WebAuthn verifier
+  /// reads it for the Android platform authenticator.
+  Map<String, dynamic> _credentialToJson(PublicKeyCredential credential) {
+    final response = credential.response;
+    if (response == null) {
+      throw PasskeyException('Malformed passkey response from the device.');
+    }
+    return <String, dynamic>{
+      'id': credential.id,
+      'rawId': credential.rawId ?? credential.id,
+      'type': credential.type ?? 'public-key',
+      'authenticatorAttachment':
+          credential.authenticatorAttachment ?? 'platform',
+      'response': <String, dynamic>{
+        'clientDataJSON': response.clientDataJSON,
+        'attestationObject': response.attestationObject,
+        'authenticatorData': response.authenticatorData,
+        'signature': response.signature,
+        'userHandle': response.userHandle,
+      },
+      'clientExtensionResults':
+          credential.clientExtensionResults?.toJson(),
+    };
+  }
+
+  // ---------------------------------------------------------------------
+  // Error mapping - never surface a raw SDK string to the user
+  // ---------------------------------------------------------------------
+
+  String _credentialErrorMessage(CredentialException e) {
+    switch (e.code) {
+      case 201: // no credential available
+      case 601: // cancelled by the user
+        return 'Passkey prompt cancelled.';
+      case 602:
+        return 'No passkey is set up on this device yet.';
+      default:
+        return 'Passkey could not be completed. Please try again.';
     }
   }
 
-  /// Helper to encode bytes to base64url, accepting `List<int>` or `String`.
-  static String _base64UrlEncode(dynamic input) {
-    if (input is List<int>) {
-      return base64Url.encode(input);
-    } else if (input is String) {
-      // If it's already a string, assume it's base64 or base64url encoded
-      // Convert to bytes first if it looks like base64
-      try {
-        return base64Url.encode(base64Url.decode(input));
-      } catch (_) {
-        // If decode fails, encode the string as UTF-8 bytes
-        return base64Url.encode(utf8.encode(input));
-      }
+  /// Translate Supabase/GoTrue errors into wording that is safe to show and
+  /// tells the user what to do next.
+  String _mapPasskeyError(Object e) {
+    if (e is PasskeyException) return e.message;
+    final text = e.toString();
+    if (text.contains('passkey_disabled')) {
+      return 'Passkeys are not enabled for Weekend yet. '
+          'Please use email and password to sign in.';
     }
-    return '';
+    if (text.contains('webauthn_challenge_expired') ||
+        text.contains('webauthn_challenge_not_found')) {
+      return 'That passkey request timed out. Please try again.';
+    }
+    if (text.contains('webauthn_credential_not_found')) {
+      return 'That passkey is not registered to this account.';
+    }
+    if (text.contains('webauthn_credential_exists')) {
+      return 'This device already has a passkey for Weekend.';
+    }
+    if (text.contains('email_not_confirmed')) {
+      return 'Confirm your email address before using a passkey.';
+    }
+    if (text.contains('user_banned')) {
+      return 'This account is not available.';
+    }
+    // Deliberately generic: raw driver/SDK text can leak implementation detail.
+    return 'Something went wrong with the passkey. Please try again.';
   }
 }
 
-/// Result of passkey registration.
-class PasskeyRegistrationResult {
+/// Result of a passkey operation (register / sign in / delete).
+class PasskeyOperationResult {
   final bool success;
   final String? error;
+  final String message;
+  final String? passkeyId;
+
+  /// Present only after a successful sign-in or another server-issued session.
   final Session? session;
 
-  const PasskeyRegistrationResult({
+  const PasskeyOperationResult({
     required this.success,
     this.error,
+    this.message = '',
+    this.passkeyId,
     this.session,
   });
-}
 
-/// Result of passkey authentication.
-class PasskeyAuthenticationResult {
-  final bool success;
-  final String? error;
-  final Session? session;
-
-  const PasskeyAuthenticationResult({
-    required this.success,
-    this.error,
+  const PasskeyOperationResult.success({
+    required this.message,
+    this.passkeyId,
     this.session,
-  });
+  }) : success = true,
+       error = null;
+
+  const PasskeyOperationResult.failure(String this.error)
+    : success = false,
+      message = '',
+      passkeyId = null,
+      session = null;
 }
 
 /// Custom exception for passkey operations.

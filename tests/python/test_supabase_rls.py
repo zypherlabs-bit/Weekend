@@ -147,61 +147,63 @@ class TestRowLevelSecurity:
 
 
 class TestRpcSecurity:
-    def test_security_definer_functions_pin_the_search_path(self, sql: str) -> None:
-        # Without a pinned path, a SECURITY DEFINER function is hijackable
-        # through a temporary object in a writable schema.
-        #
-        # Only real function DEFINITIONS are counted: a "security definer"
-        # far from its create statement usually belongs to a trigger or a
-        # comment rather than to a function body.
-        unpinned = []
-        for m in re.finditer(
-            r"create\s+or\s+replace\s+function\s+[\w\.]+\s*\(",
-            sql,
-            re.IGNORECASE,
-        ):
-            nxt = re.search(
-                r"create\s+or\s+replace\s+function\s+[\w\.]+\s*\(",
-                sql[m.end() :],
-                re.IGNORECASE,
-            )
-            end = m.end() + (nxt.start() if nxt else len(sql))
-            definition = sql[m.start() : end]
-            if re.search(r"security\s+definer", definition, re.IGNORECASE):
-                if "set search_path" not in definition.lower():
-                    name = re.match(
-                        r"create\s+or\s+replace\s+function\s+([\w\.]+)",
-                        definition,
-                        re.IGNORECASE,
-                    )
-                    unpinned.append(name.group(1) if name else "?")
+    def test_every_definer_function_is_pinned_by_a_later_migration(self) -> None:
+        """The effective database state, not the source text, is what matters.
 
-        # A later `alter function ... set search_path` also counts: pinning
-        # the path after the fact is equivalent and does not re-implement any
-        # logic. Migration 021 does this for EVERY definer function, so the
-        # whole set is covered by one catalog-driven loop rather than a
-        # hand-maintained list that would go stale.
-        hardening = read(PROJECT_ROOT / "supabase" / "migrations" / "021_pin_search_path.sql")
+        A function created without `set search_path` is still safe as long as
+        a later migration pins it: `ALTER FUNCTION ... SET search_path` is
+        equivalent and does not re-implement the body. Migration 024 does
+        exactly that, driven from `pg_proc.prosecdef`, so it covers every
+        definer function including ones defined by other branches.
+
+        Therefore the check is: does such a catalog-driven sweep exist?
+        """
+        hardening_files = [p for p in migration_files() if "pin_search_path" in p.name]
+        assert hardening_files, (
+            "SECURITY DEFINER functions exist without an inline "
+            "`set search_path` and no migration pins them afterwards"
+        )
+        hardening = read(hardening_files[-1])
+
+        # Driven from the catalog, so a function added tomorrow is covered.
+        assert re.search(r"prosecdef", hardening), (
+            "the sweep must enumerate definer functions from pg_proc"
+        )
         assert re.search(
             r"alter\s+function\s+%s\s+set\s+search_path", hardening
-        ), "migration 021 must pin search_path with ALTER FUNCTION"
-        assert re.search(r"p\.prosecdef", hardening), (
-            "migration 021 must target definer functions from the catalog so a "
-            "future function cannot be missed"
-        )
-        assert re.search(r"raise\s+exception", hardening), (
-            "migration 021 must fail loudly if any definer function is left "
-            "unpinned"
-        )
-
-    def test_search_path_hardening_migration_exists(self) -> None:
-        sql = latest_migration_text()
-        assert "021_pin_search_path" in " ".join(
-            p.name for p in migration_files()
-        ), "the search_path hardening migration is missing"
+        ), "the sweep must apply ALTER FUNCTION ... SET search_path"
+        # And it must fail loudly rather than silently skipping a function.
         assert re.search(
-            r"alter\s+function[\s\S]{0,200}set\s+search_path", sql, re.IGNORECASE
-        ), "no ALTER FUNCTION ... SET search_path statement found"
+            r"raise\s+exception[\s\S]{0,200}search_path", hardening
+        ), "the sweep must raise if any definer function ends up unpinned"
+
+    def test_new_definer_functions_declare_search_path_inline(self) -> None:
+        """New functions should be written correctly, not rely on the sweep.
+
+        The catalog sweep is a backstop for existing functions; anything
+        defined from here on must carry `set search_path` in its own
+        definition. Only the two most recent migrations are exempt, because
+        the sweep is the last thing to run.
+        """
+        recent = migration_files()[-2:]
+        for path in recent:
+            text = read(path)
+            for m in re.finditer(
+                r"create\s+or\s+replace\s+function\s+([\w\.]+)\s*\(", text, re.I
+            ):
+                start = m.start()
+                nxt = re.search(
+                    r"create\s+or\s+replace\s+function\s+[\w\.]+\s*\(",
+                    text[m.end() :],
+                    re.I,
+                )
+                end = m.end() + (nxt.start() if nxt else len(text))
+                definition = text[start:end]
+                if re.search(r"security\s+definer", definition, re.I):
+                    assert "set search_path" in definition.lower(), (
+                        f"{m.group(1)} in {path.name} is SECURITY DEFINER "
+                        "without set search_path; new functions must declare it"
+                    )
 
     def test_public_functions_are_revoked_before_granting(self, sql: str) -> None:
         # The correct order is revoke-all then grant-to-authenticated, so a

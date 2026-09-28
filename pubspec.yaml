@@ -11,7 +11,9 @@ dependencies:
     sdk: flutter
 
   # Supabase
-  supabase_flutter: ^2.8.4
+  # supabase_flutter >= 2.15.0 is REQUIRED for native passkeys: the
+  # GoTrueClientPasskey API (client.auth.passkey.*) does not exist below it.
+  supabase_flutter: ^2.15.0
   supabase: ^2.6.3
 
   # State Management

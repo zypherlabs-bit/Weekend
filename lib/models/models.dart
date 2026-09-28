@@ -1,3 +1,266 @@
+/// Immutable description of an ADVANCED SEARCH request.
+///
+/// Every field maps 1:1 to a parameter of the `search_profiles` Postgres
+/// function, which is where the filters are actually enforced. The client
+/// never filters a downloaded list itself - it sends this and renders exactly
+/// what the database returns.
+///
+/// `null` / empty means "not filtered". There is deliberately no "ignore age"
+/// escape hatch: [ageMin] and [ageMax] are a hard filter, and a profile whose
+/// age is unknown is excluded rather than silently passed.
+class SearchFilters {
+  /// Maximum distance from the search origin, in kilometres.
+  final double maxDistanceKm;
+
+  /// Explicit search origin, used by Travel and Explore. When null the
+  /// database uses the seeker's own stored position.
+  ///
+  /// These are the SEEKER's coordinates (or a destination they typed and the
+  /// app geocoded). No other user's coordinates ever reach the client.
+  final double? searchLat;
+  final double? searchLon;
+
+  /// Free-text city, kept for display and for the city hard filter.
+  final String? searchCity;
+
+  /// Genders to show.
+  final List<String> genders;
+
+  /// Who the seeker is interested in. Same vocabulary as [genders].
+  final List<String> interestedIn;
+
+  final int? ageMin;
+  final int? ageMax;
+
+  final List<String> relationshipIntents;
+  final List<String> cities;
+  final List<String> interests;
+  final List<String> languages;
+
+  final String? smoking;
+  final String? drinking;
+  final String? exercise;
+  final String? children;
+  final String? pets;
+
+  /// Include profiles the user has already liked, passed or matched.
+  ///
+  /// Off by default: those are excluded from the deck. Turning it on is how
+  /// the user searches a wider population deliberately.
+  final bool includeDealt;
+
+  const SearchFilters({
+    this.maxDistanceKm = 50,
+    this.searchLat,
+    this.searchLon,
+    this.searchCity,
+    this.genders = const [],
+    this.interestedIn = const [],
+    this.ageMin,
+    this.ageMax,
+    this.relationshipIntents = const [],
+    this.cities = const [],
+    this.interests = const [],
+    this.languages = const [],
+    this.smoking,
+    this.drinking,
+    this.exercise,
+    this.children,
+    this.pets,
+    this.includeDealt = false,
+  });
+
+  /// True when the user has narrowed the search in any way.
+  bool get hasActiveFilters =>
+      genders.isNotEmpty ||
+      interestedIn.isNotEmpty ||
+      ageMin != null ||
+      ageMax != null ||
+      relationshipIntents.isNotEmpty ||
+      cities.isNotEmpty ||
+      interests.isNotEmpty ||
+      languages.isNotEmpty ||
+      smoking != null ||
+      drinking != null ||
+      exercise != null ||
+      children != null ||
+      pets != null;
+
+  /// A short human summary for the "N filters active" affordance.
+  int get activeFilterCount {
+    var n = 0;
+    if (genders.isNotEmpty) n++;
+    if (interestedIn.isNotEmpty) n++;
+    if (ageMin != null || ageMax != null) n++;
+    if (relationshipIntents.isNotEmpty) n++;
+    if (cities.isNotEmpty) n++;
+    if (interests.isNotEmpty) n++;
+    if (languages.isNotEmpty) n++;
+    if (smoking != null) n++;
+    if (drinking != null) n++;
+    if (exercise != null) n++;
+    if (children != null) n++;
+    if (pets != null) n++;
+    return n;
+  }
+
+  /// Reset everything except the radius and the chosen origin, which are the
+  /// user's discovery context rather than a filter.
+  SearchFilters cleared() => SearchFilters(
+    maxDistanceKm: maxDistanceKm,
+    searchLat: searchLat,
+    searchLon: searchLon,
+    searchCity: searchCity,
+  );
+
+  SearchFilters copyWith({
+    double? maxDistanceKm,
+    double? searchLat,
+    double? searchLon,
+    String? searchCity,
+    List<String>? genders,
+    List<String>? interestedIn,
+    int? ageMin,
+    int? ageMax,
+    List<String>? relationshipIntents,
+    List<String>? cities,
+    List<String>? interests,
+    List<String>? languages,
+    String? smoking,
+    String? drinking,
+    String? exercise,
+    String? children,
+    String? pets,
+    bool? includeDealt,
+    bool clearAge = false,
+    bool clearSmoking = false,
+    bool clearDrinking = false,
+    bool clearExercise = false,
+    bool clearChildren = false,
+    bool clearPets = false,
+    bool clearSearchCity = false,
+  }) {
+    return SearchFilters(
+      maxDistanceKm: maxDistanceKm ?? this.maxDistanceKm,
+      searchLat: searchLat ?? this.searchLat,
+      searchLon: searchLon ?? this.searchLon,
+      searchCity: clearSearchCity ? null : (searchCity ?? this.searchCity),
+      genders: genders ?? this.genders,
+      interestedIn: interestedIn ?? this.interestedIn,
+      ageMin: clearAge ? null : (ageMin ?? this.ageMin),
+      ageMax: clearAge ? null : (ageMax ?? this.ageMax),
+      relationshipIntents: relationshipIntents ?? this.relationshipIntents,
+      cities: cities ?? this.cities,
+      interests: interests ?? this.interests,
+      languages: languages ?? this.languages,
+      smoking: clearSmoking ? null : (smoking ?? this.smoking),
+      drinking: clearDrinking ? null : (drinking ?? this.drinking),
+      exercise: clearExercise ? null : (exercise ?? this.exercise),
+      children: clearChildren ? null : (children ?? this.children),
+      pets: clearPets ? null : (pets ?? this.pets),
+      includeDealt: includeDealt ?? this.includeDealt,
+    );
+  }
+
+  /// Wire format for the `search_profiles` RPC.
+  ///
+  /// Empty arrays stay empty (the function treats that as "no filter"); nulls
+  /// stay null so the function's own default applies. Nothing is invented
+  /// here - the database re-validates every value.
+  Map<String, dynamic> toRpcParams(
+    String userId, {
+    int limit = 20,
+    int offset = 0,
+  }) {
+    return <String, dynamic>{
+      'p_user_id': userId,
+      'p_limit': limit,
+      'p_offset': offset,
+      'p_max_distance_km': maxDistanceKm,
+      'p_search_lat': searchLat,
+      'p_search_lon': searchLon,
+      'p_search_city': searchCity,
+      'p_genders': genders,
+      'p_age_min': ageMin,
+      'p_age_max': ageMax,
+      'p_interested_in': interestedIn,
+      'p_relationship_intents': relationshipIntents,
+      'p_cities': cities,
+      'p_interests': interests,
+      'p_languages': languages,
+      'p_smoking': smoking,
+      'p_drinking': drinking,
+      'p_exercise': exercise,
+      'p_children': children,
+      'p_pets': pets,
+      'p_include_dealt': includeDealt,
+    };
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is SearchFilters &&
+      other.maxDistanceKm == maxDistanceKm &&
+      other.searchLat == searchLat &&
+      other.searchLon == searchLon &&
+      other.searchCity == searchCity &&
+      _listEquals(other.genders, genders) &&
+      _listEquals(other.interestedIn, interestedIn) &&
+      other.ageMin == ageMin &&
+      other.ageMax == ageMax &&
+      _listEquals(other.relationshipIntents, relationshipIntents) &&
+      _listEquals(other.cities, cities) &&
+      _listEquals(other.interests, interests) &&
+      _listEquals(other.languages, languages) &&
+      other.smoking == smoking &&
+      other.drinking == drinking &&
+      other.exercise == exercise &&
+      other.children == children &&
+      other.pets == pets &&
+      other.includeDealt == includeDealt;
+
+  @override
+  int get hashCode => Object.hash(
+    maxDistanceKm,
+    searchLat,
+    searchLon,
+    searchCity,
+    Object.hashAll(genders),
+    Object.hashAll(interestedIn),
+    ageMin,
+    ageMax,
+    Object.hashAll(relationshipIntents),
+    Object.hashAll(cities),
+    Object.hashAll(interests),
+    Object.hashAll(languages),
+    smoking,
+    drinking,
+    exercise,
+    children,
+    pets,
+    includeDealt,
+  );
+}
+
+bool _listEquals(List<String> a, List<String> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
+/// One page of search results plus the metadata the UI needs.
+class SearchResults {
+  final List<UserProfile> profiles;
+
+  /// True when the server returned fewer rows than requested, i.e. the end of
+  /// the result set was reached.
+  final bool reachedEnd;
+
+  const SearchResults({required this.profiles, required this.reachedEnd});
+}
+
 class ProfilePrompt {
   final String prompt;
   final String answer;

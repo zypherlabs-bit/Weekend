@@ -21,6 +21,7 @@ import '../features/discovery/preferred_match_screen.dart';
 import '../features/discovery/location_permission_screen.dart';
 
 import '../features/discovery/location_settings_screen.dart';
+import '../features/discovery/search_screen.dart';
 import '../features/qr/qr.dart';
 import '../features/safety/safety_center_screen.dart';
 
@@ -200,6 +201,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/open-source',
         builder: (context, state) => const AboutOpenSourceScreen(),
+      ),
+      GoRoute(
+        path: '/search',
+        builder: (context, state) => const SearchScreen(),
       ),
       GoRoute(
         path: '/safety-center',

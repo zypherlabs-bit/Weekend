@@ -31,6 +31,10 @@ Future<void> main() async {
       await Supabase.initialize(
         url: SupabaseConfig.url,
         publishableKey: SupabaseConfig.anonKey,
+        // NOTE: `client.auth.passkey` (Supabase's native WebAuthn API) is a
+        // plain field on GoTrueClient in gotrue >= 2.27 and needs no opt-in
+        // flag. Earlier SDKs gated it behind `auth.experimental.passkey`; that
+        // gate no longer exists, so nothing extra is required here.
       );
     } catch (e) {
       debugPrint('Supabase initialization failed; running unconfigured: $e');

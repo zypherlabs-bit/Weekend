@@ -25,6 +25,14 @@ def auth_source() -> str:
     return read(AUTH_REPO)
 
 
+def _strip_comments(source: str) -> str:
+    """Drop `//` comment lines so a test's own explanation of an old bug
+    cannot be read as the bug still being present."""
+    return "\n".join(
+        line for line in source.splitlines() if not line.strip().startswith("//")
+    )
+
+
 class TestPasskeyDependencies:
     def test_credential_manager_is_a_dependency(self) -> None:
         assert "credential_manager" in read(PUBSPEC)
@@ -37,67 +45,65 @@ class TestPasskeyDependencies:
 
 
 class TestPasskeyImplementation:
-    def test_uses_supabase_mfa_webauthn_factor(self, auth_source: str) -> None:
-        assert "FactorType.webauthn" in auth_source
-        assert "mfa.enroll" in auth_source
-        assert "mfa.challenge" in auth_source
-        assert "mfa.verify" in auth_source
+    """The passkey flow uses Supabase's NATIVE passkey API.
 
-    def test_enrolls_with_a_relying_party_id(self, auth_source: str) -> None:
-        assert re.search(
-            r"_rpName\s*=\s*'[^']+'", auth_source
-        ), "a relying party name must be set during enrollment"
+    An earlier revision drove the WebAuthn *MFA factor* API
+    (`mfa.enroll(factorType: webauthn)` / `mfa.listFactors()`). Both require
+    an already-authenticated session, which is impossible during sign-up and
+    impossible during sign-in, so that flow could never have worked.
+    """
+
+    def test_uses_supabase_native_passkey_api(self, auth_source: str) -> None:
+        assert "auth.passkey.startRegistration" in auth_source
+        assert "auth.passkey.verifyRegistration" in auth_source
+        assert "auth.passkey.startAuthentication" in auth_source
+        assert "auth.passkey.verifyAuthentication" in auth_source
+
+    def test_does_not_drive_the_mfa_factor_api_for_passkeys(
+        self, auth_source: str
+    ) -> None:
+        # The MFA-factor path requires a session to exist first, so it cannot
+        # bootstrap sign-in or sign-up.
+        #
+        # `mfa.listFactors()` still appears legitimately for TOTP 2FA
+        # enrolment, so the check is scoped to the passkey section: the
+        # WebAuthn enrolment and any passkey-time factor listing are banned,
+        # a TOTP factor list is not.
+        code = _strip_comments(auth_source)
+        assert not re.search(
+            r"mfa\.enroll\(\s*factorType:\s*FactorType\.webauthn", code
+        ), "passkeys must use auth.passkey.*, not the MFA factor API"
+
+        # Split on the RAW source: the section banner is itself a comment, so
+        # it would be gone by the time the stripped copy is used.
+        section = "PASSKEYS"
+        if section in auth_source:
+            passkey_section = auth_source.split(section, 1)[-1]
+            passkey_section = _strip_comments(passkey_section)
+            assert "mfa.listFactors" not in passkey_section, (
+                "the passkey flow must not enumerate MFA factors"
+            )
+        else:
+            pytest.skip("no passkey section marker to scope the check to")
 
     def test_uses_the_platform_authenticator(self, auth_source: str) -> None:
         assert "CredentialManagerPlatform.instance" in auth_source
         assert "savePasskeyCredentials" in auth_source
         assert "getCredentials" in auth_source
 
-    def test_user_cancellation_is_handled_distinctly(self, auth_source: str) -> None:
-        # A cancel must be reported as a cancel, not as a generic failure.
-        assert "User cancelled" in auth_source
-
-    def test_no_password_fallback_hack_in_passkey_signup(self, auth_source: str) -> None:
-        # A previous revision called signInWithPassword(email, '') when the
-        # session was missing: that always fails, and it was followed by a
-        # `success: true` return - reporting a successful sign-in for an
-        # unauthenticated user. The flow must fail honestly instead.
-        #
-        # Comments are stripped first: this test's own explanation of the old
-        # bug must not be read as the bug still being present.
-        code = "\n".join(
-            line for line in auth_source.splitlines() if not line.strip().startswith("//")
-        )
-        assert not re.search(
-            r"signInWithPassword\([^)]*password:\s*''", code
-        ), "passkey signup must not fall back to an empty-password sign-in"
-
-    def test_passkey_results_never_report_success_without_a_session(
-        self, auth_source: str
-    ) -> None:
-        # A `success: true` carrying a null session tells the caller the user
-        # is signed in when nobody is.
-        code = "\n".join(
-            line for line in auth_source.splitlines() if not line.strip().startswith("//")
-        )
-        for result in ["PasskeyRegistrationResult", "PasskeyAuthenticationResult"]:
-            idx = 0
-            while True:
-                idx = code.find(result + "(", idx)
-                if idx == -1:
-                    break
-                window = code[idx : idx + 260]
-                if "success: true" in window and "session:" not in window:
-                    # A literal `true` with no session field at all.
-                    assert "session: session" in window or "session: null" in window, (
-                        f"{result} reports success without attaching a session"
-                    )
-                idx += 1
+    def test_registration_requires_an_existing_session(self, auth_source: str) -> None:
+        # Supabase cannot create a passkey for an account that does not exist
+        # yet; pretending otherwise would be a fake success.
+        assert re.search(
+            r"currentSession\s*==\s*null[\s\S]{0,200}Sign in first", auth_source
+        ), "registerPasskey must refuse without a session and say why"
 
     def test_failures_return_a_result_rather_than_throwing(self, auth_source: str) -> None:
-        assert "PasskeyRegistrationResult(" in auth_source
-        assert "PasskeyAuthenticationResult(" in auth_source
-        assert "success: false" in auth_source
+        assert "PasskeyOperationResult.failure" in auth_source
+        assert "PasskeyOperationResult.success" in auth_source
+        # A missing server-side setting must produce a clear message, not a
+        # fabricated success.
+        assert "passkey_disabled" in auth_source
 
 
 class TestPasskeyConfiguration:

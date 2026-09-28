@@ -145,6 +145,127 @@ class DiscoveryRepository {
     return parts.join(' • ');
   }
 
+  /// Run an ADVANCED SEARCH against the server-side `search_profiles` RPC.
+  ///
+  /// This is the only place advanced filtering happens, and it happens in the
+  /// database. The client never downloads a broad result set and narrows it
+  /// locally - that would be both slow and, more importantly, would let a
+  /// manipulated client show profiles that violate the user's own hard
+  /// filters.
+  ///
+  /// Every returned row is guaranteed to satisfy every hard filter in
+  /// [filters]. An empty list therefore genuinely means "nothing matched all
+  /// your filters", never "the filter was quietly dropped".
+  Future<SearchResults> searchProfiles(
+    SearchFilters filters, {
+    required String userId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final client = _client;
+    if (client == null) {
+      return const SearchResults(profiles: [], reachedEnd: true);
+    }
+
+    try {
+      final result = await client.rpc(
+        'search_profiles',
+        params: filters.toRpcParams(userId, limit: limit, offset: offset),
+      );
+
+      final rows = (result as List?) ?? const [];
+      if (rows.isEmpty) {
+        return SearchResults(profiles: const [], reachedEnd: true);
+      }
+
+      // Resolve private photo storage paths to signed URLs in one batch.
+      final paths = rows
+          .map((row) => row['primary_photo_path'] as String? ?? '')
+          .where((p) => p.isNotEmpty)
+          .toSet()
+          .toList();
+      final photoUrls = await PhotoUrlService.resolve(paths);
+
+      final profiles = rows
+          .map((row) => _mapSearchRow(row as Map<String, dynamic>, photoUrls))
+          .toList();
+
+      // A short page means the server has nothing more.
+      return SearchResults(
+        profiles: profiles,
+        reachedEnd: rows.length < limit,
+      );
+    } catch (e) {
+      // A failed search must never masquerade as "no matches" - the user
+      // would be told to widen filters that were never applied. Returning an
+      // empty result with reachedEnd=false keeps the UI in the error state.
+      return const SearchResults(profiles: [], reachedEnd: false);
+    }
+  }
+
+  /// Map one `search_profiles` row to a [UserProfile].
+  ///
+  /// Age is NULL-safe: the database now returns NULL instead of a fabricated
+  /// 25, and [UserProfile.age] stays 0 so the UI can say "Age not stated"
+  /// rather than inventing one.
+  UserProfile _mapSearchRow(
+    Map<String, dynamic> row,
+    Map<String, String?> photoUrls,
+  ) {
+    final photoPath = row['primary_photo_path'] as String? ?? '';
+    final photoUrl = photoPath.isEmpty ? null : photoUrls[photoPath];
+    final interests = (row['interests'] as List?)?.cast<String>() ?? const [];
+    final languages = (row['languages'] as List?)?.cast<String>() ?? const [];
+    final distanceKm = (row['distance_km'] as num?)?.toDouble();
+
+    // The server already produced a privacy-safe label ("Nearby",
+    // "12 km away", "Pune"). Never recompute or display raw coordinates.
+    final distanceLabel =
+        (row['distance_label'] as String?)?.trim().isNotEmpty == true
+        ? row['distance_label'] as String
+        : 'Nearby';
+
+    final age = (row['age'] as num?)?.toInt() ?? 0;
+    final shared = interests.take(3).toList();
+
+    return UserProfile(
+      id: row['profile_id'] as String? ?? '',
+      name: _displayName(row['display_name']),
+      age: age,
+      gender: row['gender'] as String? ?? 'Prefer not to say',
+      photos: photoUrl == null ? const [] : [photoUrl],
+      city: row['city'] as String? ?? '',
+      distanceKm: distanceKm?.round() ?? 0,
+      distanceDisplay: distanceLabel,
+      bio: row['bio'] as String? ?? '',
+      relationshipIntent: row['relationship_intent'] as String? ?? 'Dating',
+      interests: interests,
+      languages: languages,
+      commonInterests: shared,
+      isPhotoVerified: row['is_photo_verified'] as bool? ?? false,
+      trustScore: (row['trust_score'] as num?)?.toInt() ?? 50,
+      compatibilityExplanation: _buildSearchExplanation(
+        distanceLabel,
+        row['is_photo_verified'] as bool? ?? false,
+        (row['trust_score'] as num?)?.toInt() ?? 50,
+        (row['compatibility_score'] as num?)?.toDouble() ?? 0,
+      ),
+    );
+  }
+
+  String _buildSearchExplanation(
+    String distanceLabel,
+    bool isVerified,
+    int trustScore,
+    double compatibilityScore,
+  ) {
+    final parts = <String>[];
+    if (distanceLabel.isNotEmpty) parts.add(distanceLabel);
+    if (isVerified) parts.add('verified');
+    if (trustScore > 80) parts.add('high trust');
+    return parts.join(' • ');
+  }
+
   /// Fetch profile photos from the privacy-safe storage bucket.
   /// Only approved, moderated photos are returned, as short-lived signed
   /// URLs minted by the `get-photo-urls` Edge Function.

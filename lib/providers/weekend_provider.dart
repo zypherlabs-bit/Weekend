@@ -13,6 +13,7 @@ import '../repositories/match_repository.dart';
 import '../repositories/message_repository.dart';
 import '../repositories/plan_repository.dart';
 import '../repositories/profile_repository.dart';
+import '../repositories/profile_save_error.dart';
 import '../repositories/safety_repository.dart';
 import '../services/location_service.dart';
 
@@ -685,23 +686,25 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
 
   /// Persist the signed-in user's profile to LIVE Supabase.
   ///
-  /// Every write is addressed to the id from the Supabase **auth session**,
-  /// not to `profile.id`. `WeekendState.initial()` seeds a placeholder profile
-  /// with `id == 'me'`; writing to that id matches zero rows, and PostgREST
-  /// reports a zero-row UPDATE as a success — which is exactly how Edit
-  /// Profile could report "Profile updated successfully!" while persisting
-  /// nothing and never advancing.
+  /// The primary write goes through [ProfileRepository.updateProfile], which
+  /// addresses the id from the Supabase **auth session** (never
+  /// `profile.id` — `WeekendState.initial()` seeds the `'me'` placeholder)
+  /// and recovers from a missing profile row by inserting it under the
+  /// caller's own id. Any failure is rethrown as a classified
+  /// [ProfileSaveException] so the UI can show actionable text, and local
+  /// state only changes after the database confirmed the write.
   ///
-  /// The `profiles` write is verified (`.select('id')`) before any dependent
-  /// writes run, and a failure is rethrown so the UI can show it. Local state
-  /// is only updated after the database confirmed the change.
+  /// The bio is pre-checked against the 014 social-media policy RPC before
+  /// anything is written so blocked content fails fast with a clear message.
+  /// The database trigger stays the enforcement authority: if the RPC is
+  /// unavailable the save proceeds and the trigger decides.
   ///
-  /// The secondary writes (interests, weekend availability) are reported
-  /// instead of thrown: they used to run inside this same try/catch, so a
-  /// single failing auxiliary write rolled back the *reported* outcome of a
-  /// profile save that had in fact succeeded, leaving the user stuck on the
-  /// screen with a "failed" message. The returned list is empty when every
-  /// part persisted.
+  /// The secondary writes (interests, weekend availability, restoring a
+  /// missing `preferences` row) are reported instead of thrown: they used to
+  /// run inside this same try/catch, so a single failing auxiliary write
+  /// rolled back the *reported* outcome of a profile save that had in fact
+  /// succeeded, leaving the user stuck on the screen with a "failed" message.
+  /// The returned list is empty when every part persisted.
   Future<List<String>> updateProfile(UserProfile profile) async {
     final client = _client;
     if (client == null) {
@@ -709,49 +712,45 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     }
     final authId = client.auth.currentUser?.id;
     if (authId == null || authId == 'unauthenticated' || authId == 'me') {
-      throw StateError(
-        'You are not signed in, so the profile could not be saved.',
+      const error = ProfileSaveException(
+        ProfileSaveFailure.auth,
+        stage: 'auth.session',
       );
+      error.log('no authenticated user');
+      throw error;
     }
 
-    // ---- Primary write: the profile itself. Failing here is a real failure. --
-    try {
-      final updated = await client
-          .from('profiles')
-          .update({
-            'display_name': profile.name,
-            'bio': profile.bio,
-            'city': profile.city,
-            'gender': profile.gender,
-            'relationship_intent': profile.relationshipIntent,
-            'occupation': profile.occupation,
-            'education': profile.education,
-            'favorite_music': profile.favoriteMusic,
-            'ideal_weekend': profile.idealWeekend,
-          })
-          .eq('id', authId)
-          .select('id')
-          .limit(1);
-
-      if (updated.isEmpty) {
-        // RLS silently filters unmatched rows, so this is how a blocked or
-        // missing profile row surfaces. Never report it as a success.
-        throw StateError(
-          'The server did not save your profile. Please try again.',
+    // ---- Bio policy pre-check (014): fail fast, before any write. ----------
+    final bio = profile.bio.trim();
+    if (bio.isNotEmpty) {
+      try {
+        final detection = await client.rpc(
+          'detect_social_media_in_text',
+          params: {'p_text': bio},
         );
+        if (detection is Map && detection['detected'] == true) {
+          const error = ProfileSaveException(
+            ProfileSaveFailure.validation,
+            stage: 'bio.precheck',
+          );
+          error.log();
+          throw error;
+        }
+      } on ProfileSaveException {
+        rethrow;
+      } catch (e) {
+        // Pre-check unavailable (older backend) or transient failure: the
+        // save proceeds and the server-side trigger enforces the policy.
+        debugPrint('bio pre-check skipped (${e.runtimeType})');
       }
-    } on StateError {
-      rethrow;
-    } catch (e) {
-      debugPrint('Failed to update profile: $e');
-      // PostgREST failures arrive as opaque "server error" text. The two
-      // live causes are a schema/check mismatch (relationship-intent label,
-      // social-media bio trigger, column grant) and an RLS rejection — map
-      // them to something the user can act on.
-      throw StateError(_profileSaveErrorMessage(e));
     }
 
-    // ---- Secondary writes: reported, never silently swallowed. --------------
+    // ---- Primary write: the profile itself (with orphan recovery). ---------
+    // Throws a classified ProfileSaveException; a save that changed nothing
+    // is never reported as a success.
+    await _profileRepo.updateProfile(profile);
+
+    // ---- Secondary writes: reported, never silently swallowed. -------------
     final warnings = <String>[];
 
     if (profile.interests.isNotEmpty) {
@@ -773,58 +772,59 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
           });
         }
       } catch (e) {
-        debugPrint('Failed to update interests: $e');
+        // Code/type only: an interest name is user content, never logged.
+        debugPrint(
+          'interests write failed (${e.runtimeType}) '
+          '${classifyProfileSaveError(e).code}',
+        );
         warnings.add('Your interests were not saved.');
       }
     }
 
     try {
-      await client.from('user_settings').upsert({
-        'user_id': authId,
-        'weekend_availability': profile.weekendAvailability,
-      });
+      // `onConflict: user_id` pins the upsert to the per-user unique row so
+      // it can never target anything else.
+      await client.from('user_settings').upsert(
+        {
+          'user_id': authId,
+          'weekend_availability': profile.weekendAvailability,
+        },
+        onConflict: 'user_id',
+      );
     } catch (e) {
-      debugPrint('Failed to update weekend availability: $e');
+      debugPrint(
+        'weekend availability write failed (${e.runtimeType}) '
+        '${classifyProfileSaveError(e).code}',
+      );
       warnings.add('Your weekend availability was not saved.');
+    }
+
+    // The signup trigger creates this row, but an account orphaned before the
+    // trigger existed would have `profiles` without `preferences`. Restore it
+    // here so discovery preferences keep working for repaired accounts.
+    try {
+      final prefs = await client
+          .from('preferences')
+          .select('id')
+          .eq('user_id', authId)
+          .limit(1);
+      if (prefs.isEmpty) {
+        await client.from('preferences').insert({'user_id': authId});
+      }
+    } catch (e) {
+      // A concurrent save inserting the same row (23505) is fine.
+      final raced = e is PostgrestException && e.code == '23505';
+      if (!raced) {
+        debugPrint(
+          'preferences restore failed (${e.runtimeType}) '
+          '${classifyProfileSaveError(e).code}',
+        );
+        warnings.add('Your discovery preferences could not be restored.');
+      }
     }
 
     state = state.copyWith(currentUser: profile.copyWith(id: authId));
     return warnings;
-  }
-
-  /// Map a `profiles` UPDATE failure to actionable text.
-  ///
-  /// The save writes exactly the columns migration 006 grants to clients, so
-  /// a rejection is one of: an RLS/ownership rejection (stale session), a
-  /// CHECK violation (relationship-intent label or the social-media bio
-  /// trigger from 014), or a missing-column error when the live database is
-  /// behind the app's migrations. The raw PostgREST message would otherwise
-  /// surface as "unable to proceed".
-  static String _profileSaveErrorMessage(Object e) {
-    final msg = e.toString().toLowerCase();
-    if (msg.contains('row-level security') ||
-        msg.contains('rls') ||
-        msg.contains('policy') ||
-        msg.contains('42501') ||
-        msg.contains('not authorized')) {
-      return 'Your profile could not be saved. Please sign out and sign back '
-          'in, then try again.';
-    }
-    if (msg.contains('relationship_intent') ||
-        msg.contains('check constraint') ||
-        msg.contains('23514')) {
-      return 'Your profile could not be saved. Please re-select your dating '
-          'preference and try again.';
-    }
-    if (msg.contains('social media') || msg.contains('validate_profile_bio')) {
-      return 'Your bio contains a social media handle or link, which is not '
-          'allowed. Please remove it and try again.';
-    }
-    if (msg.contains('does not exist') || msg.contains('42703')) {
-      return 'The app and the database are out of sync. Please update to the '
-          'latest version and try again.';
-    }
-    return 'Your profile could not be saved. Check your connection and try again.';
   }
 
   /// Reload the signed-in user's profile (and their just-uploaded photos) from

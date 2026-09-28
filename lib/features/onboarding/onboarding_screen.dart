@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../widgets/intro_video_player.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -13,28 +14,27 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  final List<OnboardingPage> _pages = [
+
+  /// One slide per intro clip. The icon is only a fallback: it is shown if the
+  /// bundled video cannot be decoded, so the slide is never blank.
+  ///
+  /// `final` rather than `const` because `Icons.*` are not compile-time
+  /// constants in this Flutter version.
+  static final List<OnboardingPage> _pages = [
     OnboardingPage(
-      icon: Icons.weekend_rounded,
-      title: 'Welcome to Weekend',
-      subtitle: 'Meet people nearby and make real weekend plans.',
-      gradient: [Color(0xFFFF4B72), Color(0xFFFF9966)],
+      clip: kIntroClips[0],
+      fallbackIcon: Icons.weekend_rounded,
     ),
     OnboardingPage(
-      icon: Icons.favorite_rounded,
-      title: 'Discover & Connect',
-      subtitle:
-          'Swipe through profiles, find shared interests, and match with people who share your vibe.',
-      gradient: [Color(0xFFFF9966), Color(0xFFFFB38A)],
+      clip: kIntroClips[1],
+      fallbackIcon: Icons.favorite_rounded,
     ),
     OnboardingPage(
-      icon: Icons.calendar_today_rounded,
-      title: 'Make Weekend Plans',
-      subtitle:
-          'Turn matches into real meetups. Coffee, hikes, concerts, and more.',
-      gradient: [Color(0xFFFF4B72), Color(0xFFFFB38A)],
+      clip: kIntroClips[2],
+      fallbackIcon: Icons.calendar_today_rounded,
     ),
   ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,48 +53,38 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   final page = _pages[index];
                   return Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 40,
-                      vertical: 24,
+                      horizontal: 32,
+                      vertical: 16,
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          width: 150,
-                          height: 150,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: page.gradient,
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: page.gradient[0].withValues(alpha: 0.3),
-                                blurRadius: 30,
-                                spreadRadius: 10,
-                              ),
-                            ],
+                        // Only the slide the user is actually looking at is
+                        // allowed to decode; the other two pause, so a swipe
+                        // never leaves three video decoders competing.
+                        Expanded(
+                          child: IntroVideoPlayer(
+                            clip: page.clip,
+                            active: _currentPage == index,
+                            fallbackIcon: page.fallbackIcon,
                           ),
-                          child: Icon(page.icon, size: 80, color: Colors.white),
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 28),
                         Text(
                           page.title,
                           style: const TextStyle(
-                            fontSize: 28,
+                            fontSize: 26,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             letterSpacing: 0.5,
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         Text(
-                          page.subtitle,
+                          page.caption,
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             color: Colors.white.withValues(alpha: 0.7),
                             height: 1.5,
                           ),
@@ -212,15 +202,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 }
 
+/// One onboarding slide: a bundled intro clip, plus the icon to fall back to
+/// if that clip cannot be decoded.
 class OnboardingPage {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final List<Color> gradient;
-  OnboardingPage({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.gradient,
-  });
+  final IntroClip clip;
+  final IconData fallbackIcon;
+
+  const OnboardingPage({required this.clip, required this.fallbackIcon});
+
+  String get title => clip.title;
+  String get caption => clip.caption;
 }
+

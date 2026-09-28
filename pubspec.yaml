@@ -37,6 +37,10 @@ dependencies:
   image: ^4.5.4
   photo_view: ^0.15.0
   path_provider: ^2.1.5
+  # Intro clips shown on the onboarding slides and the sign-in screen.
+  # Compressed by tool/compress_videos.py; see that script for the
+  # SSIM/PSNR quality gates the bundled files are held to.
+  video_player: ^2.9.2
 
   # Location
   geolocator: ^13.0.2
@@ -76,6 +80,10 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   mocktail: ^1.0.4
+  # Used by test/intro_video_player_test.dart to simulate a clip that fails to
+  # decode. Declared explicitly rather than relied on transitively through
+  # video_player, so the test does not break on an upstream bump.
+  video_player_platform_interface: ^6.9.0
   build_runner: ^2.4.13
   riverpod_generator: ^2.6.2
   json_serializable: ^6.9.3
@@ -96,3 +104,9 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    # Onboarding + sign-in intro clips. Each file is named explicitly rather
+    # than globbing the directory, so an accidentally dropped high-bitrate
+    # recording cannot silently land in the APK.
+    - assets/videos/weekend1.mp4
+    - assets/videos/weekend2.mp4
+    - assets/videos/weekend3.mp4

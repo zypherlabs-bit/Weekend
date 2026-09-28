@@ -10,6 +10,83 @@ handful of conventions that are worth stating once:
 - **Server-side enforcement.** Search filters, distance computation and access
   control live in PostgreSQL, not in the client.
 
+## Unreleased
+
+### Added - intro videos on onboarding and sign-in
+
+The three pre-login slides now play video instead of showing a static icon,
+and the sign-in screen cycles the same three clips above the form.
+
+- **`assets/videos/weekend{1,2,3}.mp4`** - the three clips, 115.7 MB of
+  original footage compressed to 43.5 MB (-62%).
+- **`lib/widgets/intro_video_player.dart`** - one reusable player shared by
+  both screens, so the clip list has a single source of truth
+  (`kIntroClips`).
+- **`tool/compress_videos.py`** - the encoder. Re-runs are idempotent and
+  re-verify quality instead of trusting the previous output.
+- **`test/intro_video_player_test.dart`** - covers the clip catalogue and the
+  player-failure path.
+
+Quality is measured, not assumed. Every clip is re-encoded and gated against
+a high-quality resized reference, and the build is rejected unless it holds:
+
+| Clip | Source | Shipped | Size | SSIM | PSNR |
+| --- | --- | --- | --- | --- | --- |
+| `weekend1.mp4` | 2160x4096 | 1012x1920 | 8.72 MB | 0.9829 | 45.5 dB |
+| `weekend2.mp4` | 2160x3840 | 1080x1920 | 4.98 MB | 0.9832 | 43.5 dB |
+| `weekend3.mp4` | 1080x1920 | 1080x1920 | 29.80 MB | 0.9888 | 45.1 dB |
+
+All three clear the SSIM >= 0.98 / PSNR >= 40 dB gates. `weekend1` is 1012px
+wide rather than 1080 because its source is a 0.527 aspect ratio; padding or
+stretching it to fill 1080 would have distorted it, so it ships at its native
+shape and is centre-cropped in the layout.
+
+Originals are preserved twice and neither copy is committed:
+`assets/videos/source/` is gitignored, and an external copy lives at
+`D:\WeekendVideosBackup`.
+
+Player behaviour worth knowing about:
+
+- Only the visible slide decodes; the other two pause and drop their frame
+  callbacks, so a swipe never leaves three decoders competing.
+- A clip that fails to load falls back to a gradient graphic. It does not
+  throw and it does not leave a progress indicator spinning forever.
+- `MediaQuery.disableAnimations` is honoured: no autoplay, and the sign-in
+  carousel stops auto-advancing.
+- The clips are muted and looping, and expose a manual pause control.
+
+### Fixed - endless spinner on a failed intro clip
+
+The loading indicator was shown while a clip was loading *and* after it had
+already failed to load, so a broken asset left an animation running that never
+stopped. Found because four existing widget tests began timing out on
+`pumpAndSettle` once the player landed; `test/intro_video_player_test.dart`
+now pins the behaviour.
+
+### Build size - please read before shipping
+
+Adding the clips takes the release APK from **76.6 MB to 121.1 MB** (+58%) and
+the app bundle to 101.8 MB. The videos are already-compressed H.264, so they
+are stored in the APK rather than recompressed, and all 43.5 MB lands on every
+install and on Play's delivery quota.
+
+This is a deliberate trade and it is reversible. To shrink it, re-run
+`python tool/compress_videos.py` after lowering `--max-height`/`--crf` in that
+script, or move the clips out of the bundle and load them from a CDN. The
+quality gates there will refuse an encode that visibly degrades, so the trade
+stays an explicit decision rather than a silent one.
+
+### Not verified
+
+- **Playback on a physical Android device.** No device was connected, so
+  real-device decode, first-frame latency and battery draw are unmeasured. The
+  clips are H.264 / yuv420p with fast-start metadata at 1080x1920, which is
+  within the range of every Android device the app supports (min SDK 24), but
+  "should work" is not "has been seen to work".
+- **Release APK on hardware.** The APK builds and installs in the sense that
+  it was produced and its assets verified as present in the archive; it has
+  not been installed and launched on a device.
+
 ## 2.4.0
 
 ### Added — Advanced search with server-side hard filters

@@ -59,3 +59,9 @@ __pycache__/
 # Stray build/verification logs from local runs
 build_*.log
 release_report.txt
+
+# Original, uncompressed recordings kept for re-encoding only.
+# They are ~116 MB and must never be committed - the compressed clips
+# in assets/videos/ are what ships.
+assets/videos/source/
+

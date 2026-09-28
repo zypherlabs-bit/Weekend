@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'
     hide AsyncValue;
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/intro_video_player.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -102,23 +105,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 48),
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFF4B72), Color(0xFFFF9966)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.weekend_rounded,
-                    size: 40,
-                    color: Colors.white,
-                  ),
+                const SizedBox(height: 24),
+                // The same three intro clips shown during onboarding, cycling
+                // quietly above the form. Bounded to 180px and non-
+                // interactive: the form is the purpose of this screen, and a
+                // full-bleed player here would fight the keyboard.
+                SizedBox(
+                  height: 180,
+                  child: _IntroCarousel(),
                 ),
                 const SizedBox(height: 24),
                 const Text(
@@ -294,6 +288,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
@@ -302,3 +297,97 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 }
+
+/// Cycles the three intro clips above the sign-in form.
+///
+/// Design notes:
+/// * **One player at a time.** Only the current index is `active`, so the
+///   other two pause and drop their frame callbacks. Three simultaneous
+///   decoders on the auth screen would burn battery for nothing.
+/// * **Auto-advance is timer-driven, not video-driven.** The clips have
+///   different durations, so advancing on a fixed tick is predictable and
+///   keeps the cycle moving even if a clip fails to report its length.
+/// * **Suppressed for reduced motion.** `MediaQuery.disableAnimations` also
+///   stops the auto-advance: a user who has asked for less motion should not
+///   be shown a slideshow they cannot also pause.
+/// * **Non-interactive.** The form is the point of this screen; the carousel
+///   is atmosphere and must never swallow a tap meant for an input.
+class _IntroCarousel extends StatefulWidget {
+  const _IntroCarousel();
+
+  @override
+  State<_IntroCarousel> createState() => _IntroCarouselState();
+}
+
+class _IntroCarouselState extends State<_IntroCarousel> {
+  int _index = 0;
+  static const Duration _tick = Duration(seconds: 5);
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Timer? _timer;
+
+  void _startTimer() {
+    _timer?.cancel();
+    // Do not auto-advance when the user has asked for reduced motion.
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (reduceMotion || !mounted) return;
+    _timer = Timer.periodic(_tick, (_) {
+      if (!mounted) return;
+      setState(() => _index = (_index + 1) % kIntroClips.length);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Deferred: initState runs before the first build, and the media query
+    // (which decides whether to auto-advance) is not readable until then.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startTimer());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Cross-fade between clips so a hard cut does not flash black.
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            child: IntroVideoPlayer(
+              key: ValueKey<int>(_index),
+              clip: kIntroClips[_index],
+              active: true,
+              autoplay: true,
+              borderRadius: 20,
+            ),
+          ),
+          // A scrim keeps the bottom scrim from competing with the form
+          // text below it, and gives the rounded corners something to sit on.
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.25),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

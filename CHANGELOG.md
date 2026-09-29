@@ -10,6 +10,33 @@ handful of conventions that are worth stating once:
 - **Server-side enforcement.** Search filters, distance computation and access
   control live in PostgreSQL, not in the client.
 
+## [Unreleased]
+
+### Changed - README rebuilt as a user-first landing page
+
+- README restructured for end users: hero, screenshots, Why Weekend, How it
+  works, per-feature sections with implementation paths, a free-dating
+  comparison, a v2.6.0 download CTA (release link + direct APK + SHA-256), a
+  17-question FAQ, known limitations, roadmap and a documentation index.
+- **Screenshot honesty overhaul.** Four real captures from a running build were
+  added (`docs/screenshots/onboarding-welcome.jpg`,
+  `onboarding-discover.jpg`, `onboarding-plans.jpg`,
+  `signup-email-step.jpg`); the gallery now separates real captures from brand
+  artwork with an explicit note. Seven duplicate files were deleted — `docs/`
+  previously held 13 image files containing only 6 unique images; every image
+  is now unique bytes (enforced by the audit below).
+- **Stale "bundled sample data" claims corrected** in README,
+  `docs/getting-started.md`, `docs/supabase.md`, `docs/installation.md` and the
+  bug-report template. Since 2.1.0 unconfigured builds fabricate no data;
+  verified by running an unconfigured build on an emulator (onboarding and the
+  sign-up wizard work on-device; account actions report "not connected to a
+  backend").
+- New: `docs/SEO.md` (keyword strategy, README structure, image and version
+  rules) and `tool/seo_audit.py` (read-only PASS/FAIL/WARNING audit). Latest
+  run: `python tool/seo_audit.py --online` — 19 PASS, 0 FAIL, 0 WARNING.
+  `flutter analyze`, `flutter test` (231 tests) and
+  `python tests/python/run_all_tests.py` are green.
+
 ## [2.6.0] - 2026-09-29
 
 Audit and repair of Edit Profile, Profile Card, Passkeys, the biometric app lock

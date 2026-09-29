@@ -35,9 +35,9 @@ If applicable, add screenshots to help explain your problem.
 - **App Version:** [e.g. 2.2.0 — find it in the release tag or the APK you installed]
 - **Android Version:** [e.g. 13]
 - **Device:** [e.g. Pixel 7]
-- **Installation Source:** [e.g. GitHub Release APK `Weekend-v2.2.0-release.apk`]
+- **Installation Source:** [e.g. GitHub Release APK `Weekend-v2.6.0-release.apk`]
 - **Checksum verified?** [yes / no / not applicable]
-- **Supabase configured?** [yes / no — without a backend the app runs in offline demo mode with sample data]
+- **Supabase configured?** [yes / no — without a backend the app runs in offline demo mode (onboarding and sign-up only, no sample data)]
 
 ## Additional Context
 

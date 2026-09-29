@@ -113,11 +113,14 @@ Credit on completion: when two users match, the `check_mutual_like` trigger mark
 a pending referral whose `referee_id` is the matched user as `successful` and
 writes a `referral_events` row.
 
-**Current limitation.** Creating the pending referral row from a scanned
-invitation depends on a `record_referral` RPC that is not yet defined in
-`supabase/migrations`. Generating, scanning and validating invitations works, and
-the credit-on-match logic exists in the database; the row-creation step is a
-roadmap item. See [Known limitations](../README.md#known-limitations).
+**Row creation.** Creating the pending referral row from a scanned invitation
+calls the `record_referral` RPC, defined in
+`supabase/migrations/017_referral_integrity.sql` (SECURITY DEFINER, re-checks
+`p_referee_id = auth.uid()`; granted to `authenticated` only). Generating,
+scanning and validating invitations works, and the credit-on-match logic exists
+in the database via `check_mutual_like`. A full end-to-end two-user referral run
+against the live project is listed as **NOT VERIFIED** in
+[Known limitations](../README.md#known-limitations).
 
 ---
 

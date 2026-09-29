@@ -38,7 +38,9 @@ SUPABASE_ANON_KEY=public-anon-key-here
   [getting-started.md](getting-started.md)).
 - `.gitignore` excludes `.env` / `.env.*`. Never commit real keys.
 - If the values are missing or left as placeholders, `SupabaseConfig.isConfigured`
-  is false and the app runs in **offline demo mode** (sample data, no crash).
+  is false and the app runs in **offline demo mode** (onboarding and sign-up
+  fully usable on-device; no fabricated data, account actions report that the
+  backend is not configured).
 
 ### Environment separation
 

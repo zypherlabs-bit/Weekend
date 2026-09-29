@@ -41,8 +41,11 @@ flutter pub get
 ### A. Offline demo mode (no backend)
 
 Just run the app. When `SUPABASE_URL` / `SUPABASE_ANON_KEY` are absent the app
-uses bundled sample data, so you can review every screen without provisioning
-anything:
+starts in offline demo mode: the welcome flow, onboarding slides and sign-up
+wizard run entirely on-device, so you can review the entry experience without
+provisioning anything. There is no bundled sample data — account actions show
+an honest "not connected to a backend" message, and screens that need an
+account (discovery, matches, chat, plans) stay behind sign-in:
 
 ```bash
 flutter run            # Android device or emulator

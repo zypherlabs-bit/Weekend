@@ -19,6 +19,7 @@ than shipped, it is marked as such.
 | [security.md](security.md) | Developers / security researchers | Threat model, server-side enforcement, secrets, release integrity |
 | [verification-2fa-deletion.md](verification-2fa-deletion.md) | Operators / QA | Executable live-project verification plan for TOTP 2FA and account deletion |
 | [privacy.md](privacy.md) | Users / developers | What data Weekend handles and the privacy controls available |
+| [SEO.md](SEO.md) | Maintainers | SEO strategy: keywords, README structure, audit tooling (`tool/seo_audit.py`) |
 | [testing.md](testing.md) | Contributors | Test suites, commands, conventions |
 | [contributing.md](contributing.md) | Contributors | Workflow, standards, review expectations |
 

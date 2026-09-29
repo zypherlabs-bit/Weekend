@@ -15,7 +15,7 @@ currently published on Google Play.
 |---|---|
 | Operating system | Android 7.0 (API 24) or newer |
 | Architecture | `arm64-v8a`, `armeabi-v7a` or `x86_64` |
-| Storage | ~80 MB free |
+| Storage | ~150 MB free |
 | Permissions used | Internet, network state, camera (QR invitations), coarse/fine location (nearby discovery, optional), notifications (Android 13+) |
 
 Permissions are requested in context and can be declined — location and camera
@@ -27,9 +27,9 @@ are only used for the features that need them.
 
 1. Open the [latest release](https://github.com/zypherlabs-bit/Weekend/releases/latest).
 2. Download the current APK asset, for example
-   [`Weekend-v2.5.1-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.5.1/Weekend-v2.5.1-release.apk) (~121 MB).
+   [`Weekend-v2.6.0-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.6.0/Weekend-v2.6.0-release.apk) (~121 MB).
 3. Optionally download the matching checksum file
-   `Weekend-v2.5.1-release.apk.sha256`.
+   `Weekend-v2.6.0-release.apk.sha256`.
 
 > The asset file name embeds the version (`Weekend-v<version>-release.apk`), so it
 > changes with every release. The release page always lists the newest one.
@@ -43,18 +43,18 @@ Compare the SHA-256 hash of the file you downloaded with the published checksum.
 **Windows (PowerShell)**
 
 ```powershell
-Get-FileHash .\Weekend-v2.5.1-release.apk -Algorithm SHA256
+Get-FileHash .\Weekend-v2.6.0-release.apk -Algorithm SHA256
 ```
 
 **macOS / Linux**
 
 ```bash
-shasum -a 256 Weekend-v2.5.1-release.apk
+shasum -a 256 Weekend-v2.6.0-release.apk
 # or:
-sha256sum Weekend-v2.5.1-release.apk
+sha256sum Weekend-v2.6.0-release.apk
 ```
 
-The output must match the contents of `Weekend-v2.5.1-release.apk.sha256` in the
+The output must match the contents of `Weekend-v2.6.0-release.apk.sha256` in the
 release. If it does not match, do not install the file and download it again.
 
 Hash verification confirms the file was not corrupted or modified in transit. It
@@ -93,9 +93,9 @@ package (`com.weekend.app`) and signing key are unchanged.
 
 ## 6. First run
 
-- Weekend runs in **offline demo mode** (bundled sample data) when it is built
-  without Supabase credentials. Official release APKs are built with a backend
-  and require sign-in for account features.
+- Weekend runs in **offline demo mode** (onboarding and sign-up on-device, no
+  sample data) when it is built without Supabase credentials. Official release
+  APKs are built with a backend and require sign-in for account features.
 - Location, camera and notification permissions are requested only when the
   corresponding feature is opened.
 - You can review what the app stores and how to limit it in

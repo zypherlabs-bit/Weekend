@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
 import '../models/models.dart';
+import '../models/profile_schema.dart';
 
 import '../repositories/discovery_repository.dart';
 import '../repositories/match_repository.dart';
@@ -705,6 +706,18 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
   /// rolled back the *reported* outcome of a profile save that had in fact
   /// succeeded, leaving the user stuck on the screen with a "failed" message.
   /// The returned list is empty when every part persisted.
+  /// The catalogue category for an interest name, or null when unknown.
+  ///
+  /// Keeps a newly-inserted interest grouped in the picker exactly like the
+  /// seeded ones, so a name the user typed by hand still appears somewhere
+  /// sensible instead of in a bare "Other" bucket.
+  static String? _interestCategoryFor(String name) {
+    for (final entry in ProfileSchema.interestCategories.entries) {
+      if (entry.value.contains(name)) return entry.key;
+    }
+    return null;
+  }
+
   Future<List<String>> updateProfile(UserProfile profile) async {
     final client = _client;
     if (client == null) {
@@ -753,32 +766,63 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     // ---- Secondary writes: reported, never silently swallowed. -------------
     final warnings = <String>[];
 
-    if (profile.interests.isNotEmpty) {
-      try {
+    try {
+      // The delete runs UNCONDITIONALLY. It used to be guarded by
+      // `interests.isNotEmpty`, so a user who deselected their last interest
+      // kept it forever and was told nothing - the save silently no-opped for
+      // the one field they actually changed.
+      await client.from('user_interests').delete().eq('user_id', authId);
+      for (final interest in profile.interests) {
+        final trimmed = interest.trim();
+        if (trimmed.isEmpty) continue;
         // The master list is shared, so an interest that does not exist yet is
-        // inserted and then linked to this user only.
-        await client.from('user_interests').delete().eq('user_id', authId);
-        for (final interest in profile.interests) {
-          final trimmed = interest.trim();
-          if (trimmed.isEmpty) continue;
-          final interestResult = await client
-              .from('interests')
-              .upsert({'name': trimmed})
-              .select('id')
-              .single();
-          await client.from('user_interests').insert({
-            'user_id': authId,
-            'interest_id': interestResult['id'],
-          });
-        }
-      } catch (e) {
-        // Code/type only: an interest name is user content, never logged.
-        debugPrint(
-          'interests write failed (${e.runtimeType}) '
-          '${classifyProfileSaveError(e).code}',
-        );
-        warnings.add('Your interests were not saved.');
+        // inserted and then linked to this user only. `category` comes from the
+        // catalogue so the new row is grouped in the picker like every other.
+        final category = _interestCategoryFor(trimmed);
+        final interestResult = await client
+            .from('interests')
+            .upsert({
+              'name': trimmed,
+              if (category != null) 'category': category,
+            })
+            .select('id')
+            .single();
+        await client.from('user_interests').insert({
+          'user_id': authId,
+          'interest_id': interestResult['id'],
+        });
       }
+    } catch (e) {
+      // Code/type only: an interest name is user content, never logged.
+      debugPrint(
+        'interests write failed (${e.runtimeType}) '
+        '${classifyProfileSaveError(e).code}',
+      );
+      warnings.add('Your interests were not saved.');
+    }
+
+    try {
+      // Languages were editable in the profile model but never written, so the
+      // value silently reverted on the next load.
+      final languages = profile.languages
+          .map((l) => l.trim())
+          .where((l) => l.isNotEmpty)
+          .toSet()
+          .take(8)
+          .toList(growable: false);
+      if (languages.isNotEmpty && languages.length != profile.languages.length) {
+        throw StateError('too many languages');
+      }
+      await client
+          .from('profiles')
+          .update({'languages': languages})
+          .eq('id', authId);
+    } catch (e) {
+      debugPrint(
+        'languages write failed (${e.runtimeType}) '
+        '${classifyProfileSaveError(e).code}',
+      );
+      warnings.add('Your languages were not saved.');
     }
 
     try {
@@ -846,7 +890,8 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
             'id, display_name, date_of_birth, gender, city, bio, '
             'relationship_intent, occupation, education, favorite_music, '
             'ideal_weekend, is_photo_verified, trust_score, referral_code, '
-            'last_active_at',
+            'last_active_at, prompts, languages, smoking, drinking, '
+            'exercise, pets, children, height_cm',
           )
           .eq('id', userId)
           .maybeSingle();
@@ -891,8 +936,10 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
             response['relationship_intent'] as String? ?? 'Dating',
         interests: interests,
         favoritePlaces: const [],
-        languages: const [],
-        prompts: const [],
+        languages:
+            (response['languages'] as List?)?.map((e) => e.toString()).toList() ??
+            const [],
+        prompts: ProfileRepository.decodePrompts(response['prompts']),
         isPhotoVerified: response['is_photo_verified'] as bool? ?? false,
         trustScore: response['trust_score'] as int? ?? 50,
         crossedPathsCount: crossedPaths.length,
@@ -904,6 +951,12 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
         voiceIntroUrl: '',
         compatibilityExplanation: '',
         distanceDisplay: '',
+        smoking: response['smoking'] as String?,
+        drinking: response['drinking'] as String?,
+        exercise: response['exercise'] as String?,
+        pets: response['pets'] as String?,
+        children: response['children'] as String?,
+        heightCm: (response['height_cm'] as num?)?.toInt(),
       );
       state = state.copyWith(currentUser: updatedUser);
     } catch (e) {

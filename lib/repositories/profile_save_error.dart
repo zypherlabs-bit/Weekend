@@ -77,7 +77,11 @@ enum ProfileSaveFailure {
 /// instead of raw SDK errors so the UI can show actionable text while the
 /// diagnostic [code] is logged for debugging.
 class ProfileSaveException implements Exception {
-  const ProfileSaveException(this.failure, {this.stage});
+  const ProfileSaveException(
+    this.failure, {
+    this.stage,
+    this.userMessageOverride,
+  });
 
   final ProfileSaveFailure failure;
 
@@ -85,8 +89,16 @@ class ProfileSaveException implements Exception {
   /// strings only — never user data.
   final String? stage;
 
+  /// Replaces [ProfileSaveFailure.userMessage] for a specific instance.
+  ///
+  /// A shared failure kind covers several situations the user has to act on
+  /// differently - `validation` alone could mean "you are under 18" or "that
+  /// date is out of range". The generic wording would be useless in both, so
+  /// the call site that knows the real cause supplies the real message.
+  final String? userMessageOverride;
+
   String get code => failure.code;
-  String get message => failure.userMessage;
+  String get message => userMessageOverride ?? failure.userMessage;
 
   @override
   String toString() =>

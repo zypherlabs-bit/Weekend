@@ -25,6 +25,12 @@ EXCLUDED_DIRS = {
     "__pycache__",
     ".idea",
     "node_modules",
+    # Local Python virtualenvs. They are untracked and never shipped, and they
+    # vendor third-party CA bundles whose base64 blobs match the JWT shape.
+    ".venv",
+    "venv",
+    "env",
+    "site-packages",
 }
 
 #: Files whose job is to show a secret's NAME, not its value.

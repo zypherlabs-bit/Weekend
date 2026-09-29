@@ -52,6 +52,9 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
+# Local Python virtualenv used by tests/python
+.venv/
+
 # Release artifacts (built by tool/build_release.py, uploaded to GitHub Releases)
 *.apk
 *.sha256

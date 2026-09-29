@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to Weekend are documented here. This project follows a
 handful of conventions that are worth stating once:
@@ -10,6 +10,132 @@ handful of conventions that are worth stating once:
 - **Server-side enforcement.** Search filters, distance computation and access
   control live in PostgreSQL, not in the client.
 
+## [2.6.0] - 2026-09-29
+
+Audit and repair of Edit Profile, Profile Card, Passkeys, the biometric app lock
+and 2FA. Root causes were identified before anything was changed; each is listed
+with the evidence that established it.
+
+### Fixed - passkeys could not work (three independent causes)
+
+- **Server: passkeys were disabled.** The live project reported
+  `passkeys_enabled: false` and an empty WebAuthn relying-party ID, so every
+  request answered `404 passkey_disabled`. Passkeys are now enabled, with
+  `webauthn_rp_id = ocypgybqfushqfzisnvs.supabase.co`, the matching RP origin,
+  and a real Site URL (it was `http://localhost:3000`).
+- **Build: Credential Manager was never initialised.** The Android plugin holds
+  its `CredentialManager` in a `lateinit var` assigned only by `init()`, so every
+  ceremony threw before starting. `PasskeyService.ensureInitialized()` now
+  performs it once and caches the in-flight future.
+- **Build: the relying party could not be associated.** `AndroidManifest.xml`
+  declared `weekend.app` - a parked domain serving no `assetlinks.json`. The RP
+  ID is now derived from `SUPABASE_URL` at build time
+  (`gradle :app:logPasskeyConfig`) and baked in via `${weekendRpId}`, verified
+  present in the shipped APK.
+- WebAuthn options are now shaped defensively. `userVerification` is forced to
+  `required` on both ceremonies, and credential fetch is passkey-only. The
+  plugin's `AuthenticatorSelectionCriteria.fromJson` throws on the keys GoTrue
+  omits, so the selection criteria are built from the raw map instead.
+- New: `lib/services/passkey_service.dart`, `docs/passkeys.md`,
+  `tool/gen_assetlinks.py`, `test/passkey_service_test.dart`.
+
+### Fixed - the biometric app lock never re-locked the app
+
+- The lock was an `OverlayEntry` inserted from the state of the widget that
+  *builds* `MaterialApp.router` - above the MaterialApp, where no Overlay
+  exists. The call threw inside an async gap and was swallowed, which is why
+  the prompt never appeared. It is now a real widget installed through
+  `MaterialApp.builder` (`BiometricLockGate`).
+- `AppLifecycleState.inactive` was treated as backgrounding. Android emits it
+  whenever a system surface takes focus - including Android's own
+  `BiometricPrompt` and Credential Manager sheet - so the lock re-armed while the
+  prompt was on screen, and an `inactive -> resumed` pair unlocked the app with
+  no authentication at all. `AppLockService` now ignores `inactive` and arms only
+  on `paused` / `hidden` / `detached`.
+- Unlocking no longer calls `context.go('/home')`, which threw the user out of
+  whatever they were doing.
+- New: `lib/services/app_lock_service.dart`, `test/app_lock_lifecycle_test.dart`.
+
+### Added - 2FA recovery codes and re-authenticated 2FA changes
+
+- Supabase TOTP has no native recovery codes, so a lost phone locked the account
+  permanently. `mfa_recovery_codes` stores only a per-user salted SHA-256;
+  codes are CSPRNG-generated server-side and consumed atomically, so one code
+  cannot be spent twice.
+- Disabling 2FA now requires a live authenticator code and an AAL2 step-up
+  first. GoTrue already enforces AAL2; asking explicitly means a stolen AAL1
+  session gets a clear message instead of a silent failure.
+- New: recovery-code management in Settings -> Security, `tests/python/test_2fa.py`.
+
+### Added - mature profile experience
+
+- **Photos**: add, replace, reorder, set-primary and delete, with per-tile
+  progress. Order is persisted in `profile_photos.sort_order` through
+  owner-scoped RPCs, and the 4-photo minimum is enforced by a database trigger
+  (`profile_requirements`, configurable) as well as the UI.
+- **Prompts**: 15 question prompts in two sections, plus lifestyle attributes,
+  a normalised interest taxonomy and languages. Blank answers are dropped and
+  the count shown on the card is disclosed rather than silently truncated.
+- **Save flow**: validation -> auth -> photo minimum -> write -> prompts ->
+  interests -> preferences -> server confirmation -> refresh -> navigate. A
+  failure keeps the user on the screen with a retry.
+- New: `lib/models/profile_schema.dart`.
+
+### Fixed - fields that were rendered but never saved
+
+- **Date of birth** was collected by the form but never written; the model
+  carries a derived `age`, so the user's real birth date was discarded. Now
+  persisted, with an 18+ check.
+- **Languages** were editable but never written.
+- **Interests** were only deleted when the new list was non-empty, so
+  deselecting the *last* interest silently did nothing.
+- **Lifestyle columns** are written only when the value satisfies the column's
+  CHECK constraint, so a save can neither violate it nor erase good data.
+
+### Added - progressive profile card
+
+- Media-first: a full-bleed photo pager with the identity overlaid, and the
+  rest behind an explicit "Show more" sheet. Hierarchy is media > name > age >
+  city > distance > bio > interests > relationship intent > prompts >
+  lifestyle. An unknown age is omitted rather than rendered as 0.
+- Location stays privacy-safe: only the server's `distance_label` or a rounded
+  "km away" string. The card contains no latitude or longitude.
+
+### Fixed - database
+
+- **Migration 025** (`profile_experience_and_mfa_recovery.sql`) adds photo
+  ordering, the configurable photo minimum, prompt-shape validation, the
+  interest taxonomy and MFA recovery codes. Applied to the live project.
+- Migrations 022-024 were never applied (023 cannot be: it filters on
+  `profiles.dating_profile_activated`, which no earlier migration creates). 025
+  is written against the schema that is actually live and does not depend on
+  023. That gap is still open and is listed under *Not verified*.
+
+### Tests
+
+- 231 Flutter tests (was 210) and 311 Python checks (was 306).
+- New suites: `test_passkey.py`, `test_biometric.py`, `test_2fa.py`,
+  `test_edit_profile.py`, `test_profile_card.py`, `test_profile_data.py`.
+- Verified live against the running project: a wrong OTP is refused (HTTP 422),
+  an RFC 6238 code computed from the real enrollment secret is accepted (200), a
+  spent recovery code is refused, and GoTrue issues a real passkey challenge.
+- `run_all_tests.py` now separates 32 verified checks from 10 that cannot be
+  proven without a handset.
+
+### Not verified
+
+- **Passkey registration and sign-in on a physical handset.** No device was
+  attached. The server half is verified; the Credential Manager half is not.
+- **Passkey Digital Asset Links.** Android will not complete a ceremony until
+  `https://<rp-id>/.well-known/assetlinks.json` proves the association, and
+  Weekend controls no domain that serves it. `tool/gen_assetlinks.py` computes
+  the real digests; publishing them is a deployment step. See
+  `docs/passkeys.md`.
+- **Fingerprint prompt, unlock, cancellation and wrong-finger behaviour**, and
+  the on-device 2FA flows. All require a handset with an enrolled biometric.
+- The release APK was signed with the Android **debug** certificate because
+  `android/key.properties` is absent, so its asset-linkage digest differs from
+  any future release-signed build.
 ## [2.5.1] - 2026-09-29
 
 Bugfix release. Every change below was in the working tree and in no published
@@ -193,7 +319,7 @@ stays an explicit decision rather than a silent one.
 
 ## 2.4.0
 
-### Added — Advanced search with server-side hard filters
+### Added â€” Advanced search with server-side hard filters
 
 - **`search_profiles` Postgres function** (migration 022). Enforces every hard
   filter with `AND` semantics in the database: gender / interested-in, age
@@ -215,9 +341,9 @@ stays an explicit decision rather than a silent one.
 - Deleted, banned, rejected and opted-out accounts are excluded from search via
   the new `auth_user_state` view.
 
-### Added — Verification suite
+### Added â€” Verification suite
 
-- `tests/python/` — a pytest-compatible suite that separates **STATIC**,
+- `tests/python/` â€” a pytest-compatible suite that separates **STATIC**,
   **RUNTIME** and **DEVICE** evidence and reports only `PASS`, `FAIL` or
   `NOT VERIFIED`.
   - `test_project_structure.py`, `test_security.py`, `test_passkey.py`,
@@ -225,11 +351,11 @@ stays an explicit decision rather than a silent one.
     `test_supabase.py`, `test_release.py`, `run_all_tests.py`.
   - `test_filter_logic.py` includes an executable reference implementation of
     the hard-filter contract, exercised with the specification's own fixture
-    data (profiles A–D).
+    data (profiles Aâ€“D).
   - Emulator runs are explicitly **not** accepted as device evidence.
-- `test/search_filters_test.dart` — 16 unit tests for the `SearchFilters`
+- `test/search_filters_test.dart` â€” 16 unit tests for the `SearchFilters`
   contract.
-- `tool/apply_one_migration.ps1` — applies a migration statement-by-statement
+- `tool/apply_one_migration.ps1` â€” applies a migration statement-by-statement
   with a pre-flight structural check, so a truncated function body can never
   half-apply against the live project.
 
@@ -248,12 +374,12 @@ stays an explicit decision rather than a silent one.
 - **`get_matches_for_user` excludes deleted accounts** and a blocked match.
 - **Passkey implementation replaced.** The previous code drove the WebAuthn
   *MFA factor* API (`mfa.enroll(factorType: webauthn)` / `mfa.listFactors()`),
-  both of which require an already-authenticated session — impossible during
+  both of which require an already-authenticated session â€” impossible during
   sign-up, and impossible during usernameless sign-in. It then posted the
   ceremony to `passkey-register` / `passkey-authenticate` Edge Functions that
   do not exist in this repository. It is now a real WebAuthn flow built on
   Supabase's native passkey API and the Android Credential Manager.
-- **Passkey management UI** (Settings → Passkeys) to register, list and remove
+- **Passkey management UI** (Settings â†’ Passkeys) to register, list and remove
   passkeys.
 - GoTrue error codes are mapped to safe, actionable messages instead of raw
   SDK text.
@@ -290,11 +416,11 @@ checksum.
 ### Fixed - Edit Profile save failure for orphaned accounts
 
 - Root cause: an authenticated user missing their `public.profiles` row made
-  the save's `UPDATE ... WHERE id = auth.uid()` match zero rows — PostgREST
+  the save's `UPDATE ... WHERE id = auth.uid()` match zero rows â€” PostgREST
   answers that with `200 []`, surfaced as "The server did not save your
   profile".
-- `ProfileRepository.updateProfile` now runs UPDATE → (zero rows) → confirm →
-  INSERT under the session's own id → verify, so a missing profile row is
+- `ProfileRepository.updateProfile` now runs UPDATE â†’ (zero rows) â†’ confirm â†’
+  INSERT under the session's own id â†’ verify, so a missing profile row is
   repaired on save instead of failing. Ownership stays derived from the auth
   session; the payload never carries an `id`.
 - `WeekendNotifier.updateProfile` delegates the primary write to the
@@ -305,12 +431,12 @@ checksum.
 - New `ProfileSaveException` with stable `PROFILE_UPDATE_*` diagnostic codes:
   failures are classified (auth / RLS / constraint / validation / network /
   schema / no-row / unknown), logged as code+stage only, and shown to users as
-  actionable text — never raw PostgREST/row data, never a fake success.
+  actionable text â€” never raw PostgREST/row data, never a fake success.
 - New migration `020_orphan_profile_repair.sql` (idempotent): backfills
   `profiles`/`user_settings`/`preferences` for orphaned auth users using only
   validated signup metadata (malformed values become NULL, never a failed
   migration), hardens `handle_new_user` (conflict-safe inserts, exception-safe
-  date parsing — fixes the live HTTP 500 signups caused by malformed
+  date parsing â€” fixes the live HTTP 500 signups caused by malformed
   `date_of_birth`/`gender` metadata), re-asserts the `on_auth_user_created`
   trigger and RLS. After applying, run `supabase/test/orphan_audit.sql` and
   expect all three orphan counts to be 0.
@@ -336,21 +462,21 @@ checksum.
 ### Fixed - Android release build
 
 - `credential_manager_android` 4.1.0 configures `kotlin { ... }` in its own
-  `build.gradle` without ever applying the Kotlin plugin — it assumes AGP 9's
+  `build.gradle` without ever applying the Kotlin plugin â€” it assumes AGP 9's
   built-in Kotlin (its buildscript pins AGP 9.0.1). This project resolves the
   Android Gradle plugin to 8.11.1, so `assembleRelease` died with
   "Could not find method kotlin() ... on project ':credential_manager_android'".
   The root `android/build.gradle.kts` now puts `kotlin-gradle-plugin:2.2.20`
   (matching `settings.gradle.kts`) on the buildscript classpath inherited by
   subprojects and applies `org.jetbrains.kotlin.android` to that module the
-  moment its Android library plugin is attached — before its script reaches the
+  moment its Android library plugin is attached â€” before its script reaches the
   `kotlin { ... }` block.
 
 ### Fixed - Edit Profile recovery dropped the user's referral code
 
 Found while auditing `fix/edit-profile-save-recovery` against the live
 project. The recovery path introduced in this branch re-creates a missing
-`profiles` row with a direct `INSERT`, which bypasses `handle_new_user` — the
+`profiles` row with a direct `INSERT`, which bypasses `handle_new_user` â€” the
 only place a `referral_code` is ever assigned. A recovered profile therefore
 came back with `referral_code = NULL`, silently breaking the Referral Code
 field, its Copy button, QR invitations, and any invite link already shared.
@@ -364,16 +490,16 @@ field, its Copy button, QR invitations, and any invite link already shared.
 
 ### Added
 
-- `docs/LIVE_SCREEN_AUDIT.md` — per-screen audit of the Android build against
+- `docs/LIVE_SCREEN_AUDIT.md` â€” per-screen audit of the Android build against
   the live backend, including the 8-scenario Edit Profile save/recovery
   lifecycle and the referral-code regression.
-- `docs/PRODUCTION_VERIFICATION_REPORT.md` — release readiness, blockers, and
+- `docs/PRODUCTION_VERIFICATION_REPORT.md` â€” release readiness, blockers, and
   what remains unverified.
-- `scripts/audit_weekend_live.py` — read-only live-project health checks
+- `scripts/audit_weekend_live.py` â€” read-only live-project health checks
   (migrations, orphans, blank names, RLS coverage, social-handle pattern,
   referral-code invariant). `--cleanup` deletes only rows carrying the
   `WKND_AUDIT` marker.
-- `tool/ui_drive.ps1` — small adb wrapper for driving the app on an emulator
+- `tool/ui_drive.ps1` â€” small adb wrapper for driving the app on an emulator
   during audits.
 
 ## [2.4.1] - 2026-09-28
@@ -436,7 +562,7 @@ were silently returning wrong results.
 - **Preferred Match screen** (`/preferred-match`). Gender, age range, distance,
   city, location mode, relationship intent, interests, lifestyle and
   languages. Every selection is a hard filter, and the screen says so.
-- **`search_profiles` RPC** (migration 023) — server-side filtering with strict
+- **`search_profiles` RPC** (migration 023) â€” server-side filtering with strict
   AND semantics. A candidate is returned only if it satisfies *every*
   supplied criterion. Soft signals (shared interests, activity, verification,
   trust) rank the eligible set and never decide eligibility.
@@ -444,13 +570,13 @@ were silently returning wrong results.
   is the single source of truth in SQL; a trigger keeps
   `profiles.dating_profile_activated` in sync, and discovery excludes any
   profile that has not met it.
-- **`get_my_profile_completion` RPC** — the server's view of name, birthdate,
+- **`get_my_profile_completion` RPC** â€” the server's view of name, birthdate,
   city and photo count, so the UI and the filter can never disagree.
 - **Open Source screen** with a QR code resolving to this repository
   (Settings -> Open Source).
 - **pytest verification suite** (`tests/python/`) with a single entry point:
   `python tests/python/run_all_tests.py`.
-- **`tool/build_release.py`** — builds the release APK with credentials read
+- **`tool/build_release.py`** â€” builds the release APK with credentials read
   from `.env` and never echoes them, and writes the SHA-256 sidecar.
 
 ### Fixed
@@ -462,7 +588,7 @@ were silently returning wrong results.
   meaningless distance, so the radius filter and the displayed distance
   disagreed and the wrong people were excluded.
 - **Fabricated age.** The RPC reported age 25 for any profile with no stored
-  date of birth, which silently satisfied a 25–32 request. An unknown age is
+  date of birth, which silently satisfied a 25â€“32 request. An unknown age is
   now NULL and is excluded whenever an age range is set.
 - **`p_discovery_mode` was accepted and ignored**, so "nearby", "global" and
   "crossed_paths" all ran identical SQL. The mode now selects the predicate.
@@ -476,12 +602,12 @@ were silently returning wrong results.
 - **A live Supabase anon key was committed** to `.vscode/launch.json`. Removed;
   the launch config now reads from environment variables.
 - **A committed credential also appeared in the security scan's own patterns**
-  — the scanner now excludes itself from the file walk.
+  â€” the scanner now excludes itself from the file walk.
 
 ### Security
 
 - **`search_path` pinned on every SECURITY DEFINER function** (migration 024).
-  Thirteen functions — including the `handle_new_user` auth trigger — were
+  Thirteen functions â€” including the `handle_new_user` auth trigger â€” were
   created without `set search_path`, which lets an attacker shadow an
   unqualified name with an object in a writable schema and run code as the
   definer. Migration 021 pins the path from the catalog so a future function
@@ -513,14 +639,14 @@ as NOT VERIFIED by the verification suite. See the run output.
   `supabase db push` before testing the release APK.
 - New migration `019_weekend_availability_shape_fix.sql`: 016 guarded
   `user_settings.weekend_availability` with JSONB *containment*
-  (`<@ '{"Saturday":true,"Sunday":true}'`), but containment compares values —
+  (`<@ '{"Saturday":true,"Sunday":true}'`), but containment compares values â€”
   so the `false` the client writes for an unselected day raised
   `23514 ... violates check constraint "user_settings_weekend_availability_shape"`
   and the save failed. 019 replaces it with a key-set + value-type check
   (`weekend_availability_is_valid`) that still refuses unknown keys and
   non-boolean values.
-- Migrations **015–019 are now applied to the LIVE Supabase project**
-  (001–013 were already applied out-of-band and have been baselined in
+- Migrations **015â€“019 are now applied to the LIVE Supabase project**
+  (001â€“013 were already applied out-of-band and have been baselined in
   `supabase_migrations.schema_migrations`, which did not exist before).
 
 ## [2.3.0] - 2026-09-22
@@ -587,17 +713,17 @@ confirmation can complete on a phone:
    spam-filtered. Configure a custom SMTP provider.
 
 
-## [2.2.0] — 2026-09-20
+## [2.2.0] â€” 2026-09-20
 
-### Added — release and distribution
+### Added â€” release and distribution
 
 - **Production release APK built with real Supabase credentials** (v2.2.0+4).
-- **Verified installation on Android emulator** — app launches successfully,
+- **Verified installation on Android emulator** â€” app launches successfully,
   connects to Supabase backend.
 - **GitHub release published** with versioned APK and SHA-256 checksum.
 - **README updated** to point to v2.2.0 download links.
 
-### Fixed — build and verification
+### Fixed â€” build and verification
 
 - All 94 automated tests pass.
 - Flutter analyze reports no issues.
@@ -605,14 +731,14 @@ confirmation can complete on a phone:
   minSdk 24, targetSdk 36.
 - SHA-256: `592BFAD4772B37E5C01144C11854D84AD14774734DDF31F65FC80701B602F4FB`
 
-### Updated — documentation
+### Updated â€” documentation
 
 - README download section points to v2.2.0 APK.
 - SHA-256 checksum file included in release assets.
 
-## [2.1.0] — 2026-09-16
+## [2.1.0] â€” 2026-09-16
 
-### Fixed — production data integrity
+### Fixed â€” production data integrity
 
 - **Removed every source of fabricated users.** The offline sample deck,
   sample matches, sample chats, sample plans and sample crossed paths
@@ -622,9 +748,9 @@ confirmation can complete on a phone:
 - **The placeholder signed-in user no longer carries fabricated identity.**
   The real profile is loaded from Supabase on app start.
 
-### Fixed — matching and discovery
+### Fixed â€” matching and discovery
 
-- Matches are now actually loaded (via the `get_matches_for_user` RPC) — the
+- Matches are now actually loaded (via the `get_matches_for_user` RPC) â€” the
   Matches tab previously stayed empty in production even after real matches.
 - Passes are persisted to the `passes` table so passed profiles stay excluded.
 - Like/match logic consolidated through `MatchRepository`: the client only
@@ -633,7 +759,7 @@ confirmation can complete on a phone:
   `matches` (which RLS forbids) are removed.
 - Duplicate swipes are guarded against double-submission.
 
-### Fixed — plans, safety, chat
+### Fixed â€” plans, safety, chat
 
 - Weekend Plans create/join/leave now persist to `plans`/`plan_participants`
   with optimistic UI and authoritative re-sync; creator names resolve from
@@ -643,7 +769,7 @@ confirmation can complete on a phone:
 - Chat sends no longer double-write (local echo + repository); failures now
   surface a retry-able snackbar and restore the draft.
 
-### Changed — release engineering
+### Changed â€” release engineering
 
 - Release builds embed `SUPABASE_URL`/`SUPABASE_ANON_KEY` from repository
   secrets as compile-time defines; the anon key is client-safe and protected
@@ -657,7 +783,7 @@ confirmation can complete on a phone:
 ### Security
 
 - Added `009_account_deletion_service_role.sql`: the live `account-deletion`
-  path could never succeed — 006 revoked the service role's `EXECUTE` on
+  path could never succeed â€” 006 revoked the service role's `EXECUTE` on
   `delete_user_account`, and `assert_self` raises for service-role calls
   (`auth.uid()` is null without a user JWT). The service role now gets an
   explicit grant and bypasses `assert_self`; the Edge Function still
@@ -713,49 +839,49 @@ confirmation can complete on a phone:
 
 ### Major Changes
 
-- **Flutter migration** — Migrated from Kotlin/Compose to Flutter/Dart for cross-platform capability
-- **In-feed advertisements** — Added privacy-preserving, server-validated ad system with 120-second active discovery interval
-- **Ad management** — Ad cards with ADVERTISEMENT/Sponsored labels, report/hide functionality, server-side event validation via `serve-ad` Edge Function
-- **Crossed Paths** — Geohash-based privacy-safe crossed-path detection
-- **User location buckets** — Privacy-preserving location storage for discovery features
-- **Location radius filter** — Distance-based discovery filtering in the discovery feed
-- **Ad config** — Configurable ad intervals and display settings
+- **Flutter migration** â€” Migrated from Kotlin/Compose to Flutter/Dart for cross-platform capability
+- **In-feed advertisements** â€” Added privacy-preserving, server-validated ad system with 120-second active discovery interval
+- **Ad management** â€” Ad cards with ADVERTISEMENT/Sponsored labels, report/hide functionality, server-side event validation via `serve-ad` Edge Function
+- **Crossed Paths** â€” Geohash-based privacy-safe crossed-path detection
+- **User location buckets** â€” Privacy-preserving location storage for discovery features
+- **Location radius filter** â€” Distance-based discovery filtering in the discovery feed
+- **Ad config** â€” Configurable ad intervals and display settings
 
 ### Features
 
-- **Authentication** — Email/password
-- **Profile creation and editing** — Full profile management with photos, prompts, interests
-- **Profile display** — Detailed profile view with compatibility explanation
-- **Discovery** — Swipe-based discovery with nearby, crossed-paths, and global modes
-- **Location-aware discovery** — PostGIS-powered proximity search, privacy-safe location handling
-- **Distance/radius filtering** — Configurable discovery radius
-- **Nearby profiles** — GPS-based discovery with approximate distance
-- **Crossed Paths** — Historical location overlap detection using geohash buckets
-- **Global discovery** — Browse profiles worldwide or by city
-- **Likes and passes** — Unlimited likes and passes
-- **Mutual matches** — Match when both users express interest
-- **Unlimited messaging** — No message limits
-- **Realtime chat** — Instant messaging with matches via Supabase Realtime
-- **Notifications** — Relevant notifications for matches and messages
-- **Blocking and reporting** — Full user safety controls
-- **Unmatching** — Remove matches
-- **Verification** — Photo verification with multi-signal detection
-- **Privacy controls** — Location discovery toggles, profile visibility settings
-- **Weekend Plans** — Create and join local plans and activities
-- **In-feed advertisements** — Clearly labeled ads after 120 seconds of active discovery
-- **Image optimization** — Automatic resizing, compression, and thumbnail generation
-- **Referral system** — Invite friends with referral codes and tracking
-- **Row Level Security** — RLS enabled on all database tables
-- **Storage policies** — Privacy-safe photo storage with per-user folder policies
-- **Realtime** — Chat and notification streams via Supabase Realtime
-- **Edge Functions** — AI features, account deletion, ad serving
+- **Authentication** â€” Email/password
+- **Profile creation and editing** â€” Full profile management with photos, prompts, interests
+- **Profile display** â€” Detailed profile view with compatibility explanation
+- **Discovery** â€” Swipe-based discovery with nearby, crossed-paths, and global modes
+- **Location-aware discovery** â€” PostGIS-powered proximity search, privacy-safe location handling
+- **Distance/radius filtering** â€” Configurable discovery radius
+- **Nearby profiles** â€” GPS-based discovery with approximate distance
+- **Crossed Paths** â€” Historical location overlap detection using geohash buckets
+- **Global discovery** â€” Browse profiles worldwide or by city
+- **Likes and passes** â€” Unlimited likes and passes
+- **Mutual matches** â€” Match when both users express interest
+- **Unlimited messaging** â€” No message limits
+- **Realtime chat** â€” Instant messaging with matches via Supabase Realtime
+- **Notifications** â€” Relevant notifications for matches and messages
+- **Blocking and reporting** â€” Full user safety controls
+- **Unmatching** â€” Remove matches
+- **Verification** â€” Photo verification with multi-signal detection
+- **Privacy controls** â€” Location discovery toggles, profile visibility settings
+- **Weekend Plans** â€” Create and join local plans and activities
+- **In-feed advertisements** â€” Clearly labeled ads after 120 seconds of active discovery
+- **Image optimization** â€” Automatic resizing, compression, and thumbnail generation
+- **Referral system** â€” Invite friends with referral codes and tracking
+- **Row Level Security** â€” RLS enabled on all database tables
+- **Storage policies** â€” Privacy-safe photo storage with per-user folder policies
+- **Realtime** â€” Chat and notification streams via Supabase Realtime
+- **Edge Functions** â€” AI features, account deletion, ad serving
 
 ### Security
 
 - JWT authentication on all Supabase Edge Functions
 - Row Level Security (RLS) enabled on all database tables
 - Server-side authorization for all security-critical operations
-- Location privacy — exact GPS coordinates never exposed
+- Location privacy â€” exact GPS coordinates never exposed
 - Rate limiting and abuse detection
 - Complete server-side account deletion
 - Ad event validation server-side via `serve-ad` Edge Function

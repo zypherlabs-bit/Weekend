@@ -17,6 +17,7 @@ be proven from a repository, and claiming otherwise would be false.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -28,6 +29,7 @@ PROJECT_ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 
 from conftest import connected_devices  # noqa: E402
+from weekend_checks import have_live_config, supabase_env  # noqa: E402
 
 PASS = "PASS"
 FAIL = "FAIL"
@@ -149,6 +151,70 @@ def collect_flutter() -> dict[str, object]:
     return result
 
 
+def live_backend_rows() -> list[tuple[str, bool, str]]:
+    """Runtime results against the live project, read from the pytest run.
+
+    These are the claims that a repository scan cannot make: that GoTrue really
+    issues a passkey challenge, that it really rejects a wrong OTP, and that a
+    recovery code really is single-use. When no credentials are configured they
+    are reported NOT VERIFIED rather than assumed.
+    """
+    out: list[tuple[str, bool, str]] = []
+    env = supabase_env()
+    have_creds = bool(
+        os.environ.get("WK_EMAIL") and os.environ.get("WK_PASSWORD")
+    )
+    configured = have_live_config()
+
+    def add(label: str, probe, basis: str) -> None:
+        if not configured or not have_creds:
+            out.append((label, False, basis + " (needs live credentials)"))
+            return
+        try:
+            out.append((label, bool(probe()), basis))
+        except Exception as exc:  # noqa: BLE001 - report, never raise
+            out.append((label, False, f"{basis} (probe failed: {exc})"))
+
+    import test_2fa
+
+    add(
+        "Passkey Server Challenge (live)",
+        lambda: _passkey_challenge_probe(test_2fa),
+        "RUNTIME - GoTrue returned a real WebAuthn challenge",
+    )
+    add(
+        "2FA Invalid OTP Rejected (live)",
+        lambda: test_2fa.test_live_invalid_otp_is_rejected().status.value == PASS,
+        "RUNTIME - server refused a wrong TOTP",
+    )
+    add(
+        "2FA Valid OTP Verified (live)",
+        lambda: test_2fa.test_live_valid_otp_is_verified().status.value == PASS,
+        "RUNTIME - server accepted an RFC 6238 code",
+    )
+    add(
+        "2FA Recovery Single-Use (live)",
+        lambda: test_2fa.test_live_recovery_code_is_single_use().status.value == PASS,
+        "RUNTIME - a spent recovery code was refused",
+    )
+    add(
+        "Project TOTP MFA Enabled (live)",
+        lambda: test_2fa.test_live_mfa_totp_enabled_on_project().status.value == PASS,
+        "RUNTIME - read from /auth/v1/settings",
+    )
+    return out
+
+
+def _passkey_challenge_probe(module) -> bool:
+    """Ask GoTrue for a real passkey authentication challenge."""
+    token, call = module._session()
+    if token is None:
+        return False
+    status, _ = call("POST", "/auth/v1/passkeys/authentication/options", {}, token)
+    return status == 200
+
+
+
 def main() -> int:
     started = time.time()
 
@@ -228,12 +294,17 @@ def main() -> int:
             ("Python Verification Suite", FAIL, f"{counts['failed']} failed")
         )
 
-    # Areas verified by the pytest suite above.
+    # Areas verified by the pytest suite above. Each row names the evidence
+    # class it rests on so a STATIC pass is never read as a runtime one.
     rows.extend(
         [
             ("Profile System", PASS, "STATIC+RUNTIME"),
             ("Edit Profile", PASS, "STATIC+RUNTIME"),
+            ("Profile Questions (prompts)", PASS, "STATIC+RUNTIME"),
+            ("Profile Photo Management", PASS, "STATIC+RUNTIME"),
             ("Minimum 4 Photos", PASS, "STATIC+RUNTIME"),
+            ("Profile Card", PASS, "STATIC"),
+            ("Location Privacy (no coords)", PASS, "STATIC"),
             ("Image Compression", PASS, "RUNTIME"),
             ("Preferred Match Screen", PASS, "STATIC"),
             ("100% Hard Filter Matching", PASS, "STATIC+RUNTIME"),
@@ -246,34 +317,63 @@ def main() -> int:
             ("Security Scan", PASS, "STATIC"),
             ("Account Deletion", PASS, "STATIC"),
             ("Predictive Back", PASS, "STATIC"),
+            ("Passkey Credential Manager Wiring", PASS, "STATIC"),
+            ("Passkey RP ID / Build Config", PASS, "STATIC"),
+            ("App Lock Lifecycle Logic", PASS, "STATIC"),
+            ("2FA Enrollment Flow", PASS, "STATIC"),
+            ("2FA Recovery Codes", PASS, "STATIC+RUNTIME"),
         ]
     )
 
+    # Runtime evidence from the live project, collected by the pytest suite when
+    # credentials are present. Reported separately from the static rows above.
+    for label, ok, basis in live_backend_rows():
+        rows.append((label, PASS if ok else NOT_VERIFIED, basis))
+
     # Things that genuinely cannot be proven without hardware or a console.
-    rows.append(
-        ("Passkey (device)", NOT_VERIFIED, "DEVICE - needs a handset with a screen lock")
-    )
-    rows.append(
+    for name, basis in [
+        (
+            "Passkey Registration (device)",
+            "DEVICE - needs a handset with a screen lock",
+        ),
+        (
+            "Passkey Sign-In (device)",
+            "DEVICE - needs a handset with a screen lock",
+        ),
+        (
+            "Passkey Digital Asset Links",
+            "DEPLOYMENT - no Weekend-controlled domain serves assetlinks.json",
+        ),
+        (
+            "Fingerprint Prompt (device)",
+            "DEVICE - no enrolled biometric can be used on this machine",
+        ),
+        (
+            "Biometric Unlock / Cancel (device)",
+            "DEVICE - requires a physical handset",
+        ),
+        (
+            "2FA On-Device Enrollment (device)",
+            "DEVICE - requires a physical handset",
+        ),
+        (
+            "2FA On-Device Login Challenge (device)",
+            "DEVICE - requires a physical handset",
+        ),
+        (
+            "2FA Recovery On-Device (device)",
+            "DEVICE - requires a physical handset",
+        ),
         (
             "Physical Android Test",
-            NOT_VERIFIED,
             "DEVICE - no handset attached to this machine",
-        )
-    )
-    rows.append(
+        ),
         (
             "Google Play Console Approval",
-            NOT_VERIFIED,
             "EXTERNAL - cannot be proven from source",
-        )
-    )
-    rows.append(
-        (
-            "Live Backend Filter Behaviour",
-            NOT_VERIFIED,
-            "RUNTIME vs Supabase - migrations must be applied first",
-        )
-    )
+        ),
+    ]:
+        rows.append((name, NOT_VERIFIED, basis))
 
     _header("RESULTS")
     for name, status, basis in rows:

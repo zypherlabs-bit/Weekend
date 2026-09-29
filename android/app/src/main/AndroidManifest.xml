@@ -49,12 +49,25 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- WebAuthn / Passkey support - handle credential manager callbacks -->
+            <!-- WebAuthn / Passkey support - handle credential manager callbacks.
+
+                 The host MUST match the WebAuthn relying-party ID configured on
+                 the Supabase project (`webauthn_rp_id`), because Android
+                 Credential Manager rejects a ceremony whose RP cannot be
+                 associated with this app. The previous value pointed at
+                 `weekend.app`, a parked domain with no assetlinks.json, so
+                 every passkey request failed provider-side.
+
+                 ${weekendRpId} is supplied by build.gradle.kts and defaults to
+                 the RP ID derived from SUPABASE_URL. A release build MUST ship
+                 the real value (and a matching assetlinks.json); see
+                 docs/passkeys.md.
+            -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="weekend.app"/>
+                <data android:scheme="https" android:host="${weekendRpId}"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
@@ -62,10 +75,15 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- WebAuthn / Passkey relying party configuration -->
+        <!-- WebAuthn / Passkey relying party ID.
+
+             Must equal the Supabase `webauthn_rp_id`; see the comment on the
+             intent-filter above. Kept in sync with build.gradle.kts via the
+             ${weekendRpId} placeholder so the two can never disagree.
+        -->
         <meta-data
             android:name="android.credentials.webauthn.relying_party_id"
-            android:value="weekend.app" />
+            android:value="${weekendRpId}" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

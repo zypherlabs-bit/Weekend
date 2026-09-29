@@ -1,19 +1,20 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'config/supabase_config.dart';
 import 'theme/app_theme.dart';
 
 import 'routing/app_router.dart';
-import 'services/biometric_auth_service.dart';
-import 'features/auth/biometric_lock_screen.dart';
+import 'services/app_lock_service.dart';
+import 'features/auth/biometric_lock_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // LIVE-ONLY: a release binary must never ship without live credentials.
-  // Debug and test runs may start unconfigured — every backend call is
+  // Debug and test runs may start unconfigured - every backend call is
   // null-guarded and returns empty results (never fabricated data), which is
   // how the test suite runs without a backend.
   if (kReleaseMode && !SupabaseConfig.isConfigured) {
@@ -31,15 +32,25 @@ Future<void> main() async {
       await Supabase.initialize(
         url: SupabaseConfig.url,
         publishableKey: SupabaseConfig.anonKey,
-        // NOTE: `client.auth.passkey` (Supabase's native WebAuthn API) is a
-        // plain field on GoTrueClient in gotrue >= 2.27 and needs no opt-in
-        // flag. Earlier SDKs gated it behind `auth.experimental.passkey`; that
-        // gate no longer exists, so nothing extra is required here.
+        // `client.auth.passkey` (Supabase's native WebAuthn API) is a plain
+        // field on GoTrueClient in gotrue >= 2.27 and needs no opt-in flag.
+        //
+        // The server side is configured for this project (verified live):
+        //   Authentication -> Passkeys -> enabled
+        //   webauthn_rp_id     = <project-ref>.supabase.co
+        //   webauthn_rp_origin = https://<project-ref>.supabase.co
       );
     } catch (e) {
       debugPrint('Supabase initialization failed; running unconfigured: $e');
     }
   }
+
+  // Start the app lock observer and read the persisted preference BEFORE the
+  // first frame, so an app that was killed while unlocked still locks on the
+  // next cold start.
+  AppLockService.instance.attach();
+  await AppLockService.instance.loadFromStorage();
+
   runApp(const ProviderScope(child: WeekendApp()));
 }
 
@@ -50,64 +61,7 @@ class WeekendApp extends ConsumerStatefulWidget {
   ConsumerState<WeekendApp> createState() => _WeekendAppState();
 }
 
-class _WeekendAppState extends ConsumerState<WeekendApp>
-    with WidgetsBindingObserver {
-  bool _needsBiometricUnlock = false;
-  OverlayEntry? _biometricOverlay;
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    switch (state) {
-      case AppLifecycleState.resumed:
-        _onAppResumed();
-        break;
-      case AppLifecycleState.paused:
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.detached:
-      case AppLifecycleState.hidden:
-        _needsBiometricUnlock = true;
-        break;
-    }
-  }
-
-  Future<void> _onAppResumed() async {
-    final biometricEnabled = await BiometricAuthService.isBiometricEnabled();
-    if (biometricEnabled && _needsBiometricUnlock) {
-      _showBiometricLockScreen();
-    }
-    _needsBiometricUnlock = false;
-  }
-
-  void _showBiometricLockScreen() {
-    _removeBiometricOverlay();
-    _biometricOverlay = OverlayEntry(
-      builder: (context) => Material(
-        color: Colors.transparent,
-        child: BiometricLockScreen(onAuthenticated: _removeBiometricOverlay),
-      ),
-    );
-    if (mounted) {
-      Overlay.of(context, rootOverlay: true).insert(_biometricOverlay!);
-    }
-  }
-
-  void _removeBiometricOverlay() {
-    _biometricOverlay?.remove();
-    _biometricOverlay = null;
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _removeBiometricOverlay();
-    super.dispose();
-  }
-
+class _WeekendAppState extends ConsumerState<WeekendApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
@@ -119,6 +73,10 @@ class _WeekendAppState extends ConsumerState<WeekendApp>
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
       routerConfig: router,
+      // The gate lives INSIDE the MaterialApp, so it is a real widget in the
+      // tree rather than an OverlayEntry inserted above the app - which is what
+      // silently failed before.
+      builder: (context, child) => BiometricLockGate(child: child),
     );
   }
 }

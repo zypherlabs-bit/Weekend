@@ -1,147 +1,338 @@
-"""Passkey (WebAuthn) verification.
+﻿"""Passkey (WebAuthn via Android Credential Manager) verification.
 
-Passkeys need a physical Android device with a screen lock, so the parts
-that can only be proven by running the app are reported as NOT VERIFIED by
-the runner rather than silently claimed as passing.
+Static checks prove the code is written and configured. They are reported
+separately from the runtime and device evidence, and the device section is
+ALWAYS honest: a static pass is never allowed to imply a passkey was created
+or used on a phone.
 """
 
 from __future__ import annotations
 
-import re
-
 import pytest
 
-from conftest import PROJECT_ROOT, connected_devices, read
+from conftest import connected_devices
+from weekend_checks import (
+    REPO_ROOT as PROJECT_ROOT,
+    CheckResult,
+    Evidence,
+    Status,
+    have_live_config,
+    management_token,
+    read_text as read,
+    supabase_env,
+)
 
-PUBSPEC = PROJECT_ROOT / "pubspec.yaml"
+PASSKEY_SERVICE = PROJECT_ROOT / "lib" / "services" / "passkey_service.dart"
 AUTH_REPO = PROJECT_ROOT / "lib" / "repositories" / "auth_repository.dart"
 MANIFEST = PROJECT_ROOT / "android" / "app" / "src" / "main" / "AndroidManifest.xml"
-MFA_SCREEN = PROJECT_ROOT / "lib" / "features" / "auth" / "mfa_challenge_screen.dart"
+GRADLE = PROJECT_ROOT / "android" / "app" / "build.gradle.kts"
+PUBSPEC = PROJECT_ROOT / "pubspec.yaml"
 
 
-@pytest.fixture(scope="module")
-def auth_source() -> str:
-    assert AUTH_REPO.exists()
-    return read(AUTH_REPO)
+# --------------------------------------------------------------------------
+# Static: the ceremony is really wired
+# --------------------------------------------------------------------------
 
-
-def _strip_comments(source: str) -> str:
-    """Drop `//` comment lines so a test's own explanation of an old bug
-    cannot be read as the bug still being present."""
-    return "\n".join(
-        line for line in source.splitlines() if not line.strip().startswith("//")
+def test_credential_manager_dependency_present() -> CheckResult:
+    """The Android Credential Manager plugin must be a real dependency."""
+    pub = read(PUBSPEC)
+    assert "credential_manager:" in pub, "credential_manager is not a dependency"
+    return CheckResult(
+        name="Credential Manager dependency declared",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="credential_manager is in pubspec.yaml dependencies",
     )
 
 
-class TestPasskeyDependencies:
-    def test_credential_manager_is_a_dependency(self) -> None:
-        assert "credential_manager" in read(PUBSPEC)
+def test_credential_manager_is_initialised() -> CheckResult:
+    """`init()` must run before any ceremony.
 
-    def test_min_sdk_meets_the_credential_manager_requirement(self) -> None:
-        gradle = read(PROJECT_ROOT / "android" / "app" / "build.gradle.kts")
-        m = re.search(r"minSdk\s*=\s*(\d+)", gradle)
-        assert m
-        assert int(m.group(1)) >= 24, "passkeys require API 24+"
-
-
-class TestPasskeyImplementation:
-    """The passkey flow uses Supabase's NATIVE passkey API.
-
-    An earlier revision drove the WebAuthn *MFA factor* API
-    (`mfa.enroll(factorType: webauthn)` / `mfa.listFactors()`). Both require
-    an already-authenticated session, which is impossible during sign-up and
-    impossible during sign-in, so that flow could never have worked.
+    The Android plugin assigns its `CredentialManager` inside the init handler
+    only; without it every call throws UninitializedPropertyAccessException,
+    which presents to the user as "the passkey button does nothing".
     """
-
-    def test_uses_supabase_native_passkey_api(self, auth_source: str) -> None:
-        assert "auth.passkey.startRegistration" in auth_source
-        assert "auth.passkey.verifyRegistration" in auth_source
-        assert "auth.passkey.startAuthentication" in auth_source
-        assert "auth.passkey.verifyAuthentication" in auth_source
-
-    def test_does_not_drive_the_mfa_factor_api_for_passkeys(
-        self, auth_source: str
-    ) -> None:
-        # The MFA-factor path requires a session to exist first, so it cannot
-        # bootstrap sign-in or sign-up.
-        #
-        # `mfa.listFactors()` still appears legitimately for TOTP 2FA
-        # enrolment, so the check is scoped to the passkey section: the
-        # WebAuthn enrolment and any passkey-time factor listing are banned,
-        # a TOTP factor list is not.
-        code = _strip_comments(auth_source)
-        assert not re.search(
-            r"mfa\.enroll\(\s*factorType:\s*FactorType\.webauthn", code
-        ), "passkeys must use auth.passkey.*, not the MFA factor API"
-
-        # Split on the RAW source: the section banner is itself a comment, so
-        # it would be gone by the time the stripped copy is used.
-        section = "PASSKEYS"
-        if section in auth_source:
-            passkey_section = auth_source.split(section, 1)[-1]
-            passkey_section = _strip_comments(passkey_section)
-            assert "mfa.listFactors" not in passkey_section, (
-                "the passkey flow must not enumerate MFA factors"
-            )
-        else:
-            pytest.skip("no passkey section marker to scope the check to")
-
-    def test_uses_the_platform_authenticator(self, auth_source: str) -> None:
-        assert "CredentialManagerPlatform.instance" in auth_source
-        assert "savePasskeyCredentials" in auth_source
-        assert "getCredentials" in auth_source
-
-    def test_registration_requires_an_existing_session(self, auth_source: str) -> None:
-        # Supabase cannot create a passkey for an account that does not exist
-        # yet; pretending otherwise would be a fake success.
-        assert re.search(
-            r"currentSession\s*==\s*null[\s\S]{0,200}Sign in first", auth_source
-        ), "registerPasskey must refuse without a session and say why"
-
-    def test_failures_return_a_result_rather_than_throwing(self, auth_source: str) -> None:
-        assert "PasskeyOperationResult.failure" in auth_source
-        assert "PasskeyOperationResult.success" in auth_source
-        # A missing server-side setting must produce a clear message, not a
-        # fabricated success.
-        assert "passkey_disabled" in auth_source
+    src = read(PASSKEY_SERVICE)
+    assert "CredentialManagerPlatform.instance.init(" in src, (
+        "passkey_service never calls CredentialManagerPlatform.instance.init"
+    )
+    assert "ensureInitialized" in src, "no shared init future / guard"
+    repo = read(AUTH_REPO)
+    assert "PasskeyService.instance.createCredential" in repo
+    assert "PasskeyService.instance.getCredential" in repo
+    assert "CredentialManagerPlatform.instance" not in repo, (
+        "auth_repository calls CredentialManagerPlatform directly; ceremony "
+        "handling belongs in PasskeyService"
+    )
+    return CheckResult(
+        name="Credential Manager initialised before ceremonies",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="PasskeyService.ensureInitialized() guards both ceremonies",
+    )
 
 
-class TestPasskeyConfiguration:
-    def test_relying_party_metadata_is_declared(self) -> None:
-        manifest = read(MANIFEST)
-        assert "android.credentials.webauthn.relying_party_id" in manifest
+def test_uses_supabase_native_passkey_api() -> CheckResult:
+    """Must use the standards-based WebAuthn endpoints, not a parallel scheme."""
+    repo = read(AUTH_REPO)
+    for call in (
+        "auth.passkey.startRegistration",
+        "auth.passkey.verifyRegistration",
+        "auth.passkey.startAuthentication",
+        "auth.passkey.verifyAuthentication",
+    ):
+        assert call in repo, f"missing Supabase passkey call: {call}"
+    return CheckResult(
+        name="Supabase native WebAuthn API used",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="startRegistration/verifyRegistration/startAuthentication/verifyAuthentication",
+    )
 
-    def test_asset_links_host_is_declared(self) -> None:
-        # Passkeys need digital asset links proving the app owns the domain;
-        # without them the credential is not associated with this RP.
-        manifest = read(MANIFEST)
-        assert "autoVerify" in manifest, (
-            "an App Links intent-filter is required for passkey association"
+
+def test_challenge_handling_is_present() -> CheckResult:
+    """The server challenge must be passed through to the platform."""
+    src = read(PASSKEY_SERVICE)
+    assert "creationOptionsFromJson" in src
+    assert "loginOptionsFromJson" in src
+    assert "start.options" in read(AUTH_REPO), "challenge options are not forwarded"
+    return CheckResult(
+        name="Server challenge forwarded to Credential Manager",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="creationOptionsFromJson / loginOptionsFromJson parse the GoTrue options",
+    )
+
+
+def test_user_verification_is_required() -> CheckResult:
+    """userVerification must be `required`, not the server's `preferred`.
+
+    `preferred` lets a device with no screen lock satisfy the ceremony, which
+    is weaker than the guarantee the sign-up screen promises.
+    """
+    src = read(PASSKEY_SERVICE)
+    assert src.count("userVerification: 'required'") >= 2, (
+        "userVerification must be forced to 'required' on BOTH ceremonies"
+    )
+    assert "userVerification: 'preferred'" not in src
+    return CheckResult(
+        name="User verification required (not preferred)",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="forced to 'required' on registration and authentication",
+    )
+
+
+def test_fetch_options_are_passkey_only() -> CheckResult:
+    """getCredentials must ask for a passkey only.
+
+    The plugin's default also requests saved passwords and Google IDs, which
+    can surface a password row instead of the passkey the user selected.
+    """
+    src = read(PASSKEY_SERVICE)
+    assert "FetchOptionsAndroid(" in src
+    assert "passwordCredential: false" in src
+    assert "googleCredential: false" in src
+    return CheckResult(
+        name="Credential fetch is passkey-only",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="FetchOptionsAndroid(passKey: true, others false)",
+    )
+
+
+def test_no_fake_passkey_authentication() -> CheckResult:
+    """No boolean may stand in for a credential or a session.
+
+    This is the single most important static check in the file: a
+    `passkeyAuthenticated = true` anywhere would make every other pass green
+    while the app was completely insecure.
+    """
+    offenders: list[str] = []
+    banned = (
+        "passkeyAuthenticated",
+        "passkey_authenticated",
+        "fakePasskey",
+        "simulatePasskey",
+        "mockPasskey",
+    )
+    for path in list((PROJECT_ROOT / "lib").rglob("*.dart")) + [
+        PASSKEY_SERVICE,
+        AUTH_REPO,
+    ]:
+        text = read(path).lower()
+        for needle in banned:
+            if needle.lower() in text:
+                offenders.append(f"{path.name}: {needle}")
+
+    # A success must never be reachable without a credential from the platform.
+    service = read(PASSKEY_SERVICE)
+    assert "credentials.publicKeyCredential" in service, (
+        "getCredential must inspect the returned PublicKeyCredential"
+    )
+    assert "if (publicKey == null)" in service, (
+        "an empty credential must be a failure, not a success"
+    )
+    assert "return false" in service or "!ceremony.success" in read(AUTH_REPO)
+
+    assert not offenders, f"fake passkey authentication found: {offenders}"
+    return CheckResult(
+        name="No simulated passkey authentication",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="success requires a real credential; empty credential is a failure",
+    )
+
+
+def test_no_hardcoded_credentials() -> CheckResult:
+    """No service-role key or private key may live in the repo."""
+    import re
+
+    secret_patterns = [
+        r"eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.",  # a JWT literal
+        r"-----BEGIN [A-Z ]*PRIVATE KEY-----",
+    ]
+    hits: list[str] = []
+    for path in (PROJECT_ROOT / "lib").rglob("*.dart"):
+        text = read(path)
+        for pattern in secret_patterns:
+            if re.search(pattern, text):
+                hits.append(path.name)
+    assert not hits, f"credential-shaped literal in Dart source: {set(hits)}"
+    return CheckResult(
+        name="No hard-coded credentials in the app",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="no JWT or PEM literal under lib/",
+    )
+
+
+def test_session_is_required_for_success() -> CheckResult:
+    """A sign-in without a session must be reported as a failure."""
+    repo = read(AUTH_REPO)
+    assert "if (session == null)" in repo, (
+        "signInWithPasskey must fail when GoTrue returns no session"
+    )
+    assert "PasskeyOperationResult.failure(" in repo
+    return CheckResult(
+        name="Sign-in requires a server-issued session",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="null session -> PasskeyOperationResult.failure",
+    )
+
+
+# --------------------------------------------------------------------------
+# Static: release / build configuration
+# --------------------------------------------------------------------------
+
+def test_relying_party_id_is_derived_not_hardcoded() -> CheckResult:
+    """The manifest RP must come from the build, not a literal domain."""
+    manifest = read(MANIFEST)
+    assert "${weekendRpId}" in manifest, (
+        "AndroidManifest must use the ${weekendRpId} manifest placeholder"
+    )
+    assert 'android:value="weekend.app"' not in manifest, (
+        "the parked weekend.app host is still hard-coded as the relying party"
+    )
+    gradle = read(GRADLE)
+    assert "resolvePasskeyRpId" in gradle
+    assert "manifestPlaceholders[\"weekendRpId\"]" in gradle
+    return CheckResult(
+        name="RP ID derived from the Supabase project at build time",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="build.gradle.kts resolvePasskeyRpId() -> ${weekendRpId}",
+    )
+
+
+def test_asset_links_tooling_exists() -> CheckResult:
+    """The Digital Asset Links digest must be derivable from real keystores."""
+    tool_path = PROJECT_ROOT / "tool" / "gen_assetlinks.py"
+    tool = read(tool_path) if tool_path.exists() else None
+    assert tool, "tool/gen_assetlinks.py is missing"
+    assert "sha256_cert_fingerprints" in tool
+    # A placeholder digest would make the statement look valid while never
+    # matching any APK.
+    assert "MISSING" in tool, "the generator must refuse to emit a placeholder digest"
+    return CheckResult(
+        name="Digital Asset Links generator present",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="tool/gen_assetlinks.py computes real keystore digests",
+    )
+
+
+def test_passkey_documentation_records_prerequisites() -> CheckResult:
+    doc_path = PROJECT_ROOT / "docs" / "passkeys.md"
+    doc = read(doc_path) if doc_path.exists() else None
+    assert doc, "docs/passkeys.md is missing"
+    assert "assetlinks.json" in doc
+    return CheckResult(
+        name="Passkey deployment prerequisites documented",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="docs/passkeys.md records the server config and the DAL step",
+    )
+
+
+# --------------------------------------------------------------------------
+# Device: reported honestly, never inferred
+# --------------------------------------------------------------------------
+
+def test_passkey_signup_journey_exists() -> CheckResult:
+    src = read(AUTH_REPO)
+    assert "registerPasskey" in src
+    assert "startRegistration" in src
+    return CheckResult(
+        name="Passkey registration journey implemented",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="registerPasskey() drives start -> ceremony -> verify",
+    )
+
+
+def test_passkey_signin_journey_exists() -> CheckResult:
+    src = read(AUTH_REPO)
+    assert "signInWithPasskey" in src
+    assert "startAuthentication" in src
+    return CheckResult(
+        name="Passkey sign-in journey implemented",
+        status=Status.PASS,
+        evidence=Evidence.STATIC,
+        detail="signInWithPasskey() drives start -> ceremony -> verify",
+    )
+
+
+def test_passkey_physical_device_registration() -> CheckResult:
+    return _device_only(
+        "PASSKEY PHYSICAL DEVICE REGISTRATION:",
+        "create account -> passkey -> user verification -> session -> profile",
+    )
+
+
+def test_passkey_physical_device_signin() -> CheckResult:
+    return _device_only(
+        "PASSKEY PHYSICAL DEVICE SIGN-IN:",
+        "sign out -> passkey -> user verification -> discover",
+    )
+
+
+def _device_only(label: str, flow: str) -> CheckResult:
+    devices = connected_devices()
+    if not devices:
+        return CheckResult(
+        name=label + " NOT VERIFIED",
+            status=Status.NOT_VERIFIED,
+            evidence=Evidence.DEVICE,
+            detail=f"no physical Android device attached. Required flow: {flow}",
         )
-
-    def test_credential_manager_queries_are_present(self) -> None:
-        manifest = read(MANIFEST)
-        assert "android.service.credentials.CredentialProviderService" in manifest
-        assert "android.service.autofill.AutofillService" in manifest
-
-    def test_mfa_challenge_screen_exists(self) -> None:
-        assert MFA_SCREEN.exists(), "the MFA step-up screen is missing"
-
-
-class TestPasskeyDeviceVerification:
-    """These cannot be proven from source alone."""
-
-    def test_passkey_registration_on_a_real_device(self) -> None:
-        devices = connected_devices()
-        if not devices:
-            pytest.skip(
-                "NOT VERIFIED: no physical Android device attached. Passkey "
-                "registration requires a device with a screen lock and a "
-                "registered credential."
-            )
-        # A device is present; the actual registration is exercised by the
-        # device test plan, not by this static suite.
-        pytest.skip(
-            "NOT VERIFIED: passkey registration was not executed by this "
-            "static suite even though a device is attached"
-        )
+    return CheckResult(
+        name=label + " REQUIRES MANUAL RUN",
+        status=Status.NOT_VERIFIED,
+        evidence=Evidence.DEVICE,
+        detail=(
+            f"{len(devices)} device(s) attached but no signed device-run "
+            f"evidence file was produced. Required flow: {flow}"
+        ),
+    )

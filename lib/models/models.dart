@@ -1,3 +1,5 @@
+import 'profile_schema.dart';
+
 /// Immutable description of an ADVANCED SEARCH request.
 ///
 /// Every field maps 1:1 to a parameter of the `search_profiles` Postgres
@@ -262,20 +264,45 @@ class SearchResults {
 }
 
 class ProfilePrompt {
+  /// Stable id from [ProfileSchema]. Empty for a legacy answer stored before
+  /// the catalogue existed; [questionText] then falls back to [prompt].
+  final String id;
+
+  /// The question as displayed. Kept alongside the id so re-wording the
+  /// catalogue never rewrites what the user actually answered.
   final String prompt;
+
   final String answer;
-  const ProfilePrompt({required this.prompt, required this.answer});
-  ProfilePrompt copyWith({String? prompt, String? answer}) {
+
+  const ProfilePrompt({
+    required this.prompt,
+    required this.answer,
+    this.id = '',
+  });
+
+  /// The question to render, preferring the live catalogue text.
+  String get questionText => ProfileSchema.promptQuestion(id, prompt);
+
+  ProfilePrompt copyWith({String? id, String? prompt, String? answer}) {
     return ProfilePrompt(
+      id: id ?? this.id,
       prompt: prompt ?? this.prompt,
       answer: answer ?? this.answer,
     );
   }
 
-  Map<String, dynamic> toJson() => {'prompt': prompt, 'answer': answer};
+  Map<String, dynamic> toJson() => {
+    if (id.isNotEmpty) 'id': id,
+    'prompt': prompt,
+    'answer': answer,
+  };
+
   factory ProfilePrompt.fromJson(Map<String, dynamic> json) => ProfilePrompt(
-    prompt: json['prompt'] as String,
-    answer: json['answer'] as String,
+    id: (json['id'] as String?) ?? '',
+    // Tolerate a missing key rather than throwing on a malformed row, which
+    // would break the whole deck for one bad record.
+    prompt: (json['prompt'] as String?) ?? '',
+    answer: (json['answer'] as String?) ?? '',
   );
 }
 
@@ -306,6 +333,19 @@ class UserProfile {
   final String voiceIntroUrl;
   final String compatibilityExplanation;
   final String distanceDisplay;
+
+  /// Lifestyle attributes. Each maps to a `profiles` column with a CHECK
+  /// constraint; the accepted values live in [ProfileSchema.lifestyleFields]
+  /// so the model and the picker can never disagree.
+  final String? smoking;
+  final String? drinking;
+  final String? exercise;
+  final String? pets;
+  final String? children;
+
+  /// Height in centimetres, or null when not stated.
+  final int? heightCm;
+
   const UserProfile({
     required this.id,
     required this.name,
@@ -333,6 +373,12 @@ class UserProfile {
     this.voiceIntroUrl = '',
     this.compatibilityExplanation = '',
     this.distanceDisplay = '',
+    this.smoking,
+    this.drinking,
+    this.exercise,
+    this.pets,
+    this.children,
+    this.heightCm,
   });
   UserProfile copyWith({
     String? id,
@@ -361,6 +407,12 @@ class UserProfile {
     String? voiceIntroUrl,
     String? compatibilityExplanation,
     String? distanceDisplay,
+    String? smoking,
+    String? drinking,
+    String? exercise,
+    String? pets,
+    String? children,
+    int? heightCm,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -390,6 +442,12 @@ class UserProfile {
       compatibilityExplanation:
           compatibilityExplanation ?? this.compatibilityExplanation,
       distanceDisplay: distanceDisplay ?? this.distanceDisplay,
+      smoking: smoking ?? this.smoking,
+      drinking: drinking ?? this.drinking,
+      exercise: exercise ?? this.exercise,
+      pets: pets ?? this.pets,
+      children: children ?? this.children,
+      heightCm: heightCm ?? this.heightCm,
     );
   }
 

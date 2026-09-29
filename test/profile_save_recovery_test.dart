@@ -84,6 +84,7 @@ UserProfile _profile({
   String gender = 'Woman',
   String intent = 'Dating & Weekend Plans',
   String bio = 'I enjoy music, travel, food and relaxed weekends.',
+  List<ProfilePrompt> prompts = const [],
 }) {
   return UserProfile(
     id: id,
@@ -98,6 +99,7 @@ UserProfile _profile({
     relationshipIntent: intent,
     favoriteMusic: 'Jazz',
     idealWeekend: 'Hiking',
+    prompts: prompts,
   );
 }
 
@@ -129,8 +131,51 @@ void main() {
           'education',
           'favorite_music',
           'ideal_weekend',
+          // Prompt answers, as the jsonb array the `profile_prompts_shape`
+          // CHECK constraint validates. Present even when empty so clearing
+          // the last answer actually clears the column server-side.
+          'prompts',
         },
       );
+    });
+
+    test('encodes prompt answers and drops blank ones', () {
+      final payload = buildProfilePayload(
+        _profile(
+          prompts: const [
+            ProfilePrompt(
+              id: 'simple_pleasures',
+              prompt: 'My simple pleasures',
+              answer: 'Long walks and bad coffee.',
+            ),
+            // Blank answer: must not reach the database at all, or the card
+            // renders an empty question box.
+            ProfilePrompt(
+              id: 'hidden_talent',
+              prompt: 'My hidden talent',
+              answer: '   ',
+            ),
+          ],
+        ),
+      );
+      final prompts = payload['prompts'] as List;
+      expect(prompts, hasLength(1));
+      expect((prompts.first as Map)['id'], 'simple_pleasures');
+      expect((prompts.first as Map)['answer'], 'Long walks and bad coffee.');
+    });
+
+    test('omits lifestyle columns whose value is outside the CHECK set', () {
+      final payload = buildProfilePayload(
+        _profile().copyWith(
+          smoking: 'Vaporises clouds',
+          drinking: 'Socially',
+        ),
+      );
+      // Invalid -> omitted entirely, so the constraint can never be violated
+      // and good stored data survives.
+      expect(payload.containsKey('smoking'), isFalse);
+      // Valid -> written.
+      expect(payload['drinking'], 'Socially');
     });
 
     test('omits CHECK-constrained columns when the value is not allowed', () {

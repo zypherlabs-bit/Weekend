@@ -206,7 +206,20 @@ class TestPhotoMinimumRule:
         )
         body = function_body(sql, "minimum_profile_photos")
         assert body is not None
-        assert re.search(r"select\s+4", body), "minimum must be exactly 4"
+        # The threshold is configurable (profile_requirements), but its shipped
+        # default must still be exactly 4 and the function must read it rather
+        # than hard-code a literal.
+        assert re.search(
+            r"insert\s+into\s+public\.profile_requirements[^;]*values\s*\(\s*true\s*,\s*4\s*,",
+            sql,
+            re.IGNORECASE | re.DOTALL,
+        ), "the configured default must remain 4 photos"
+        assert "profile_requirements" in body, (
+            "minimum_profile_photos must read the configured value"
+        )
+        assert not re.search(r"select\s+4", body), (
+            "the literal 4 was replaced by the configured value"
+        )
 
     def test_only_approved_photos_count(self, sql: str) -> None:
         body = function_body(sql, "approved_photo_count")

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../repositories/auth_repository.dart';
 
@@ -22,6 +22,13 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
   int _attempts = 0;
   DateTime? _cooldownUntil;
   bool _showSecret = false;
+  /// Recovery codes generated during this screen visit, shown exactly once.
+  /// Empty means "not generated right now" - the plaintext is never persisted,
+  /// so it genuinely cannot be shown again after the user leaves.
+  List<MfaRecoveryCode> _recoveryCodes = const [];
+
+  /// Unused recovery codes the server still holds. A count, never the codes.
+  int _recoveryCount = 0;
 
   @override
   void initState() { super.initState(); _refresh(); }
@@ -32,6 +39,10 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final factors = await _repo.listFactors();
+      // Never derive "2FA is on" from a failed lookup: an exception below leaves
+      // the previous state untouched, so a transient error cannot offer a
+      // disable button for a factor that is still required.
+      _recoveryCount = await _repo.recoveryCodeCount();
       setState(() {
         _mfaEnabled = factors.verifiedTotp.isNotEmpty;
         _existingFactorId = factors.verifiedTotp.isNotEmpty ? factors.verifiedTotp.first.id : null;
@@ -40,6 +51,60 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
       setState(() => _error = 'Could not load 2FA status: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Generate a fresh recovery-code set.
+  ///
+  /// Regenerating destroys every previous code, so the user is warned first and
+  /// told explicitly that only the newest set will work.
+  Future<void> _generateRecoveryCodes() async {
+    if (_working) return;
+    if (_recoveryCount > 0) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          backgroundColor: const Color(0xFF1C162E),
+          title: const Text('Replace recovery codes?',
+              style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'Your existing recovery codes will stop working immediately. '
+            'Only the new set will unlock your account.',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('Replace'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+    }
+    setState(() { _working = true; _error = null; });
+    try {
+      final codes = await _repo.generateRecoveryCodes(count: 8);
+      if (!mounted) return;
+      if (codes.isEmpty) {
+        setState(() =>
+            _error = 'Recovery codes could not be generated. Please try again.');
+        return;
+      }
+      setState(() {
+        _recoveryCodes = codes;
+        _recoveryCount = codes.length;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = 'Could not generate recovery codes.');
+      }
+    } finally {
+      if (mounted) setState(() => _working = false);
     }
   }
 
@@ -94,30 +159,126 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
     }
   }
 
+  /// Disable 2FA.
+  ///
+  /// Requires a live code from the authenticator FIRST. GoTrue also enforces an
+  /// AAL2 session for unenrolling a verified factor, but relying on the server
+  /// alone would leave an attacker with a stolen AAL1 session to discover the
+  /// rule by trial. Asking for the code here makes the requirement explicit and
+  /// gives the user a clear message either way.
   Future<void> _disable() async {
-    if (_existingFactorId == null) return;
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text('Disable 2FA?', style: TextStyle(color: Colors.white)),
-        content: const Text('Your account will be protected by password only.', style: TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Disable', style: TextStyle(color: Colors.red))),
-        ],
-      ),
+    final factorId = _existingFactorId;
+    if (factorId == null) return;
+
+    final code = await _promptForCode(
+      title: 'Confirm it is you',
+      reason: 'Enter the current code from your authenticator app to turn '
+          'off two-factor authentication.',
     );
-    if (confirm != true) return;
+    if (code == null || !mounted) return;
+
     setState(() { _working = true; _error = null; });
     try {
-      await _repo.unenrollFactor(_existingFactorId!);
+      await _repo.stepUpToAal2(factorId: factorId, code: code);
+      await _repo.unenrollFactor(factorId);
+      // Recovery codes are meaningless once the factor is gone, and leaving
+      // spendable codes behind would be a silent re-entry path.
+      await _repo.generateRecoveryCodes(count: 0);
+      setState(() {
+        _recoveryCodes = const [];
+        _recoveryCount = 0;
+      });
       await _refresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Two-factor authentication disabled.'),
+          ),
+        );
+      }
     } catch (e) {
-      setState(() => _error = 'Could not disable 2FA: $e');
+      setState(() => _error = _friendlyDisableError(e));
     } finally {
       if (mounted) setState(() => _working = false);
     }
+  }
+
+  String _friendlyDisableError(Object e) {
+    final text = e.toString().toLowerCase();
+    if (text.contains('invalid') || text.contains('expired')) {
+      return 'That code was not accepted. 2FA is still on.';
+    }
+    if (text.contains('insufficient_aal')) {
+      return 'Your session could not be verified. Sign out, sign back in and '
+          'try again.';
+    }
+    if (text.contains('401') || text.contains('403')) {
+      return '2FA could not be disabled. Sign out, sign back in and try again.';
+    }
+    return 'Could not disable 2FA. Please try again.';
+  }
+
+  /// Ask for a 6-digit code. Returns null when the user cancels.
+  Future<String?> _promptForCode({
+    required String title,
+    required String reason,
+  }) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF1C162E),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              reason,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              autofocus: true,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                letterSpacing: 8,
+              ),
+              decoration: InputDecoration(
+                counterText: '',
+                hintText: '......',
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.06),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    final code = result;
+    if (code == null || code.length != 6) return null;
+    return code;
   }
   @override
   Widget build(BuildContext context) {
@@ -153,17 +314,113 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
                           : const Text('Enable 2FA', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   )
-                else
+                else ...[
                   OutlinedButton(
                     onPressed: _working ? null : _disable,
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red), minimumSize: const Size.fromHeight(52)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      minimumSize: const Size.fromHeight(52),
+                    ),
                     child: const Text('Disable 2FA'),
                   ),
+                  const SizedBox(height: 24),
+                  _recoverySection(),
+                ],
               ],
             ),
     );
   }
 
+  /// Recovery-code management.
+  ///
+  /// The plaintext set exists only in [_recoveryCodes] for as long as this
+  /// screen stays open: it is never written to disk, never logged, and the
+  /// server only keeps a salted hash. Leaving the screen therefore genuinely
+  /// makes the codes unrecoverable, which is why the warning below is explicit.
+  Widget _recoverySection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Recovery codes',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _recoveryCount == 0
+                ? 'You have no recovery codes. If you lose your phone you will '
+                    'need support to get back in.'
+                : '$_recoveryCount unused recovery '
+                    '${_recoveryCount == 1 ? 'code' : 'codes'} left.',
+            style: const TextStyle(color: Colors.white60, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: _working ? null : _generateRecoveryCodes,
+              icon: const Icon(Icons.vpn_key_rounded, size: 18),
+              label: Text(
+                _recoveryCount == 0
+                    ? 'Generate recovery codes'
+                    : 'Replace recovery codes',
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFFF9966),
+                side: const BorderSide(color: Color(0xFFFF9966)),
+              ),
+            ),
+          ),
+          if (_recoveryCodes.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final c in _recoveryCodes)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: SelectableText(
+                        c.code,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontFamily: 'monospace',
+                          fontSize: 14,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Save these somewhere safe now. They are shown once and '
+                    'cannot be displayed again. Each code works only once.',
+                    style: TextStyle(color: Colors.orangeAccent, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
   Widget _statusCard() {
     return Container(
       padding: const EdgeInsets.all(16),

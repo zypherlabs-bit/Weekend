@@ -47,9 +47,25 @@ jobs:
             echo "LIVE-ONLY: SUPABASE_ANON_KEY secret is a placeholder. Refusing to build." >&2
             exit 1
           fi
+          # SUPABASE_URL is passed as BOTH a --dart-define and a Gradle
+          # property. The Dart side needs it for String.fromEnvironment; the
+          # Gradle side needs it to derive the WebAuthn relying-party ID that
+          # goes into AndroidManifest.xml. --dart-define alone is invisible to
+          # Gradle, which would publish an APK with an empty
+          # android.credentials.webauthn.relying_party_id.
+          #
+          # PASSKEY_REQUIRE_RP_ID makes an underivable RP ID a hard failure
+          # instead of a release whose passkeys silently cannot work.
           flutter build apk --release \
-            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+            --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
+            -PSUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            -PPASSKEY_REQUIRE_RP_ID=true
+
+      - name: Log passkey configuration
+        run: |
+          cd android
+          ./gradlew :app:logPasskeyConfig --console=plain
 
       - name: Prepare release assets
         id: prep

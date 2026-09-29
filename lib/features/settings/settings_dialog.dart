@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 import '../safety/safety_dialogs.dart';
 import '../../services/biometric_auth_service.dart';
+import '../../services/app_lock_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../repositories/auth_repository.dart';
 import '../../config/supabase_config.dart';
@@ -26,6 +27,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   bool _biometricLock = false;
 
   bool _isLoadingBiometric = true;
+  bool _togglingBiometric = false;
   bool _isMfaEnabled = false;
   bool _isLoadingMfa = true;
 
@@ -171,35 +173,54 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
     }
   }
 
+  /// Turning the app lock on/off.
+  ///
+  /// Enabling requires a real prompt FIRST: the flag is only persisted after a
+  /// successful authentication, so a user can never end up locked out by a
+  /// toggle they could not satisfy. Disabling writes through
+  /// [AppLockService] so the live lock state stays in sync with storage.
   Future<void> _toggleBiometricLock(bool value) async {
-    if (value) {
-      final result = await BiometricAuthService.authenticate(
-        localizedReason: 'Enable biometric app lock',
-        useErrorDialogs: true,
-        stickyAuth: true,
-      );
-      if (result.success) {
-        if (mounted) {
-          setState(() => _biometricLock = true);
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                result.errorMessage ?? 'Failed to enable biometric lock',
+    if (_togglingBiometric) return;
+    setState(() => _togglingBiometric = true);
+    try {
+      if (value) {
+        final result = await BiometricAuthService.authenticate(
+          localizedReason: 'Confirm to enable Weekend app lock',
+          stickyAuth: true,
+        );
+        if (!result.success) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  result.errorMessage ??
+                      'Could not enable app lock. Please try again.',
+                ),
               ),
-            ),
-          );
+            );
+          }
+          // The switch stays where the user last saw it: unchanged.
+          await _loadBiometricSetting();
+          return;
         }
+        await AppLockService.instance.setLockEnabled(true);
+        if (mounted) setState(() => _biometricLock = true);
+      } else {
+        await AppLockService.instance.setLockEnabled(false);
+        if (mounted) setState(() => _biometricLock = false);
       }
-    } else {
-      await BiometricAuthService.disableBiometric();
+    } catch (e) {
+      await _loadBiometricSetting();
       if (mounted) {
-        setState(() => _biometricLock = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e')),
+        );
       }
+    } finally {
+      if (mounted) setState(() => _togglingBiometric = false);
     }
   }
+
 
   Future<void> _changePassword() async {
     final email = SupabaseConfig.client?.auth.currentUser?.email;
@@ -207,7 +228,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No email on this account — cannot send reset link.'),
+          content: Text('No email on this account â€” cannot send reset link.'),
         ),
       );
       return;
@@ -304,7 +325,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
             ),
             subtitle: _isLoadingMfa
                 ? const Text(
-                    'Checking…',
+                    'Checkingâ€¦',
                     style: TextStyle(color: Colors.white54, fontSize: 12),
                   )
                 : Text(
@@ -329,7 +350,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
             ),
             subtitle: Text(
               _isLoadingPasskeys
-                  ? 'Checking…'
+                  ? 'Checkingâ€¦'
                   : (_passkeyCount == 0
                         ? 'Sign in without a password using your fingerprint, '
                               'face or device PIN'

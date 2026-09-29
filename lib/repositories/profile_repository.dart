@@ -2,11 +2,93 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
+import '../models/profile_schema.dart';
 import '../models/models.dart';
 import '../services/photo_url_service.dart';
 import 'profile_save_error.dart';
 
+/// Encode prompt answers for the `profiles.prompts` jsonb column.
+///
+/// Enforces the SAME contract the `profile_prompts_shape` CHECK constraint
+/// enforces server-side (migration 025), so an invalid array is never sent:
+///
+///   * at most [ProfileSchema.maxPrompts] entries,
+///   * every entry has a non-empty `prompt` (question) and an `answer`,
+///   * every answer is at most the template's `maxLength`.
+///
+/// Blank answers are DROPPED, not written as empty strings: an unanswered
+/// prompt must disappear from the profile card rather than render as an empty
+/// box. Returns `null` when nothing survives, so the caller can distinguish
+/// "clear the column" from "leave it alone".
+List<Map<String, dynamic>>? encodePrompts(List<ProfilePrompt> prompts) {
+  final out = <Map<String, dynamic>>[];
+  for (final p in prompts) {
+    final answer = p.answer.trim();
+    final question = p.questionText.trim();
+    if (answer.isEmpty || question.isEmpty) continue;
+
+    final template = p.id.isEmpty ? null : ProfileSchema.promptById(p.id);
+    final limit = template?.maxLength ?? 300;
+    // Truncate rather than reject: a long answer losing its tail is better than
+    // the whole save failing on a CHECK constraint.
+    final capped = answer.length <= limit
+        ? answer
+        : answer.substring(0, limit);
+
+    out.add(<String, dynamic>{
+      if (p.id.isNotEmpty) 'id': p.id,
+      'prompt': question,
+      'answer': capped,
+    });
+    if (out.length >= ProfileSchema.maxPrompts) break;
+  }
+  return out.isEmpty ? null : out;
+}
+
 /// Values the `profiles.gender` CHECK constraint accepts (migration 001).
+/// One photo on a profile, with the metadata the editor needs.
+///
+/// [url] is a short-lived SIGNED url resolved from the private storage bucket
+/// and may be null when signing failed; [storagePath] is the durable private
+/// path and is what the delete flow removes. A null [url] must never be treated
+/// as "photo missing" - the row still exists.
+class ProfilePhotoRecord {
+  final String id;
+  final String storagePath;
+  final bool isPrimary;
+  final int sortOrder;
+
+  /// Signed URL, or null when it could not be resolved.
+  final String? url;
+
+  const ProfilePhotoRecord({
+    required this.id,
+    required this.storagePath,
+    required this.isPrimary,
+    required this.sortOrder,
+    this.url,
+  });
+
+  ProfilePhotoRecord copyWith({
+    String? id,
+    String? storagePath,
+    bool? isPrimary,
+    int? sortOrder,
+    String? url,
+  }) {
+    return ProfilePhotoRecord(
+      id: id ?? this.id,
+      storagePath: storagePath ?? this.storagePath,
+      isPrimary: isPrimary ?? this.isPrimary,
+      sortOrder: sortOrder ?? this.sortOrder,
+      url: url ?? this.url,
+    );
+  }
+
+  /// A one-based label for the photo tile overlay.
+  String get positionLabel => (sortOrder + 1).toString();
+}
+
 const Set<String> kAllowedGenders = {
   'Man',
   'Woman',
@@ -48,7 +130,35 @@ Map<String, dynamic> buildProfilePayload(UserProfile profile) {
     'education': clean(profile.education),
     'favorite_music': clean(profile.favoriteMusic),
     'ideal_weekend': clean(profile.idealWeekend),
+    // Prompts are stored as the jsonb array the `profile_prompts_shape` CHECK
+    // constraint validates (migration 025). Answers that are blank are dropped
+    // rather than stored empty, so the profile card never renders an empty
+    // question box.
+    'prompts': encodePrompts(profile.prompts),
   };
+
+  // Lifestyle columns: only written when the value is inside the column's CHECK
+  // constraint, for the same reason as gender/intent below. An invalid value is
+  // OMITTED rather than written as NULL, so a bad row can neither violate the
+  // constraint nor erase good data.
+  void lifestyle(String column, String? value) {
+    final v = value?.trim() ?? '';
+    if (v.isEmpty) return;
+    if (ProfileSchema.isValidLifestyleValue(column, v)) {
+      payload[column] = v;
+    }
+  }
+
+  lifestyle('smoking', profile.smoking);
+  lifestyle('drinking', profile.drinking);
+  lifestyle('exercise', profile.exercise);
+  lifestyle('pets', profile.pets);
+  lifestyle('children', profile.children);
+
+  final height = profile.heightCm;
+  if (height != null && height >= 100 && height <= 250) {
+    payload['height_cm'] = height;
+  }
   final gender = oneOf(profile.gender, kAllowedGenders);
   if (gender != null) payload['gender'] = gender;
   final intent = oneOf(profile.relationshipIntent, kAllowedRelationshipIntents);
@@ -222,7 +332,9 @@ class ProfileRepository {
             'id, display_name, date_of_birth, gender, bio, city, '
             'relationship_intent, occupation, education, favorite_music, '
             'ideal_weekend, verification_status, is_photo_verified, '
-            'trust_score, referral_code',
+            'trust_score, referral_code, prompts, languages, smoking, '
+            'drinking, exercise, pets, children, height_cm, '
+            'has_minimum_photos',
           )
           .eq('id', userId)
           .single();
@@ -252,8 +364,10 @@ class ProfileRepository {
         relationshipIntent: response['relationship_intent'] ?? 'Dating',
         interests: const [],
         favoritePlaces: const [],
-        languages: const [],
-        prompts: const [],
+        languages:
+            (response['languages'] as List?)?.map((e) => e.toString()).toList() ??
+            const [],
+        prompts: decodePrompts(response['prompts']),
         isPhotoVerified:
             (response['is_photo_verified'] as bool? ?? false) ||
             response['verification_status'] == 'verified',
@@ -262,9 +376,213 @@ class ProfileRepository {
         favoriteMusic: response['favorite_music'] ?? '',
         idealWeekend: response['ideal_weekend'] ?? '',
         referralCode: response['referral_code'] ?? '',
+        smoking: response['smoking'] as String?,
+        drinking: response['drinking'] as String?,
+        exercise: response['exercise'] as String?,
+        pets: response['pets'] as String?,
+        children: response['children'] as String?,
+        heightCm: (response['height_cm'] as num?)?.toInt(),
       );
     } catch (e) {
       return null;
+    }
+  }
+
+  /// Decode the `profiles.prompts` jsonb column.
+  ///
+  /// A malformed entry is skipped rather than throwing: one bad row must not
+  /// blank out the entire profile of an otherwise valid account.
+  ///
+  /// Public so the provider's `refreshProfile` reuses exactly one parser - two
+  /// parsers for the same column is how they drift apart.
+  static List<ProfilePrompt> decodePrompts(Object? raw) {
+    if (raw is! List) return const [];
+    final out = <ProfilePrompt>[];
+    for (final entry in raw) {
+      if (entry is! Map) continue;
+      final answer = (entry['answer'] ?? '').toString().trim();
+      if (answer.isEmpty) continue;
+      out.add(
+        ProfilePrompt.fromJson(Map<String, dynamic>.from(entry)),
+      );
+    }
+    return out;
+  }
+
+  /// Photos of a profile, in display order, with the ids needed to reorder.
+  ///
+  /// Returns the storage PATH as well as the resolved signed URL, because a
+  /// reorder has to address the row by id while the card renders the URL.
+  Future<List<ProfilePhotoRecord>> fetchProfilePhotoRecords(
+    String userId,
+  ) async {
+    final client = _client;
+    if (client == null) return const [];
+
+    try {
+      final response = await client
+          .from('profile_photos')
+          .select('id, storage_path, is_primary, sort_order')
+          .eq('user_id', userId)
+          .eq('moderation_status', 'approved')
+          // User-defined order first, then the primary photo, then newest.
+          .order('sort_order', ascending: true)
+          .order('is_primary', ascending: false)
+          .order('created_at', ascending: false);
+
+      final rows = (response as List)
+          .whereType<Map<String, dynamic>>()
+          .toList(growable: false);
+
+      final paths = rows
+          .map((r) => r['storage_path'] as String? ?? '')
+          .where((p) => p.isNotEmpty)
+          .toList(growable: false);
+
+      final urls = await PhotoUrlService.resolve(paths);
+
+      return rows
+          .map(
+            (r) => ProfilePhotoRecord(
+              id: r['id'] as String? ?? '',
+              storagePath: r['storage_path'] as String? ?? '',
+              isPrimary: r['is_primary'] as bool? ?? false,
+              sortOrder: (r['sort_order'] as num?)?.toInt() ?? 0,
+              url: urls[r['storage_path'] as String? ?? ''],
+            ),
+          )
+          .where((r) => r.id.isNotEmpty)
+          .toList(growable: false);
+    } catch (e) {
+      return const [];
+    }
+  }
+
+  /// The minimum number of approved photos the server requires.
+  ///
+  /// Read from `profile_requirements` rather than hard-coded, so changing the
+  /// threshold in the database changes the app with no release.
+  Future<int> minimumPhotos() async {
+    final client = _client;
+    if (client == null) return ProfileSchema.minimumPhotos;
+    try {
+      final result = await client.rpc('minimum_profile_photos');
+      return (result as num?)?.toInt() ?? ProfileSchema.minimumPhotos;
+    } catch (_) {
+      return ProfileSchema.minimumPhotos;
+    }
+  }
+
+  /// The maximum number of photos a profile may carry.
+  Future<int> maximumPhotos() async {
+    final client = _client;
+    if (client == null) return ProfileSchema.maximumPhotos;
+    try {
+      final result = await client.rpc('maximum_profile_photos');
+      return (result as num?)?.toInt() ?? ProfileSchema.maximumPhotos;
+    } catch (_) {
+      return ProfileSchema.maximumPhotos;
+    }
+  }
+
+  /// Persist a new photo order.
+  ///
+  /// [photoIds] must be the COMPLETE ordered list. The server rejects the call
+  /// outright if any id is not owned by the caller, so a stale client cannot
+  /// move another user's photos.
+  ///
+  /// Throws [ProfileSaveException] on rejection - a reorder that silently did
+  /// nothing would leave the card showing an order the user did not choose.
+  Future<void> reorderPhotos(List<String> photoIds) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError(SupabaseConfig.configError);
+    }
+    if (photoIds.isEmpty) return;
+    try {
+      await client.rpc(
+        'set_profile_photo_order',
+        params: {
+          'p_photo_ids': photoIds,
+        },
+      );
+    } catch (e) {
+      final classified = classifyProfileSaveError(e, stage: 'photos.reorder');
+      classified.log(e.runtimeType.toString());
+      throw classified;
+    }
+  }
+
+  /// Make one photo the primary (first) photo.
+  ///
+  /// The server clears the previous primary inside the same transaction, so two
+  /// primaries cannot exist even transiently.
+  Future<void> setPrimaryPhoto(String photoId) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError(SupabaseConfig.configError);
+    }
+    if (photoId.isEmpty) return;
+    try {
+      await client.rpc('set_primary_profile_photo', params: {
+        'p_photo_id': photoId,
+      });
+    } catch (e) {
+      final classified = classifyProfileSaveError(e, stage: 'photos.primary');
+      classified.log(e.runtimeType.toString());
+      throw classified;
+    }
+  }
+
+  /// Delete one of the caller's own photos.
+  ///
+  /// Removes BOTH the `profile_photos` row and the Storage object. Order is
+  /// storage-first so a failed object delete leaves an orphan row (harmless,
+  /// retryable) rather than a live row pointing at nothing (which would render
+  /// a broken image on every view of this profile).
+  ///
+  /// Deleting is refused while it would drop the profile below the server's
+  /// minimum, so the user can never strand themselves mid-flow.
+  Future<void> deletePhoto(ProfilePhotoRecord photo) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError(SupabaseConfig.configError);
+    }
+    final authId = client.auth.currentUser?.id;
+    if (authId == null || authId.isEmpty) {
+      const error = ProfileSaveException(
+        ProfileSaveFailure.auth,
+        stage: 'photos.delete',
+      );
+      throw error;
+    }
+    try {
+      final remaining = (await fetchProfilePhotoRecords(authId))
+          .where((p) => p.id != photo.id)
+          .length;
+      final minimum = await minimumPhotos();
+      if (remaining < minimum) {
+        throw const ProfileSaveException(
+          ProfileSaveFailure.validation,
+          stage: 'photos.delete.minimum',
+        );
+      }
+
+      if (photo.storagePath.isNotEmpty) {
+        await client.storage.from(SupabaseConfig.storageBucket).remove([
+          photo.storagePath,
+        ]);
+      }
+      await client
+          .from('profile_photos')
+          .delete()
+          .eq('id', photo.id)
+          .eq('user_id', authId);
+    } catch (e) {
+      if (e is ProfileSaveException) rethrow;
+      final classified = classifyProfileSaveError(e, stage: 'photos.delete');
+      classified.log(e.runtimeType.toString());
+      throw classified;
     }
   }
 
@@ -276,9 +594,14 @@ class ProfileRepository {
     try {
       final response = await client
           .from('profile_photos')
-          .select('storage_path')
+          .select('id, storage_path, is_primary, sort_order')
           .eq('user_id', userId)
-          .eq('moderation_status', 'approved');
+          .eq('moderation_status', 'approved')
+          // User-defined order first, then the primary photo, then newest.
+          // This is what makes a reorder actually visible on the profile card.
+          .order('sort_order', ascending: true)
+          .order('is_primary', ascending: false)
+          .order('created_at', ascending: false);
 
       final paths = (response as List)
           .map((photo) => photo['storage_path'] as String? ?? '')
@@ -311,6 +634,85 @@ class ProfileRepository {
   /// Throws [ProfileSaveException] (classified: RLS / constraint / validation
   /// / network / auth / no-row) when the backend rejects the write, and
   /// [StateError] when the app is not configured with live credentials.
+  /// Persist the signed-in user's date of birth.
+  ///
+  /// `date_of_birth` is NOT part of [buildProfilePayload] because
+  /// [UserProfile] carries a derived `age`, not the birth date itself - writing
+  /// a fabricated date to make the age line up would corrupt the one field that
+  /// every age filter in `search_profiles` reads. The Edit Profile screen owns
+  /// the picker, so it owns this write.
+  ///
+  /// Age eligibility is re-checked here: `search_profiles` hard-filters on a
+  /// known age starting at 18, so storing an under-18 date would produce a
+  /// profile that can never appear in anyone else's deck.
+  Future<void> updateDateOfBirth(DateTime dob) async {
+    final client = _client;
+    if (client == null) {
+      throw StateError(SupabaseConfig.configError);
+    }
+    final authId = client.auth.currentUser?.id;
+    if (authId == null || authId.isEmpty) {
+      const error = ProfileSaveException(
+        ProfileSaveFailure.auth,
+        stage: 'profiles.dob',
+      );
+      throw error;
+    }
+
+    final now = DateTime.now();
+    var age = now.year - dob.year;
+    if (now.month < dob.month ||
+        (now.month == dob.month && now.day < dob.day)) {
+      age -= 1;
+    }
+    if (age < 18) {
+      throw const ProfileSaveException(
+        ProfileSaveFailure.validation,
+        stage: 'profiles.dob.underage',
+        userMessageOverride:
+            'Weekend is for adults 18 and over. Please enter a date of birth '
+            'that makes you 18 or older.',
+      );
+    }
+    if (age > 120) {
+      throw const ProfileSaveException(
+        ProfileSaveFailure.validation,
+        stage: 'profiles.dob.range',
+        userMessageOverride: 'That date of birth looks out of range. '
+            'Please check it and try again.',
+      );
+    }
+
+    final iso =
+        '${dob.year.toString().padLeft(4, '0')}-'
+        '${dob.month.toString().padLeft(2, '0')}-'
+        '${dob.day.toString().padLeft(2, '0')}';
+
+    try {
+      final rows = await client
+          .from('profiles')
+          .update({'date_of_birth': iso})
+          .eq('id', authId)
+          .select('id');
+      if ((rows as List).isEmpty) {
+        // A zero-row update means the profile row does not exist yet; the
+        // caller must let the main save create it first.
+        const error = ProfileSaveException(
+          ProfileSaveFailure.noRow,
+          stage: 'profiles.dob',
+        );
+        error.log('zero rows updated');
+        throw error;
+      }
+    } on ProfileSaveException {
+      rethrow;
+    } catch (e) {
+      final classified = classifyProfileSaveError(e, stage: 'profiles.dob');
+      classified.log(e.runtimeType.toString());
+      throw classified;
+    }
+  }
+
   Future<int> updateProfile(UserProfile profile) async {
     final client = _client;
     if (client == null) {

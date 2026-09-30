@@ -57,14 +57,15 @@ class PasskeyCeremonyResult {
 ///
 /// Why this exists
 /// ---------------
-/// `CredentialManagerPlatform.instance` is a `PlatformInterface` whose Android
-/// implementation holds `CredentialManager credentialManager` as a
-/// `lateinit var`. It is assigned ONLY inside the plugin's `init` handler.
-/// Calling `savePasskeyCredentials` / `getCredentials` without a prior
-/// `init(...)` therefore throws `UninitializedPropertyAccessException` before
-/// any WebAuthn ceremony begins - the "passkey button does nothing on a real
-/// device" symptom. [ensureInitialized] performs that init once and caches the
-/// in-flight future so concurrent taps cannot race.
+/// `credential_manager` 5.x registers its platform implementation inside the
+/// `CredentialManager()` CONSTRUCTOR (`registerWith()` is never called from a
+/// static member). `CredentialManagerPlatform.instance` is therefore left
+/// unset - reading it throws
+/// `Assertion failed: CredentialManagerPlatform.instance has not been
+/// initialized` - and every ceremony aborts before the Credential Manager
+/// sheet is ever shown. That is the real "passkey does nothing" symptom, and
+/// it is fixed by constructing the handle in [ensureInitialized] before any
+/// `init` / `get` / `save` call.
 class PasskeyService {
   PasskeyService._();
 
@@ -72,6 +73,20 @@ class PasskeyService {
 
   Future<bool>? _initFuture;
   bool _initialized = false;
+
+  /// The plugin's high-level handle.
+  ///
+  /// Constructing it is what performs platform registration: the constructor
+  /// calls `CredentialManagerAndroidPlugin.registerWith()`, which is the ONLY
+  /// place `CredentialManagerPlatform.instance` is ever assigned.
+  ///
+  /// Calling the static-style `CredentialManagerPlatform.instance.init(...)`
+  /// directly therefore throws
+  /// `CredentialManagerPlatform.instance has not been initialized`, because
+  /// nothing ever constructed a [CredentialManager]. That assertion was the
+  /// real cause of "the passkey button does nothing": every ceremony aborted
+  /// before the Credential Manager sheet was ever requested.
+  CredentialManager? _manager;
 
   /// Whether [init] has completed successfully. Diagnostics only.
   bool get isInitialized => _initialized;
@@ -86,11 +101,14 @@ class PasskeyService {
   Future<bool> _init() async {
     if (!isSupportedPlatform) return false;
     try {
+      // Registration happens here and ONLY here. `_manager` is cached so the
+      // ceremony calls below reuse the same registered instance.
+      _manager ??= CredentialManager();
       // `preferImmediatelyAvailableCredentials: false` keeps the system sheet
       // on real user verification. Passing true allows a device with no screen
       // lock to satisfy the request, which is not user verification at all.
       // The Google client id is unused: Weekend uses neither Save nor Autofill.
-      await CredentialManagerPlatform.instance.init(false, null);
+      await _manager!.init(preferImmediatelyAvailableCredentials: false);
       _initialized = true;
       return true;
     } catch (e) {
@@ -263,8 +281,11 @@ class PasskeyService {
     }
     try {
       final request = creationOptionsFromJson(options);
-      final credential = await CredentialManagerPlatform.instance
-          .savePasskeyCredentials(request: request);
+      // Routed through the cached [CredentialManager] so the registered platform
+      // instance is the one used - see the note on [_manager].
+      final credential = await _manager!.savePasskeyCredentials(
+        request: request,
+      );
       return PasskeyCeremonyResult.ok(
         credential: credential,
         message: 'Passkey created on this device.',
@@ -310,19 +331,18 @@ class PasskeyService {
     }
     try {
       final request = loginOptionsFromJson(options);
-      final credentials = await CredentialManagerPlatform.instance
-          .getCredentials(
-            passKeyOption: request,
-            // Passkey ONLY. The plugin's default is FetchOptionsAndroid.all(),
-            // which also asks the system for saved passwords and Google IDs;
-            // that downgrades the ceremony and can surface a password row
-            // instead of the passkey the user is trying to use.
-            fetchOptions: FetchOptionsAndroid(
-              passKey: true,
-              googleCredential: false,
-              passwordCredential: false,
-            ),
-          );
+      final credentials = await _manager!.getCredentials(
+        passKeyOption: request,
+        // Passkey ONLY. The plugin's default is FetchOptionsAndroid.all(),
+        // which also asks the system for saved passwords and Google IDs;
+        // that downgrades the ceremony and can surface a password row
+        // instead of the passkey the user is trying to use.
+        fetchOptions: FetchOptionsAndroid(
+          passKey: true,
+          googleCredential: false,
+          passwordCredential: false,
+        ),
+      );
       final publicKey = credentials.publicKeyCredential;
       if (publicKey == null) {
         // Android answers an empty Credentials() when nothing matched. That is

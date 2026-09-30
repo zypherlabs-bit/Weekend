@@ -6,7 +6,9 @@ import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 import '../safety/safety_dialogs.dart';
 import '../../services/biometric_auth_service.dart';
 import '../../services/app_lock_service.dart';
+import '../../services/notification_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../repositories/auth_repository.dart';
 import '../../config/supabase_config.dart';
 
@@ -21,8 +23,6 @@ class SettingsDialog extends ConsumerStatefulWidget {
 
 class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   bool _pushNotifications = true;
-
-  bool _darkMode = true;
 
   bool _biometricLock = false;
 
@@ -43,6 +43,77 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
     _loadBiometricSetting();
     _loadMfaStatus();
     _loadPasskeys();
+    _loadPushSetting();
+  }
+
+  /// Read the stored push-notification preference.
+  ///
+  /// `user_settings.push_notifications_enabled` has existed since migration 001
+  /// and had no reader, so this switch was hardcoded to `true` and reset on
+  /// every open.
+  Future<void> _loadPushSetting() async {
+    final client = SupabaseConfig.client;
+    if (client == null) return;
+
+    final userId = SupabaseConfig.currentUserId;
+    if (userId == 'me' || userId == 'unauthenticated') return;
+
+    try {
+      final rows = await client
+          .from('user_settings')
+          .select('push_notifications_enabled')
+          .eq('user_id', userId)
+          .limit(1);
+      if (!mounted || rows.isEmpty) return;
+      final stored = rows.first['push_notifications_enabled'];
+      if (stored is bool && !_pushNotifications) {
+        setState(() => _pushNotifications = stored);
+      }
+    } catch (_) {
+      // A failed read leaves the optimistic default; the toggle still works and
+      // the next open will re-read.
+    }
+  }
+
+  /// Persist the push-notification preference.
+  ///
+  /// Turning notifications ON asks for the OS permission first. `requestPermission`
+  /// had no caller anywhere in `lib/`, so the permission was never actually
+  /// requested and the switch only changed a local field. If the user declines
+  /// at the OS prompt the switch snaps back, because leaving it on while
+  /// nothing is delivered is the more misleading state.
+  Future<void> _setPushNotifications(bool value) async {
+    if (value && !_pushNotifications) {
+      try {
+        await NotificationService().requestPermission();
+      } catch (e) {
+        debugPrint('Push permission request failed: ${e.runtimeType}');
+      }
+    }
+
+    setState(() => _pushNotifications = value);
+
+    final client = SupabaseConfig.client;
+    if (client == null) return;
+    final userId = SupabaseConfig.currentUserId;
+    if (userId == 'me' || userId == 'unauthenticated') return;
+
+    try {
+      await client.from('user_settings').upsert({
+        'user_id': userId,
+        'push_notifications_enabled': value,
+      }, onConflict: 'user_id');
+    } catch (e) {
+      if (!mounted) return;
+      // Roll the switch back: reporting a saved setting that was not saved is
+      // how a user ends up believing alerts are on when they are not.
+      setState(() => _pushNotifications = !value);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('That preference could not be saved. Try again.'),
+        ),
+      );
+    }
   }
 
   /// Read how many passkeys the account has.
@@ -268,23 +339,23 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+          // Replaced a switch that only flipped a local bool and had no effect on
+          // anything. Theme now reads and writes the persisted selection.
+          _ThemeModeSelector(enabled: !_isLoadingBiometric),
+          const SizedBox(height: 4),
           SwitchListTile(
             title: const Text(
               'Push Notifications',
               style: TextStyle(color: Colors.white),
             ),
-            value: _pushNotifications,
-            onChanged: (value) => setState(() => _pushNotifications = value),
-            activeThumbColor: const Color(0xFFFF4B72),
-          ),
-          SwitchListTile(
-            title: const Text(
-              'Dark Mode',
-              style: TextStyle(color: Colors.white),
+            subtitle: Text(
+              _pushNotifications
+                  ? 'Match and message alerts are on'
+                  : 'You will only be alerted while the app is open',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
-            value: _darkMode,
-            onChanged: (value) => setState(() => _darkMode = value),
-
+            value: _pushNotifications,
+            onChanged: (value) => _setPushNotifications(value),
             activeThumbColor: const Color(0xFFFF4B72),
           ),
           _isLoadingBiometric
@@ -466,10 +537,51 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
 
   void _showDeleteAccountDialog(BuildContext dialogContext) {
     final messenger = ScaffoldMessenger.of(dialogContext);
+    // Held outside the builder so it survives the StatefulBuilder rebuilds
+    // below and is not recreated (and cleared) on every keystroke.
+    final passwordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
     showDialog(
       context: dialogContext,
       builder: (context) {
         var deleting = false;
+
+        /// Shared by the button and the keyboard "done" action, so both paths
+        /// validate first and both report a failure the same way.
+        Future<void> confirmDelete(StateSetter setState) async {
+          if (deleting) return;
+          if (!(formKey.currentState?.validate() ?? false)) return;
+
+          setState(() => deleting = true);
+          final deleted = await ref
+              .read(authStateProvider.notifier)
+              .deleteAccount(password: passwordController.text);
+
+          if (!context.mounted) return;
+
+          if (deleted) {
+            Navigator.pop(context);
+            if (dialogContext.mounted) {
+              dialogContext.go('/onboarding');
+            }
+            return;
+          }
+
+          // Stay on the dialog so the user can correct a mistyped password
+          // rather than being dropped back into settings with no idea what
+          // happened.
+          setState(() => deleting = false);
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                ref.read(authStateProvider).error ??
+                    'Account deletion failed. Try again.',
+              ),
+            ),
+          );
+        }
+
         return StatefulBuilder(
           builder: (context, setState) => AlertDialog(
             backgroundColor: const Color(0xFF1C162E),
@@ -477,9 +589,39 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
               'Delete Account',
               style: TextStyle(color: Colors.red),
             ),
-            content: const Text(
-              'This action cannot be undone. All your data will be permanently deleted.',
-              style: TextStyle(color: Colors.white70),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'This permanently deletes your profile, photos, matches '
+                    'and every message you have sent. It cannot be undone.',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 16),
+                  // Deletion is irreversible, and a live session token is
+                  // routinely long-lived and left in a device cache, so the
+                  // server requires the account password as proof before it
+                  // will act. Without this field the request is rejected.
+                  TextFormField(
+                    controller: passwordController,
+                    obscureText: true,
+                    enabled: !deleting,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm your password',
+                      helperText: 'Required to delete your account',
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                    validator: (value) => (value == null || value.isEmpty)
+                        ? 'Enter your password to confirm.'
+                        : null,
+                    onFieldSubmitted: (_) => confirmDelete(setState),
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
@@ -487,30 +629,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                 child: const Text('Cancel', style: TextStyle(color: Colors.white)),
               ),
               TextButton(
-                onPressed: deleting
-                    ? null
-                    : () async {
-                        setState(() => deleting = true);
-                        final deleted = await ref
-                            .read(authStateProvider.notifier)
-                            .deleteAccount();
-                        if (!context.mounted) return;
-                        Navigator.pop(context);
-                        if (deleted) {
-                          if (dialogContext.mounted) {
-                            dialogContext.go('/onboarding');
-                          }
-                        } else {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                ref.read(authStateProvider).error ??
-                                    'Account deletion failed. Try again.',
-                              ),
-                            ),
-                          );
-                        }
-                      },
+                onPressed: deleting ? null : () => confirmDelete(setState),
                 child: deleting
                     ? const SizedBox(
                         width: 16,
@@ -523,6 +642,66 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Light / Dark / System selector.
+///
+/// Replaces a two-state switch that had no effect on the app's theme: the
+/// choice is now persisted (see `ThemeModeController`) and applied by
+/// `MaterialApp.router`, and it survives a restart.
+///
+/// Exposed as three segments rather than a boolean because "follow the system"
+/// is a genuine third state - it is the default, and collapsing it into an
+/// off/on switch makes it impossible to return to.
+class _ThemeModeSelector extends ConsumerWidget {
+  final bool enabled;
+
+  const _ThemeModeSelector({required this.enabled});
+
+  static const _options = <(ThemeMode, String, IconData)>[
+    (ThemeMode.system, 'System', Icons.brightness_auto_rounded),
+    (ThemeMode.light, 'Light', Icons.light_mode_rounded),
+    (ThemeMode.dark, 'Dark', Icons.dark_mode_rounded),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(themeModeProvider);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Appearance',
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          // A segmented control has one button per option, so it is operable
+          // with a screen reader and with a keyboard alone. The old switch
+          // offered neither an announced selected value nor a target.
+          SegmentedButton<ThemeMode>(
+            segments: [
+              for (final (mode, label, icon) in _options)
+                ButtonSegment<ThemeMode>(
+                  value: mode,
+                  label: Text(label),
+                  icon: Icon(icon, size: 18),
+                  tooltip: '$label appearance',
+                ),
+            ],
+            selected: {current},
+            showSelectedIcon: false,
+            onSelectionChanged: enabled
+                ? (selection) =>
+                      ref.read(themeModeProvider.notifier).set(selection.first)
+                : null,
+          ),
+        ],
+      ),
     );
   }
 }

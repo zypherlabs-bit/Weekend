@@ -67,12 +67,23 @@ class SafetyRepository {
     ];
   }
 
-  /// Submit a report about [reportedId]. Reports are write-once from the
-  /// client; only moderators can act on them afterwards.
+  /// Submit a report about [reportedId].
   ///
-  /// [reason] is the free-form label shown in the report dialog; it is mapped
-  /// to the `report_type` enum enforced by the schema and stored verbatim in
-  /// `description` so moderators keep the full context.
+  /// Routed through the `submit_report` RPC (migration 026) rather than a
+  /// direct INSERT into `reports`. The RPC is what makes a report trustworthy:
+  ///
+  ///   * the category is validated server-side against the schema's CHECK
+  ///     constraint, so a malformed value is refused at the source;
+  ///   * it is rate limited to 20 a day per reporter, so one account cannot
+  ///     flood a moderator queue or get an innocent profile flagged;
+  ///   * a second open report on the same person is de-duplicated instead of
+  ///     stacking;
+  ///   * and a non-2xx response is a hard failure, so the UI never reports a
+  ///     report as received when the server did not accept it.
+  ///
+  /// [reason] is the free-form label shown in the report dialog. The verbatim
+  /// text is always preserved in the description so moderators keep the full
+  /// context, including when the label maps onto a different bucket.
   Future<void> reportUser(
     String reporterId,
     String reportedId,
@@ -88,29 +99,47 @@ class SafetyRepository {
         ? reason
         : '$reason — $details';
 
-    await client.from('reports').insert({
-      'reporter_id': reporterId,
-      'reported_id': reportedId,
-      'report_type': _mapReportType(reason),
-      'description': description,
-      'status': 'pending',
-    });
+    // Not awaited silently: a failure here must reach the caller so the user
+    // is not told their report was sent when it was not.
+    await client.rpc(
+      'submit_report',
+      params: {
+        'p_reported_id': reportedId,
+        'p_report_type': mapReportType(reason),
+        'p_description': description,
+      },
+    );
   }
 
-  /// Map the UI reason onto the `reports.report_type` enum.
+  /// Map the UI reason onto a `reports.report_type` value.
   ///
-  /// The enum has no dedicated "underage" bucket, so an underage report is
-  /// filed as `impersonation` — the closest category that routes to urgent
-  /// review — rather than silently falling through to the generic `profile`
-  /// type. The verbatim reason is always preserved in `description`.
-  String _mapReportType(String reason) {
+  /// Migration 026 extended the column's CHECK constraint with `spam`,
+  /// `underage`, `unsafe_behavior` and `other`. Underage is the important one:
+  /// it previously had nowhere to go and was filed as `impersonation`, so the
+  /// single most urgent category in a dating app was indistinguishable from
+  /// "this is a fake account" in the moderation queue. It now has its own
+  /// bucket. The verbatim reason is still preserved in `description`.
+  ///
+  /// [reporterId] is accepted for signature stability with the direct-insert
+  /// implementation this replaced; the RPC derives the reporter from the
+  /// authenticated session and ignores it.
+  String mapReportType(String reason) {
     final r = reason.toLowerCase();
-    if (r.contains('underage') || r.contains('minor') || r.contains('child')) {
-      return 'impersonation';
+    if (r.contains('underage') ||
+        r.contains('minor') ||
+        r.contains('child') ||
+        r.contains('too young')) {
+      return 'underage';
+    }
+    if (r.contains('unsafe') ||
+        r.contains('threat') ||
+        (r.contains('meet') && r.contains('safety'))) {
+      return 'unsafe_behavior';
     }
     if (r.contains('photo')) return 'photo';
     if (r.contains('harass') || r.contains('bully')) return 'harassment';
-    if (r.contains('spam') || r.contains('scam')) return 'scam';
+    if (r.contains('spam')) return 'spam';
+    if (r.contains('scam')) return 'scam';
     if (r.contains('impersonat') || r.contains('fake')) return 'impersonation';
     if (r.contains('message')) return 'message';
     if (r.contains('inappropriate') || r.contains('content')) {

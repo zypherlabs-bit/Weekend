@@ -8,6 +8,8 @@ or used on a phone.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from conftest import connected_devices
@@ -46,17 +48,36 @@ def test_credential_manager_dependency_present() -> CheckResult:
 
 
 def test_credential_manager_is_initialised() -> CheckResult:
-    """`init()` must run before any ceremony.
+    """The plugin handle must be CONSTRUCTED before any ceremony runs.
 
-    The Android plugin assigns its `CredentialManager` inside the init handler
-    only; without it every call throws UninitializedPropertyAccessException,
-    which presents to the user as "the passkey button does nothing".
+    `credential_manager` 5.x registers its platform implementation inside the
+    `CredentialManager()` constructor - `registerWith()` is never called from a
+    static member. Reading `CredentialManagerPlatform.instance` without having
+    constructed the handle throws
+
+        Assertion failed: CredentialManagerPlatform.instance has not been
+        initialized
+
+    which is exactly the "the passkey button does nothing" symptom observed on
+    device (2026-09-29 logcat). The fix is to build the handle, so the test
+    asserts the handle exists and that no raw platform accessor is used.
     """
     src = read(PASSKEY_SERVICE)
-    assert "CredentialManagerPlatform.instance.init(" in src, (
-        "passkey_service never calls CredentialManagerPlatform.instance.init"
+    assert "CredentialManager()" in src, (
+        "passkey_service never constructs CredentialManager(); without it the "
+        "plugin is never registered and every ceremony throws"
     )
     assert "ensureInitialized" in src, "no shared init future / guard"
+    # A raw platform accessor means the registration path was bypassed again.
+    # Comments are stripped first: this file documents the old failure in prose
+    # that names `CredentialManagerPlatform.instance`, which would otherwise
+    # match itself.
+    code = re.sub(r"//.*?$", "", src, flags=re.M)
+    assert "CredentialManagerPlatform.instance" not in code, (
+        "passkey_service reaches for CredentialManagerPlatform.instance "
+        "directly; the platform impl is only registered by constructing "
+        "CredentialManager()"
+    )
     repo = read(AUTH_REPO)
     assert "PasskeyService.instance.createCredential" in repo
     assert "PasskeyService.instance.getCredential" in repo
@@ -65,10 +86,13 @@ def test_credential_manager_is_initialised() -> CheckResult:
         "handling belongs in PasskeyService"
     )
     return CheckResult(
-        name="Credential Manager initialised before ceremonies",
+        name="Credential Manager registered before ceremonies",
         status=Status.PASS,
         evidence=Evidence.STATIC,
-        detail="PasskeyService.ensureInitialized() guards both ceremonies",
+        detail=(
+            "PasskeyService.ensureInitialized() constructs CredentialManager() "
+            "then inits; both ceremonies go through the cached handle"
+        ),
     )
 
 

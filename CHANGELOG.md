@@ -10,6 +10,40 @@ handful of conventions that are worth stating once:
 - **Server-side enforcement.** Search filters, distance computation and access
   control live in PostgreSQL, not in the client.
 
+## [2.7.0] - 2026-09-30
+
+### Added - Date Ideas UI (was BROKEN)
+
+The `date-ideas` Edge Function was implemented server-side but never invoked from the client. Now surfaced in the chat screen:
+
+- `lib/repositories/date_ideas_repository.dart` — calls the `date-ideas` Edge Function via `client.functions.invoke()`
+- `lib/widgets/date_ideas_widget.dart` — `DateIdeasButton` + `DateIdeasSheet` (bottom sheet with loading/empty/refresh states)
+- `generateDateIdeas()` method on `WeekendNotifier` (`lib/providers/weekend_provider.dart`)
+- Wired `DateIdeasButton` into `ChatScreen` app bar
+- `test/date_ideas_test.dart` (3 tests for no-backend fallback behavior)
+
+### Added - GitHub page documentation (Phases 0-4)
+
+- `docs/github-page-baseline.md` — baseline snapshot of repo state
+- `docs/product-feature-audit.md` — 44-area feature audit
+- `docs/github-user-journey.md` — user journey mapping
+- `docs/github-discovery.md` — GitHub topics and discovery strategy
+
+### Changed - README & docs
+
+- README known limitations: updated icebreakers/date ideas entry — date ideas now surfaced in chat; icebreakers remain server-side only
+- README roadmap: date ideas marked shipped; icebreakers remain planned
+- Updated `docs/feature_parity_matrix.md` summary to reflect 44 COMPLETE, 1 MISSING
+- README download section references v2.7.0
+
+### Verification
+
+- `flutter analyze` — No issues found!
+- `flutter test` — 295 passed (292 existing + 3 new date ideas tests)
+- `python tool/seo_audit.py` — 18 PASS, 0 FAIL, 1 WARNING (online check skipped)
+
+---
+
 ## [Unreleased]
 
 ### Changed - README rebuilt as a user-first landing page
@@ -943,7 +977,9 @@ confirmation can complete on a phone:
   the 2.0.x Flutter line and is no longer maintained; see the supported-versions
   table in [SECURITY.md](SECURITY.md).
 
-[Unreleased]: https://github.com/zypherlabs-bit/Weekend/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/zypherlabs-bit/Weekend/compare/v2.7.0...HEAD
+[2.7.0]: https://github.com/zypherlabs-bit/Weekend/compare/v2.6.0...v2.7.0
+[2.6.0]: https://github.com/zypherlabs-bit/Weekend/compare/v2.3.0...v2.6.0
 [2.3.0]: https://github.com/zypherlabs-bit/Weekend/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/zypherlabs-bit/Weekend/compare/v2.1.0...v2.2.0
 [2.0.1]: https://github.com/zypherlabs-bit/Weekend/compare/v2.0.0...v2.0.1

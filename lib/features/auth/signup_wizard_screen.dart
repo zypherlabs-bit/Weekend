@@ -157,9 +157,11 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
       if (authState.awaitingEmailConfirmation) {
         context.go('/confirm-email');
       } else if (authState.isAuthenticated) {
-        context.go(
-          authState.needsProfileSetup ? '/edit-profile' : '/home',
-        );
+        // A session exists, so offer the passkey / app-lock step immediately
+        // after the account is created. `/security-setup` finishes into
+        // `/edit-profile` or `/home` itself, so the wizard never sends the new
+        // user back to the sign-in screen.
+        context.go('/security-setup');
       }
       // On failure the wizard stays put: the inline error box shows why.
       // Navigating here on failure was the old "pushed back" defect.

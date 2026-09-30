@@ -186,17 +186,6 @@ serve(async (req: Request) => {
     );
     detectionSignals.filename_suspicious_patterns = suspiciousMatches;
 
-    // Check for social media patterns in filename/URL
-    const socialMatches = SOCIAL_MEDIA_PATTERNS.filter(p =>
-      p.test(photoUrl) || p.test(storagePath || '')
-    );
-    if (socialMatches.length > 0) {
-      detectionSignals.social_media_detected = true;
-      detectionSignals.social_media_patterns = socialMatches.map(m => m.toString());
-      riskLevel = riskLevel === 'high' ? 'high' : 'medium';
-      suspicionReasons.push('Image filename/URL contains social media patterns');
-    }
-
     // Determine result
     const geminiAnalysis = (detectionSignals.gemini_analysis ||
       (detectionSignals as Record<string, unknown>).raw_text) as Record<string, unknown> | undefined;
@@ -211,6 +200,25 @@ serve(async (req: Request) => {
       confidence = (geminiAnalysis['confidence'] as number) ?? 50;
       riskLevel = (geminiAnalysis['risk_level'] as string) ?? 'low';
       suspicionReasons.push(...((geminiAnalysis['suspicion_reasons'] as string[]) ?? []));
+    }
+
+    // Check for social media patterns in filename/URL.
+    //
+    // This check MUST come after the declarations above. It previously sat
+    // above them, which put every `riskLevel` / `suspicionReasons` reference
+    // into the temporal dead zone: any request whose filename or storage path
+    // matched a social-media pattern threw
+    // `ReferenceError: Cannot access 'riskLevel' before initialization`
+    // before any verdict was reached. A moderation failure that only triggers
+    // on exactly the uploads most worth moderating.
+    const socialMatches = SOCIAL_MEDIA_PATTERNS.filter(p =>
+      p.test(photoUrl) || p.test(storagePath || '')
+    );
+    if (socialMatches.length > 0) {
+      detectionSignals.social_media_detected = true;
+      detectionSignals.social_media_patterns = socialMatches.map(m => m.toString());
+      riskLevel = riskLevel === 'high' ? 'high' : 'medium';
+      suspicionReasons.push('Image filename/URL contains social media patterns');
     }
 
     if (suspiciousMatches.length > 0) {

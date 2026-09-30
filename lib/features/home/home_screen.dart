@@ -12,7 +12,9 @@ import '../../widgets/discovery_card.dart';
 import '../../widgets/weekend_design_system.dart';
 import '../../widgets/weekend_empty_state.dart';
 import '../../services/location_service.dart';
-import '../chat/chat_screen.dart';
+import '../../providers/interactions_provider.dart';
+import '../likes/likes_screen.dart';
+import '../notifications/notifications_screen.dart';
 import '../profile/profile_screen.dart';
 import '../discovery/explore_screen.dart';
 
@@ -25,13 +27,37 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
   bool _showLocationBanner = false;
-  List<Widget> get _screens => [
+  /// Reads the notification badge.
+int get _unreadNotifications => ref.watch(unreadCountProvider);
+
+/// The tab stack.
+///
+/// Both new surfaces are embedded rather than pushed so switching tabs
+/// preserves their scroll position and loaded pages, which is the point of an
+/// IndexedStack. `onNavigate` routes notification taps back through the tab
+/// index instead of trying to push onto a navigation stack that does not exist
+/// at this depth.
+List<Widget> get _screens => [
     const DiscoverScreen(),
     const ExploreScreen(),
     MatchesScreen(
       onDiscoverTap: () => setState(() => _currentIndex = 0),
     ),
     const ProfileTabScreen(),
+    // Embedded rather than pushed so switching tabs preserves their scroll
+    // position and loaded pages.
+    LikesScreen(
+      onOpenDiscover: () => setState(() => _currentIndex = 0),
+    ),
+    NotificationCentreScreen(
+      onNavigate: (type) => setState(() {
+        _currentIndex = switch (type) {
+          'new_like' => 4,
+          'new_match' || 'new_message' => 2,
+          _ => _currentIndex,
+        };
+      }),
+    ),
   ];
   @override
   void initState() {
@@ -49,6 +75,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     notifier.loadCrossedPaths();
     notifier.loadMatches();
     notifier.loadPlans();
+    // Drives the Alerts tab badge. The count is a single indexed COUNT, not a
+    // table read, so it is cheap enough to run at every home mount.
+    ref.read(unreadCountProvider.notifier).refresh();
     final hasPerms = await LocationService.hasPermission();
     if (mounted) {
       setState(() {
@@ -239,6 +268,68 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           label: 'Profile',
           tooltip: 'Profile',
+        ),
+        // Reached by tap-through from the Chat tab rather than by a tab of
+        // its own: six bottom tabs is past what a phone tab bar carries well,
+        // and matches + conversations are the same surface, so the two entry
+        // points belong together. Both are real routes (/likes, /notifications)
+        // so they are also deep-linkable.
+        BottomNavigationBarItem(
+          icon: Semantics(
+            label: 'Likes you tab',
+            child: Icon(
+              _currentIndex == 4
+                  ? Icons.star_rounded
+                  : Icons.star_outline_rounded,
+            ),
+          ),
+          label: 'Likes',
+          tooltip: 'People who liked you',
+        ),
+        BottomNavigationBarItem(
+          icon: Semantics(
+            label: 'Notifications tab',
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  _currentIndex == 5
+                      ? Icons.notifications_rounded
+                      : Icons.notifications_none_rounded,
+                ),
+                if (_unreadNotifications > 0)
+                  Positioned(
+                    right: -6,
+                    top: -4,
+                    child: Semantics(
+                      label: '$_unreadNotifications unread notifications',
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF4B72),
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '$_unreadNotifications',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          label: 'Alerts',
+          tooltip: 'Notifications',
         ),
       ],
     );
@@ -784,16 +875,19 @@ class _MatchAvatar extends StatelessWidget {
 class MatchCard extends StatelessWidget {
   final MatchItem match;
   const MatchCard({super.key, required this.match});
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => ChatScreen(match: match)),
-        );
-      },
-      child: Container(
+    return Semantics(
+      button: true,
+      label: 'Conversation with ${match.user.name}'
+          '${match.unreadCount > 0 ? ', ${match.unreadCount} unread' : ''}',
+      child: GestureDetector(
+        // Routed through GoRouter rather than a bare `Navigator.push` so a
+        // conversation is addressable at /chat/:matchId and a notification
+        // deep link lands on exactly the same screen.
+        onTap: () => context.push('/chat/${match.id}'),
+        child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -848,6 +942,7 @@ class MatchCard extends StatelessWidget {
                 ),
               ),
           ],
+        ),
         ),
       ),
     );

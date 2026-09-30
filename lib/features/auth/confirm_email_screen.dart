@@ -20,6 +20,43 @@ class ConfirmEmailScreen extends ConsumerStatefulWidget {
 
 class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
   bool _isResending = false;
+  bool _isContinuing = false;
+
+  /// Turn "I clicked the link" into a real session.
+  ///
+  /// This used to do `context.go('/auth')`, which dropped a user who had just
+  /// created an account and confirmed their email onto the sign-in form and
+  /// made them retype the password they had chosen seconds earlier. Now the
+  /// credentials captured by the wizard are used directly and the user lands
+  /// on the passkey/biometric setup step instead.
+  Future<void> _continueAfterConfirmation() async {
+    if (_isContinuing) return;
+    setState(() => _isContinuing = true);
+
+    final notifier = ref.read(authStateProvider.notifier);
+    final ok = await notifier.completeSignupAndSignIn();
+
+    if (!mounted) return;
+    setState(() => _isContinuing = false);
+    if (!ok) {
+      // `completeSignupAndSignIn` already put a readable message on the state.
+      final message =
+          ref.read(authStateProvider).error ?? 'Could not continue. Try again.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: const Color(0xFFB3261E),
+        ),
+      );
+      return;
+    }
+
+    // A pending 2FA step-up owns the next screen; the redirect would send the
+    // user there anyway, so do not fight it.
+    if (ref.read(authStateProvider).needsMfaChallenge) return;
+
+    context.go('/security-setup');
+  }
 
   Future<void> _resend() async {
     setState(() => _isResending = true);
@@ -158,7 +195,9 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
               SizedBox(
                 height: 56,
                 child: OutlinedButton(
-                  onPressed: () => context.go('/auth'),
+                  onPressed: (_isResending || _isContinuing)
+                      ? null
+                      : _continueAfterConfirmation,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFFF9966),
                     side: const BorderSide(color: Color(0xFFFF9966)),
@@ -166,10 +205,22 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
-                  child: const Text(
-                    "I've confirmed — Sign in",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
+                  child: _isContinuing
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            color: Color(0xFFFF9966),
+                            strokeWidth: 2.4,
+                          ),
+                        )
+                      : const Text(
+                          "I've confirmed — continue",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 8),

@@ -16,6 +16,7 @@ import '../repositories/plan_repository.dart';
 import '../repositories/profile_repository.dart';
 import '../repositories/profile_save_error.dart';
 import '../repositories/safety_repository.dart';
+import '../repositories/date_ideas_repository.dart';
 import '../services/location_service.dart';
 
 final weekendProvider = StateNotifierProvider<WeekendNotifier, WeekendState>((
@@ -28,6 +29,7 @@ final weekendProvider = StateNotifierProvider<WeekendNotifier, WeekendState>((
     messageRepository: MessageRepository(),
     planRepository: PlanRepository(),
     safetyRepository: SafetyRepository(),
+    dateIdeasRepository: DateIdeasRepository(),
   );
 });
 
@@ -166,6 +168,7 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
   final MessageRepository _messageRepo;
   final PlanRepository _planRepo;
   final SafetyRepository _safetyRepo;
+  final DateIdeasRepository _dateIdeasRepo;
 
   WeekendNotifier({
     required DiscoveryRepository discoveryRepository,
@@ -174,12 +177,14 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     required MessageRepository messageRepository,
     required PlanRepository planRepository,
     required SafetyRepository safetyRepository,
+    required DateIdeasRepository dateIdeasRepository,
   }) : _discoveryRepo = discoveryRepository,
        _profileRepo = profileRepository,
        _matchRepo = matchRepository,
        _messageRepo = messageRepository,
        _planRepo = planRepository,
        _safetyRepo = safetyRepository,
+       _dateIdeasRepo = dateIdeasRepository,
        super(WeekendState.initial());
 
   SupabaseClient? get _client => SupabaseConfig.client;
@@ -354,7 +359,14 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
           'show_distance_enabled': prefs.showDistanceEnabled,
           'travel_mode_enabled': prefs.travelModeEnabled,
           'crossed_paths_enabled': prefs.crossedPathsEnabled,
-        })
+        },
+        // `user_settings` has a surrogate `id` primary key and a separate
+        // `unique (user_id)`. With no conflict target, PostgREST targets the
+        // PRIMARY KEY, so this became a plain INSERT on every call and hit
+        // `user_settings_user_id_key` (23505). The discovery-radius write
+        // therefore never persisted and the slider silently reset on next
+        // launch - the exact failure the try/catch above was added to surface.
+        onConflict: 'user_id')
         .select('user_id')
         .limit(1);
   }
@@ -427,26 +439,67 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     final userId = SupabaseConfig.currentUserId;
 
     try {
-      final matched = await _matchRepo.recordLike(
+      final outcome = await _matchRepo.recordLike(
         userId,
         profile.id,
         isStandOut: isStandOut,
       );
-      if (matched) {
-        state = state.copyWith(recentMatchCelebration: profile);
-        unawaited(loadMatches());
+
+      switch (outcome) {
+        case LikeOutcome.matched:
+          state = state.copyWith(recentMatchCelebration: profile);
+          unawaited(loadMatches());
+          return true;
+        case LikeOutcome.recorded:
+          return false;
+        case LikeOutcome.failed:
+          _restoreCard(profile);
+          return false;
       }
-      return matched;
     } catch (e) {
       debugPrint('Failed to record like for ${profile.id}: $e');
+      _restoreCard(profile);
       return false;
     }
+  }
+
+  /// Put a card back at the front of the deck after the server rejected the
+  /// interaction.
+  ///
+  /// The optimistic removal at the top of [swipeRight] removed the card from
+  /// `deckProfiles` and added its id to `swipedProfileIds`. When the write
+  /// fails, that state is a lie: the profile was never dealt with, yet it is
+  /// unreachable for the rest of the session. Both halves are undone here, and
+  /// the profile object is put back first in the deck so the user can act on it
+  /// again without waiting for a refresh.
+  void _restoreCard(UserProfile profile) {
+    state = state.copyWith(
+      deckProfiles: [
+        profile,
+        ...state.deckProfiles.where((p) => p.id != profile.id),
+      ],
+      likedProfiles:
+          state.likedProfiles.where((id) => id != profile.id).toList(),
+      swipedProfileIds:
+          state.swipedProfileIds.where((id) => id != profile.id).toList(),
+    );
   }
 
   /// Pass on a profile. The pass is persisted server-side so the profile
   /// stays excluded from future discovery results.
   Future<void> swipeLeft(String profileId) async {
     if (state.swipedProfileIds.contains(profileId)) return;
+
+    // Held before the optimistic removal below. Once the card is out of
+    // `deckProfiles` there is nothing left to restore it from, and the rollback
+    // on a failed write would have nothing to put back.
+    UserProfile? removed;
+    for (final profile in state.deckProfiles) {
+      if (profile.id == profileId) {
+        removed = profile;
+        break;
+      }
+    }
 
     state = state.copyWith(
       deckProfiles:
@@ -462,6 +515,13 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
       await _matchRepo.recordPass(userId, profileId);
     } catch (e) {
       debugPrint('Failed to record pass for $profileId: $e');
+      // Same honesty requirement as a like: if the pass was not recorded, the
+      // profile is still in future results and the user should be able to pass
+      // on it again rather than lose the card silently.
+      final profile = removed;
+      if (profile != null) {
+        _restoreCard(profile);
+      }
     }
   }
 
@@ -775,21 +835,34 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
       for (final interest in profile.interests) {
         final trimmed = interest.trim();
         if (trimmed.isEmpty) continue;
-        // The master list is shared, so an interest that does not exist yet is
-        // inserted and then linked to this user only. `category` comes from the
-        // catalogue so the new row is grouped in the picker like every other.
+        // The master list is shared, so an interest that does not exist yet has
+        // to be created before it can be linked. That used to be
+        //   client.from('interests').upsert({'name': ...}).select('id').single()
+        // which was broken twice over:
+        //   * `upsert` with no `id` cannot conflict on the primary key, so the
+        //     second user to pick the same interest hit the unique violation on
+        //     `name` and the whole interests block was reported as unsaved;
+        //   * PostgREST expands it to INSERT ... ON CONFLICT DO UPDATE, which
+        //     required an UPDATE policy on `interests` that migration 018
+        //     opened to every signed-in user - anyone could rewrite any
+        //     interest and change the chip on every profile that used it.
+        //
+        // `ensure_interest` get-or-creates atomically and never updates an
+        // existing row, so both problems go away and the UPDATE grant is no
+        // longer needed.
         final category = _interestCategoryFor(trimmed);
-        final interestResult = await client
-            .from('interests')
-            .upsert({
-              'name': trimmed,
-              if (category != null) 'category': category,
-            })
-            .select('id')
-            .single();
+        final interestId = await client.rpc(
+          'ensure_interest',
+          params: {'p_name': trimmed, 'p_category': category},
+        );
+
+        if (interestId is! String || interestId.isEmpty) {
+          throw StateError('interest_not_resolved');
+        }
+
         await client.from('user_interests').insert({
           'user_id': authId,
-          'interest_id': interestResult['id'],
+          'interest_id': interestId,
         });
       }
     } catch (e) {
@@ -970,6 +1043,40 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
 
   void setIsGeneratingDateIdeas(bool value) {
     state = state.copyWith(isGeneratingDateIdeas: value);
+  }
+
+  /// Fetch AI-generated date ideas from the `date-ideas` Edge Function.
+  ///
+  /// [partnerInterests] are the interests of the person the user matched with.
+  /// [city] is the user's current city. Both may be empty — the function falls
+  /// back to defaults in that case.
+  ///
+  /// The method toggles `isGeneratingDateIdeas` and populates `dateIdeas` on
+  /// completion. On any failure, `dateIdeas` is left empty and the loading
+  /// flag is cleared — the UI shows its genuine empty state rather than a
+  /// fabricated message.
+  Future<void> generateDateIdeas({
+    required List<String> partnerInterests,
+    required String city,
+  }) async {
+    final userInterests = state.currentUser.interests;
+
+    setIsGeneratingDateIdeas(true);
+
+    try {
+      final (ideas, source) = await _dateIdeasRepo.fetchDateIdeas(
+        city: city,
+        userInterests: userInterests,
+        partnerInterests: partnerInterests,
+      );
+
+      if (!mounted) return;
+      setDateIdeas(ideas);
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('Failed to generate date ideas: $e');
+      setIsGeneratingDateIdeas(false);
+    }
   }
 
   Future<void> loadReferralData() async {

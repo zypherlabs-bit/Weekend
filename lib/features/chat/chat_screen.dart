@@ -6,6 +6,7 @@ import '../../providers/weekend_provider.dart';
 
 import '../../models/models.dart';
 import '../../repositories/message_repository.dart';
+import '../../widgets/date_ideas_widget.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final MatchItem match;
@@ -162,12 +163,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Voice calls are not available in this release',
-            onPressed: null,
-            icon: const Icon(Icons.call_rounded, color: Colors.white38),
-          ),
+         actions: [
+           DateIdeasButton(
+             partnerInterests: widget.match.user.interests,
+             city: state.currentUser.city.isNotEmpty
+                 ? state.currentUser.city
+                 : widget.match.user.city,
+           ),
+           IconButton(
+             tooltip: 'Voice calls are not available in this release',
+             onPressed: null,
+             icon: const Icon(Icons.call_rounded, color: Colors.white38),
+           ),
               PopupMenuButton(
             icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
             color: const Color(0xFF2E244A),

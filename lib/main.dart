@@ -7,6 +7,7 @@ import 'config/supabase_config.dart';
 import 'theme/app_theme.dart';
 
 import 'routing/app_router.dart';
+import 'providers/theme_provider.dart';
 import 'services/app_lock_service.dart';
 import 'features/auth/biometric_lock_gate.dart';
 
@@ -51,7 +52,17 @@ Future<void> main() async {
   AppLockService.instance.attach();
   await AppLockService.instance.loadFromStorage();
 
-  runApp(const ProviderScope(child: WeekendApp()));
+  // Same reasoning for the theme: loaded before the first frame so the app
+  // never paints once in the wrong brightness and then corrects itself.
+  final container = ProviderContainer();
+  await container.read(themeModeProvider.notifier).load();
+
+  runApp(
+    UncontrolledProviderScope(
+      container: container,
+      child: const WeekendApp(),
+    ),
+  );
 }
 
 class WeekendApp extends ConsumerStatefulWidget {
@@ -65,13 +76,16 @@ class _WeekendAppState extends ConsumerState<WeekendApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
+    // Previously hardcoded to ThemeMode.system, which made the settings
+    // dialog's "Dark Mode" switch a control that changed nothing.
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: 'Weekend',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       routerConfig: router,
       // The gate lives INSIDE the MaterialApp, so it is a real widget in the
       // tree rather than an OverlayEntry inserted above the app - which is what

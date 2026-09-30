@@ -10,6 +10,7 @@ import '../features/auth/auth_screen.dart';
 import '../features/auth/confirm_email_screen.dart';
 import '../features/auth/mfa_challenge_screen.dart';
 import '../features/auth/mfa_enrollment_screen.dart';
+import '../features/auth/security_setup_screen.dart';
 import '../features/auth/signup_wizard_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/profile/profile_screen.dart';
@@ -22,6 +23,9 @@ import '../features/discovery/location_permission_screen.dart';
 
 import '../features/discovery/location_settings_screen.dart';
 import '../features/discovery/search_screen.dart';
+import '../features/likes/likes_screen.dart';
+import '../features/notifications/notifications_screen.dart';
+import '../features/chat/match_conversation_screen.dart';
 import '../features/qr/qr.dart';
 import '../features/safety/safety_center_screen.dart';
 
@@ -72,6 +76,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isMfa = location == '/mfa-challenge';
       final isConfirmEmail = location == '/confirm-email';
       final isPersonalDetails = location == '/edit-profile';
+      final isSecuritySetup = location == '/security-setup';
 
       // A pending 2FA step-up stays on the challenge screen; nowhere else.
       if (authState.needsMfaChallenge && !isMfa) return '/mfa-challenge';
@@ -108,7 +113,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       // Authenticated users with an incomplete profile finish Personal
       // Details first (except anonymous guests, who skip onboarding).
-      if (authState.needsProfileSetup && !isPersonalDetails && !isMfa) {
+      // `/security-setup` is exempt for the same reason `/edit-profile` is:
+      // every brand-new account has `needsProfileSetup` true, so without the
+      // exemption the passkey/biometric offer would be skipped on arrival -
+      // exactly the step this screen exists to show.
+      if (authState.needsProfileSetup &&
+          !isPersonalDetails &&
+          !isSecuritySetup &&
+          !isMfa) {
         return '/edit-profile';
       }
 
@@ -146,6 +158,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/confirm-email',
         builder: (context, state) => const ConfirmEmailScreen(),
+      ),
+
+      // Post-signup security setup. Deliberately NOT a guest screen: a
+      // passkey can only be registered for an existing session, and the
+      // redirect below keeps it behind authentication.
+      GoRoute(
+        path: '/security-setup',
+        builder: (context, state) => const SecuritySetupScreen(),
       ),
 
       GoRoute(
@@ -209,6 +229,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/safety-center',
         builder: (context, state) => const SafetyCenterScreen(),
+      ),
+
+      // Interaction surfaces. Both were absent entirely: the `notifications`
+      // table was written by the database but never read back, and inbound
+      // likes were never queried at all.
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationCentreScreen(),
+      ),
+
+      GoRoute(
+        path: '/likes',
+        builder: (context, state) => const LikesScreen(),
+      ),
+
+      // Deep-linkable conversation. `ChatScreen` needs a populated MatchItem;
+      // this route resolves the id and hands off, so a notification tap, a
+      // shared link and an in-app tap all land in the same place.
+      GoRoute(
+        path: '/chat/:matchId',
+        builder: (context, state) => MatchConversationScreen(
+          matchId: state.pathParameters['matchId'] ?? '',
+        ),
       ),
     ],
   );

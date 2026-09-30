@@ -636,6 +636,103 @@ class MatchItem {
   }
 }
 
+/// A non-mutual like this user received.
+///
+/// Surfaced by `get_received_likes` (migration 026). This is a genuinely new
+/// capability rather than a reshuffle of existing data: nothing in the app read
+/// inbound likes before, and `likes.is_stand_out` was a write-only column that
+/// no query ever selected.
+class ReceivedLike {
+  final UserProfile profile;
+  final bool isStandOut;
+  final DateTime? likedAt;
+
+  const ReceivedLike({
+    required this.profile,
+    this.isStandOut = false,
+    this.likedAt,
+  });
+}
+
+/// One entry in the notification centre.
+///
+/// Backed by the `notifications` table, which had no client surface at all
+/// before migration 026: the repository that read it was never called from
+/// anywhere, so the only two notification types the database ever produced were
+/// shown as transient system toasts and then lost.
+class AppNotification {
+  final String id;
+  final String type;
+  final String title;
+  final String body;
+  final Map<String, dynamic> payload;
+  final bool isRead;
+  final DateTime? createdAt;
+
+  const AppNotification({
+    required this.id,
+    required this.type,
+    this.title = '',
+    this.body = '',
+    this.payload = const {},
+    this.isRead = false,
+    this.createdAt,
+  });
+
+  factory AppNotification.fromRow(Map<String, dynamic> row) {
+    // `data` is jsonb; a malformed or absent value must not take down the
+    // whole list, so it degrades to an empty payload.
+    final rawData = row['data'];
+    Map<String, dynamic> payload = const {};
+    if (rawData is Map) {
+      final inner = rawData['payload'];
+      if (inner is Map) {
+        payload = Map<String, dynamic>.from(inner);
+      } else {
+        payload = Map<String, dynamic>.from(rawData);
+      }
+    }
+
+    return AppNotification(
+      id: row['id'] as String? ?? '',
+      type: row['type'] as String? ?? 'safety_alert',
+      title: row['title'] as String? ?? '',
+      body: row['body'] as String? ?? '',
+      payload: payload,
+      isRead: row['is_read'] as bool? ?? false,
+      createdAt: DateTime.tryParse(row['created_at'] as String? ?? ''),
+    );
+  }
+
+  AppNotification copyWith({bool? isRead}) {
+    return AppNotification(
+      id: id,
+      type: type,
+      title: title,
+      body: body,
+      payload: payload,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt,
+    );
+  }
+
+  /// The user id this notification is about, when it names one.
+  String? get targetUserId {
+    final id = payload['user_id'];
+    return id is String && id.isNotEmpty ? id : null;
+  }
+
+  String? get targetMatchId {
+    final id = payload['match_id'];
+    return id is String && id.isNotEmpty ? id : null;
+  }
+
+  String? get targetConversationId {
+    final id = payload['conversation_id'];
+    return id is String && id.isNotEmpty ? id : null;
+  }
+}
+
 class ChatMessage {
   final String id;
   final String senderId;
@@ -777,6 +874,16 @@ class WeekendAuthState {
   /// The address the confirmation mail was sent to (for resend / display).
   final String? pendingEmail;
 
+  /// The password typed into the sign-up wizard, kept in memory only so the
+  /// "I've confirmed" step can finish the sign-in without making the user
+  /// type it a second time on the sign-in screen.
+  ///
+  /// This is deliberately never written to disk, never put in the
+  /// [WeekendAuthState] persistence path, and is cleared the moment it is
+  /// used (or the user leaves the confirmation step). It exists purely for
+  /// the signup-continuation window.
+  final String? pendingPassword;
+
   const WeekendAuthState({
     this.isAuthenticated = false,
     this.isLoading = false,
@@ -789,6 +896,7 @@ class WeekendAuthState {
     this.needsProfileSetup = false,
     this.awaitingEmailConfirmation = false,
     this.pendingEmail,
+    this.pendingPassword,
   });
   WeekendAuthState copyWith({
     bool? isAuthenticated,
@@ -804,6 +912,8 @@ class WeekendAuthState {
     bool? awaitingEmailConfirmation,
     String? pendingEmail,
     bool clearPendingEmail = false,
+    String? pendingPassword,
+    bool clearPendingPassword = false,
   }) {
     return WeekendAuthState(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
@@ -818,6 +928,9 @@ class WeekendAuthState {
       awaitingEmailConfirmation:
           awaitingEmailConfirmation ?? this.awaitingEmailConfirmation,
       pendingEmail: clearPendingEmail ? null : (pendingEmail ?? this.pendingEmail),
+      pendingPassword: clearPendingPassword
+          ? null
+          : (pendingPassword ?? this.pendingPassword),
     );
   }
 
@@ -832,6 +945,7 @@ class WeekendAuthState {
         needsProfileSetup: needsProfileSetup,
         awaitingEmailConfirmation: awaitingEmailConfirmation,
         pendingEmail: pendingEmail,
+        pendingPassword: pendingPassword,
       );
 }
 

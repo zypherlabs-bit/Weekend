@@ -119,9 +119,19 @@ class AuthRepository {
   /// objects, sessions) runs server-side; the client only forwards the
   /// caller's own access token so the function can verify identity.
   ///
+  /// [password] is REQUIRED. The edge function performs a real credential
+  /// check and returns 401 without it: deletion is irreversible and destroys
+  /// the profile, photos, matches and the entire message history, so a live -
+  /// and frequently cached - session token is not sufficient proof that the
+  /// person at the keyboard owns the account. It previously read `password`
+  /// from the body and never verified it.
+  ///
   /// Returns `true` when the backend confirms deletion. Throws on failure so
   /// the UI can surface the real backend error instead of a fake success.
-  Future<bool> deleteAccount({String reason = 'user_request'}) async {
+  Future<bool> deleteAccount({
+    required String password,
+    String reason = 'user_request',
+  }) async {
     final client = _client;
     if (client == null) return false;
     final session = client.auth.currentSession;
@@ -129,7 +139,7 @@ class AuthRepository {
     if (session == null || userId == null) return false;
     final response = await client.functions.invoke(
       'account-deletion',
-      body: {'userId': userId, 'reason': reason},
+      body: {'userId': userId, 'reason': reason, 'password': password},
     );
     final data = response.data;
     if (data is Map<String, dynamic>) {

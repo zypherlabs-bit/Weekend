@@ -238,6 +238,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       clearError: true,
       awaitingEmailConfirmation: false,
       clearPendingEmail: true,
+      clearPendingPassword: true,
     );
 
     try {
@@ -293,6 +294,10 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
           emailVerified: false,
           awaitingEmailConfirmation: true,
           pendingEmail: email,
+          // Held in memory only so `completeSignupAndSignIn` can finish the
+          // sign-in the moment the user confirms, instead of dumping them back
+          // on the sign-in screen to retype the password they just chose.
+          pendingPassword: password,
           user: _profileFromAuth(response.user!, fullName),
           clearError: true,
         );
@@ -307,6 +312,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
         emailVerified: response.user!.emailConfirmedAt != null,
         awaitingEmailConfirmation: false,
         clearPendingEmail: true,
+        clearPendingPassword: true,
         user: _profileFromAuth(response.user!, fullName),
         session: session.accessToken,
         clearError: true,
@@ -460,6 +466,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       needsMfaChallenge: false,
       awaitingEmailConfirmation: false,
       clearPendingEmail: true,
+      clearPendingPassword: true,
     );
 
     try {
@@ -522,6 +529,54 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
         error: _readableAuthError(e),
       );
     }
+  }
+
+  /// Finish a signup that is waiting on email confirmation.
+  ///
+  /// The user has just proved they own the mailbox by clicking the link, so
+  /// the only thing standing between them and the app is a session. This signs
+  /// in with the credentials captured during the wizard rather than sending
+  /// them to `/auth` to type the same email and password a second time.
+  ///
+  /// Returns `true` once a session exists. On failure the state carries a
+  /// user-readable [WeekendAuthState.error] and this returns `false` so the
+  /// caller can stay put rather than navigating into an unauthenticated screen.
+  Future<bool> completeSignupAndSignIn() async {
+    final email = state.pendingEmail;
+    final password = state.pendingPassword;
+
+    if (email == null || email.isEmpty || password == null) {
+      // The in-memory stash is gone (app restart, or the user already signed
+      // in). Only a real sign-in can recover from here.
+      state = state.copyWith(
+        isAuthenticated: false,
+        error: 'Please sign in to continue.',
+      );
+      return false;
+    }
+
+    // The password is consumed by this call: drop it from state first so it
+    // cannot linger if the sign-in throws.
+    state = state.copyWith(clearPendingPassword: true);
+
+    await signInWithEmail(email, password);
+
+    if (state.isAuthenticated) {
+      state = state.copyWith(
+        awaitingEmailConfirmation: false,
+        clearPendingEmail: true,
+        clearPendingPassword: true,
+      );
+      return true;
+    }
+
+    // `signInWithEmail` already puts a readable message on the state. If the
+    // address is genuinely unconfirmed, keep the confirmation step current so
+    // the user can resend instead of being stranded.
+    if (!state.awaitingEmailConfirmation) {
+      state = state.copyWith(clearPendingEmail: true);
+    }
+    return false;
   }
 
   /// Verify the pending MFA challenge after primary sign-in.
@@ -746,10 +801,20 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
 
   /// Delete the current account via the server-side `account-deletion`
   /// function, then clear local auth state. Returns `true` when deleted.
-  Future<bool> deleteAccount({String reason = 'user_request'}) async {
+  ///
+  /// [password] is required: the edge function performs a real credential check
+  /// and returns 401 without it. See [AuthRepository.deleteAccount] for why a
+  /// session token alone is not accepted for an irreversible action.
+  Future<bool> deleteAccount({
+    required String password,
+    String reason = 'user_request',
+  }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final deleted = await _repo.deleteAccount(reason: reason);
+      final deleted = await _repo.deleteAccount(
+        password: password,
+        reason: reason,
+      );
       if (!deleted) {
         state = state.copyWith(
           isLoading: false,

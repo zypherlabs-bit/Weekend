@@ -18,7 +18,7 @@ Free • Open Source • Android • Privacy-first
 [![Latest release](https://img.shields.io/github/v/release/zypherlabs-bit/Weekend?style=for-the-badge&color=blue)](https://github.com/zypherlabs-bit/Weekend/releases/latest)
 [![License: MIT](https://img.shields.io/github/license/zypherlabs-bit/Weekend?style=for-the-badge&color=yellow)](LICENSE)
 
-**[⬇️ Download Weekend v2.6.0](#download-weekend)** ·
+**[⬇️ Download Weekend v2.7.0](#download-weekend)** ·
 **[❓ FAQ](#faq)** ·
 **[💻 Source code](https://github.com/zypherlabs-bit/Weekend)**
 
@@ -429,7 +429,7 @@ and it ends at **real weekend plans** instead of endless swiping.
 Download the latest Weekend Android APK from **GitHub Releases** — free, no
 account needed to download, no store required.
 
-**Current version: 2.6.0** (versionCode 11) · APK ≈ 121 MB ·
+**Current version: 2.7.0** (versionCode 12) · APK ≈ 121 MB ·
 [📊 Analytics dashboard](https://zypherlabs-bit.github.io/Weekend/analytics/)
 
 <p align="center">
@@ -438,12 +438,12 @@ account needed to download, no store required.
   </a>
 </p>
 
-**Direct links for v2.6.0:**
+**Direct links for v2.7.0:**
 
 | Link | Purpose |
 | --- | --- |
-| [`Weekend-v2.6.0-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.6.0/Weekend-v2.6.0-release.apk) | The Android APK (≈121 MB) |
-| [`Weekend-v2.6.0-release.apk.sha256`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.6.0/Weekend-v2.6.0-release.apk.sha256) | SHA-256 checksum for the APK |
+| [`Weekend-v2.7.0-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.7.0/Weekend-v2.7.0-release.apk) | The Android APK (≈121 MB) |
+| [`Weekend-v2.7.0-release.apk.sha256`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.7.0/Weekend-v2.7.0-release.apk.sha256) | SHA-256 checksum for the APK |
 | [**Latest release page**](https://github.com/zypherlabs-bit/Weekend/releases/latest) | Always points at the newest stable Weekend release |
 | [All releases](https://github.com/zypherlabs-bit/Weekend/releases) | Full release history and notes |
 | [📊 **Analytics dashboard**](https://zypherlabs-bit.github.io/Weekend/analytics/) | Daily GitHub visitor and APK download statistics |
@@ -453,19 +453,19 @@ account needed to download, no store required.
 
 ### Install the APK
 
-1. Download `Weekend-v2.6.0-release.apk` from the link above.
+1. Download `Weekend-v2.7.0-release.apk` from the link above.
 2. Verify the download (recommended):
 
    ```bash
    # Windows (PowerShell)
-   Get-FileHash Weekend-v2.6.0-release.apk -Algorithm SHA256
+   Get-FileHash Weekend-v2.7.0-release.apk -Algorithm SHA256
 
    # macOS / Linux
-   sha256sum Weekend-v2.6.0-release.apk
+   sha256sum Weekend-v2.7.0-release.apk
    ```
 
-   Compare the output with the contents of
-   `Weekend-v2.6.0-release.apk.sha256` in the same release.
+    Compare the output with the contents of
+    `Weekend-v2.7.0-release.apk.sha256` in the same release.
 
 3. Open the APK on your device. Because Weekend is distributed directly through
    GitHub (not through an app store), Android will show its standard security
@@ -571,7 +571,7 @@ and ad serving.
 
 Download the latest APK from the
 [Weekend releases page](https://github.com/zypherlabs-bit/Weekend/releases/latest)
-(currently **v2.6.0**), verify its SHA-256 checksum, then open it on your
+(currently **v2.7.0**), verify its SHA-256 checksum, then open it on your
 Android device and confirm Android's "install from this source" prompt. Full
 instructions: [docs/installation.md](docs/installation.md).
 
@@ -636,7 +636,7 @@ does today:
 |------|---------------|
 | **Discovery mode queries** | The Explore chips (For You, Nearby, Around Me, City, Global, Travel Mode, Crossed Paths, Interests, Plans) all share one proximity query today; a mode changes the presentation context rather than the SQL filter. Per-mode queries are planned — see [Roadmap](#roadmap). |
 | **Message translation** | The `translate-message` Edge Function, the `translated_text` / `is_translated` columns and the chat rendering are in place, but the chat UI has no "translate" action yet. |
-| **Icebreakers & date ideas** | `icebreaker` and `date-ideas` Edge Functions are implemented server-side; they are not yet surfaced in the UI. |
+| **Icebreakers & date ideas** | The `date-ideas` Edge Function is surfaced in the chat screen via the "Date ideas" button; tapping it fetches AI-generated suggestions. The `icebreaker` Edge Function remains server-side only; it is not yet surfaced in the UI. |
 | **Passkeys** | The client implementation is complete, but the live Supabase project still answers `passkey_disabled` — **passkey sign-in does not work yet**. Email + password (with optional TOTP 2FA) works. See [Passkeys](#passkeys-webauthn--credential-manager). |
 | **Voice intros / voice messages** | A voice-intro indicator exists on discovery cards; recording and upload are not implemented. |
 | **Notifications** | Android notification channels, local notifications and a `notifications` table with Realtime streaming exist. There is no remote push (FCM) integration yet, so notifications are seen while the app is running. |
@@ -675,6 +675,7 @@ likes, matches or messaging behind a paywall.
 - [x] Privacy-preserving in-feed ads with server-validated events
 - [x] In-app account deletion wired to the `account-deletion` Edge Function
 - [x] Passkey client implementation (waiting on the live project setting — see [Known limitations](#known-limitations))
+- [x] Date ideas surfaced in the chat screen via the "Date ideas" button, calling the `date-ideas` Edge Function
 - [x] Row Level Security hardened on every table; pinned `search_path` on functions
 - [x] CI (analyze, tests, release APK build) and tag-driven releases with checksums
 
@@ -683,7 +684,7 @@ likes, matches or messaging behind a paywall.
 - [ ] Verified in-app screenshots of the signed-in experience for this README (discovery, matching, chat — onboarding and sign-up captures already shipped, see [Screenshots](#screenshots))
 - [ ] Mode-specific discovery queries (per-mode result sets beyond today's shared proximity query)
 - [ ] Translate-on-tap in chat using the existing `translate-message` function
-- [ ] Surface icebreakers and date ideas in the UI
+- [ ] Surface icebreakers in the UI (date ideas are now surfaced via the chat screen)
 - [ ] Enable passkeys on the live project and verify on physical hardware
 - [ ] Voice intros and voice messages
 - [ ] Remote push notifications (FCM)
@@ -927,7 +928,7 @@ CI builds and signs a **development-key release**. Production releases must
 provide a real `key.properties` with your own keystore
 (see `android/key.properties.example`).
 
-**Versioning** lives in `pubspec.yaml` (`version: 2.6.0+11`). Pushing a `v*`
+**Versioning** lives in `pubspec.yaml` (`version: 2.7.0+12`). Pushing a `v*`
 tag triggers `.github/workflows/release.yml`, which builds the APK, generates
 `Weekend-v<version>-release.apk` plus a `.sha256` checksum, and publishes both
 to a GitHub Release.

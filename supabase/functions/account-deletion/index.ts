@@ -44,6 +44,79 @@ serve(async (req: Request) => {
       );
     }
 
+    // ------------------------------------------------------------------
+    // Step 0: RE-AUTHENTICATE.
+    //
+    // `password` was read from the request body but never checked, so a single
+    // live session token was enough to irreversibly destroy an account - its
+    // profile, photos, matches, conversations and full message history. An
+    // access token is routinely long-lived and frequently left in a shared
+    // device's app cache, so it is not proof that the person at the keyboard
+    // is the account owner. Deletion is the one irreversible action in the
+    // app and needs a fresh factor of proof for exactly that reason.
+    //
+    // The check is a real password verification, not a presence check: a
+    // throwaway ANON-keyed client signs in with the supplied credentials and
+    // we confirm the session belongs to `authUserId`. Comparing the returned
+    // id is what prevents this from being satisfied by any other account.
+    // ------------------------------------------------------------------
+    const {data: account} = await supabase.auth.admin.getUserById(authUserId);
+    const email = account?.user?.email;
+
+    if (!email) {
+      // Phone-only or OAuth-only identities have no password to re-confirm.
+      // They cannot satisfy this gate, and account deletion for them has to go
+      // through support rather than silently bypass a check we cannot perform.
+      return new Response(
+        JSON.stringify({
+          error: 'This account cannot be deleted here.',
+          reason: 'no_password_credential',
+          support: 'Contact support to request account deletion.',
+        }),
+        {status: 409, headers: {...corsHeaders, 'Content-Type': 'application/json'}},
+      );
+    }
+
+    if (!password || typeof password !== 'string') {
+      return new Response(
+        JSON.stringify({
+          error: 'Password confirmation required.',
+          reason: 'password_required',
+        }),
+        {status: 401, headers: {...corsHeaders, 'Content-Type': 'application/json'}},
+      );
+    }
+
+    const verifier = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {auth: {persistSession: false, autoRefreshToken: false}},
+    );
+
+    const {data: verified, error: verifyError} = await verifier.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    // Sign the throwaway session out unconditionally: it is a real, working
+    // session for this account and must not outlive this request.
+    await verifier.auth.signOut();
+
+    if (verifyError || verified?.user?.id !== authUserId) {
+      // Deliberately vague: confirming which half of the pair was wrong helps
+      // someone enumerate registered addresses.
+      console.warn(
+        `Account deletion re-auth failed for ${authUserId}: ${verifyError?.message ?? 'id mismatch'}`,
+      );
+      return new Response(
+        JSON.stringify({
+          error: 'Those credentials did not match this account.',
+          reason: 'reauth_failed',
+        }),
+        {status: 401, headers: {...corsHeaders, 'Content-Type': 'application/json'}},
+      );
+    }
+
     // Step 1: Call the secure database function to clean up all user data
     // (profiles, photos, matches, messages, blocks, reports, referrals, etc.)
     const {data: cleanupData, error: cleanupError } = await supabase.rpc(

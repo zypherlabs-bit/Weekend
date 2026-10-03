@@ -2,13 +2,14 @@
   "schema_version": 1,
   "timezone": "UTC",
   "tracking_started": "2026-09-23",
-  "generated_at": "2026-09-30T03:59:30Z",
+  "generated_at": "2026-10-03T03:48:35Z",
   "apk": {
-    "live_downloads": 30,
+    "live_downloads": 34,
     "archived_downloads": 3,
-    "total_downloads": 33,
+    "total_downloads": 37,
     "asset_counts": {
-      "Weekend-v2.6.0-release.apk": 6,
+      "Weekend-v2.7.0-release.apk": 2,
+      "Weekend-v2.6.0-release.apk": 8,
       "Weekend-v2.5.1-release.apk": 8,
       "Weekend-v2.5.0-release.apk": 6,
       "Weekend-v2.4.1-release.apk": 0,
@@ -19,12 +20,12 @@
     "archived_note": "Weekend-v2.2.0-supabase.apk had download_count=3 when it was removed from release v2.2.0 on 2026-09-23; the count is kept here so cumulative totals stay accurate."
   },
   "release": {
-    "tag": "v2.6.0",
-    "version": "2.6.0",
-    "published_at": "2026-09-29T07:47:53Z",
-    "apk_asset": "Weekend-v2.6.0-release.apk",
-    "apk_downloads": 6,
-    "sha256": "d4c0b475fa63696bd2580429ae534b819c33231a4cfe24029e02d26ff91e062b"
+    "tag": "v2.7.0",
+    "version": "2.7.0",
+    "published_at": "2026-09-30T23:53:02Z",
+    "apk_asset": "Weekend-v2.7.0-release.apk",
+    "apk_downloads": 2,
+    "sha256": "a167137138e58d50cbd7e7bc32270f7cf65bc218ca105090ae93f530c615af32"
   },
   "days": [
     {
@@ -218,8 +219,8 @@
     },
     {
       "date": "2026-09-29",
-      "repository_views": null,
-      "repository_unique_visitors": null,
+      "repository_views": 9,
+      "repository_unique_visitors": 3,
       "repository_clones": null,
       "repository_unique_cloners": null,
       "apk_downloads_daily": 14,
@@ -227,17 +228,44 @@
     },
     {
       "date": "2026-09-30",
-      "repository_views": null,
-      "repository_unique_visitors": null,
+      "repository_views": 22,
+      "repository_unique_visitors": 6,
       "repository_clones": null,
       "repository_unique_cloners": null,
       "apk_downloads_daily": 12,
       "apk_downloads_cumulative": 33
+    },
+    {
+      "date": "2026-10-01",
+      "repository_views": 75,
+      "repository_unique_visitors": 5,
+      "repository_clones": null,
+      "repository_unique_cloners": null,
+      "apk_downloads_daily": 2,
+      "apk_downloads_cumulative": 35
+    },
+    {
+      "date": "2026-10-02",
+      "repository_views": null,
+      "repository_unique_visitors": null,
+      "repository_clones": null,
+      "repository_unique_cloners": null,
+      "apk_downloads_daily": 1,
+      "apk_downloads_cumulative": 36
+    },
+    {
+      "date": "2026-10-03",
+      "repository_views": null,
+      "repository_unique_visitors": null,
+      "repository_clones": null,
+      "repository_unique_cloners": null,
+      "apk_downloads_daily": 1,
+      "apk_downloads_cumulative": 37
     }
   ],
   "traffic_window_totals": {
-    "views": 103,
-    "unique_visitors": 13
+    "views": 196,
+    "unique_visitors": 21
   },
-  "traffic_fetched_at": "2026-09-30T03:59:29Z"
+  "traffic_fetched_at": "2026-10-03T03:48:34Z"
 }

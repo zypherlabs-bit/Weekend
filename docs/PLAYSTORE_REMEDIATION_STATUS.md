@@ -3,7 +3,8 @@
 **App:** Weekend — Dating & Matchmaking (`com.weekend.app`)
 **Version:** 2.7.0 (`versionCode` 12)
 **Date:** 2026-10-02
-**Base commit:** `8d01432` on `master`
+**Audit baseline:** `8d01432` on `master`
+**Current HEAD:** `d5e49e5` — commits the work described below (see §1)
 **Trigger:** `docs/PLAYSTORE_LAUNCH_CERTIFICATION.md` (2026-10-02), result **NO-GO**
 **Auditor:** automated remediation pass
 
@@ -24,15 +25,15 @@ Console access).
 
 ```
 git branch --show-current   -> master
-git rev-parse HEAD          -> 8d01432
+git rev-parse HEAD          -> 8d01432   (at audit time)
 git log --oneline -3        -> 8d01432 (Merge branch 'master' of ...)
 git remote -v               -> origin https://github.com/zypherlabs-bit/Weekend.git
 ```
 
-The repository has **not** changed since the audit's base commit. HEAD is
+The repository had **not** changed since the audit's base commit; HEAD was
 exactly `8d01432`.
 
-However, the working tree was **not clean**. It carries substantial uncommitted
+However, the working tree was **not clean**. It carried substantial uncommitted
 work — including the very files the audit reasons about:
 
 ```
@@ -54,10 +55,39 @@ work — including the very files the audit reasons about:
 ```
 
 **Consequence:** the age-enforcement migrations, the FCM dependency and the
-signing guard are all **untracked or uncommitted** — they are not in `8d01432`.
-Any CI run from `master` today does **not** contain migration 028, the adult age
-gate, or the debug-signing refusal. This must be committed before anything else
-is meaningful.
+signing guard were all **untracked or uncommitted** — they were not in `8d01432`.
+Any CI run from `master` did **not** contain migration 028, the adult age
+gate, or the debug-signing refusal.
+
+### RESOLVED — committed as `d5e49e5`
+
+All of the above is now committed to `master`:
+
+```
+$ git log --oneline -1
+d5e49e5 fix(safety): enforce adults-only in the database, refuse debug-signed releases
+
+$ git ls-tree -r --name-only HEAD -- supabase/migrations | grep -E '027|028'
+supabase/migrations/027_device_tokens_and_mode_queries.sql
+supabase/migrations/028_adult_only_enforcement.sql
+
+$ git status --porcelain
+(clean)
+```
+
+40 files changed, 5413 insertions, 2133 deletions. Before committing, the
+staged diff was scanned for real credential values (Supabase JWT/anon keys,
+`sbp_` management PATs, PEM private keys, AWS keys, GitHub tokens) and for
+credential assignments — **both clean**. `.env`, `*.jks`, `*.keystore` and
+`android/key.properties` were confirmed absent from the index and remain
+git-ignored.
+
+`android/hs_err_pid13844.log` was a 2 MB JVM OOM crash dump that had been
+committed by accident. It is deleted, and `hs_err_pid*.log` / `replay_pid*.log`
+are now git-ignored so it cannot recur.
+
+Committing the code does **not** apply it: migration 028 is in git but is
+still **not applied to the live database** (see blocker 3).
 
 ### Toolchain
 

@@ -1,7 +1,8 @@
 # HUMAN ACTIONS REQUIRED — Weekend Play Store Launch
 
 **Date:** 2026-10-02
-**Base commit:** `8d01432`
+**Audit baseline:** `8d01432`
+**Current HEAD:** `d5e49e5`
 **Companion documents:** `docs/PLAYSTORE_REMEDIATION_STATUS.md`,
 `docs/PLAYSTORE_FINAL_CERTIFICATION.md`
 
@@ -15,74 +16,87 @@ Android handset, or real people. This file does not say "you need to do this".
 It gives the exact steps, what you must supply back, and how to confirm the
 result is genuinely correct.
 
-**Nothing in this list has been done.** Each item is genuinely outstanding.
+**§1 is now complete** (committed as `d5e49e5`). **§2–§8 remain genuinely
+outstanding** and require your accounts, credentials, hardware or people.
 
-| § | Action | Blocks |
-|---|---|---|
-| 1 | Commit the uncommitted work | everything |
-| 2 | Publish the policy pages | the submission |
-| 3 | Create the production keystore | the build, the upload |
-| 4 | Apply migrations 027/028 + run probes | launch |
-| 5 | Physical-device testing | launch |
-| 6 | Play Console account + declarations | the submission |
-| 7 | Reviewer account | review |
-| 8 | Closed testing | production access |
+| § | Action | Blocks | Status |
+|---|---|---|---|
+| 1 | Commit the uncommitted work | everything | **DONE — `d5e49e5`** |
+| 2 | Publish the policy pages | the submission | outstanding |
+| 3 | Create the production keystore | the build, the upload | outstanding |
+| 4 | Apply migrations 027/028 + run probes | launch | outstanding |
+| 5 | Physical-device testing | launch | outstanding |
+| 6 | Play Console account + declarations | the submission | outstanding |
+| 7 | Reviewer account | review | outstanding |
+| 8 | Closed testing | production access | outstanding |
 
 ---
 
-## §1 — Commit the uncommitted work
+## §1 — Commit the uncommitted work ✅ DONE
 
-### ACTION
-`git add` and commit the working tree.
+### STATUS: COMPLETE — commit `d5e49e5`
 
-### WHY REQUIRED
-The audit's base commit is `8d01432`, but the working tree holds **critical
-uncommitted changes**: migration `028` (the entire adults-only age gate),
-migration `027`, the FCM wiring, the release-signing guard, and every Play
-document.
+The work has been committed to `master`. The working tree is clean.
 
-**CI building `master` right now does not contain the age gate or the signing
-guard.** Everything in this launch plan depends on those files being in git.
+### WHAT WAS DONE
 
-### EXACT STEPS
+```
+$ git log --oneline -1
+d5e49e5 fix(safety): enforce adults-only in the database, refuse debug-signed releases
+
+$ git status --porcelain
+(clean)
+
+$ git ls-tree -r --name-only HEAD -- supabase/migrations | grep -E '027|028'
+supabase/migrations/027_device_tokens_and_mode_queries.sql
+supabase/migrations/028_adult_only_enforcement.sql
+```
+
+40 files changed, 5413 insertions, 2133 deletions.
+
+### SAFETY CHECKS PERFORMED BEFORE COMMITTING
+
+| Check | Result |
+|---|---|
+| Real secret values in the staged diff (Supabase JWT/anon keys, `sbp_` PATs, PEM private keys, AWS keys, GitHub tokens) | **none found** |
+| Credential assignments (`KEY=<value>`) | **none found** |
+| `.env`, `*.jks`, `*.keystore`, `android/key.properties` in the index | **none staged** |
+| `.env` (holds live credentials) | present on disk, **git-ignored** (`.gitignore:20`) |
+| Keystore files anywhere in the repo | **none exist** |
+
+Textual matches for `service_role` / `SUPABASE_SERVICE_ROLE_KEY` appear in
+source, tests and docs, but they are **variable names and prose**, never
+values. No secret was committed.
+
+### ALSO INCLUDED
+
+- `android/hs_err_pid13844.log` deleted — a 2 MB JVM OOM crash dump committed
+  by accident, produced by the old `-Xmx8G` setting that
+  `android/gradle.properties` no longer uses. `hs_err_pid*.log` and
+  `replay_pid*.log` are now git-ignored so it cannot recur.
+
+### REMAINING FOR YOU
+
+**Push to the remote.** The commit is local only:
 
 ```bash
-cd d:/Projects/Weekend
+git push origin master
+```
 
-# 1. Review what is about to be committed.
-git status
-git --no-pager diff
+Then confirm CI is green and that a build from `master` now contains the age
+gate:
 
-# 2. Confirm no secrets are staged. These MUST NOT appear.
-git --no-pager diff --cached | findstr /I "SUPABASE_ANON_KEY service_role PRIVATE KEY"
+```bash
+git log --oneline -1 origin/master
+git --no-pager ls-tree -r --name-only origin/master -- supabase/migrations | grep 028
+```
 
-# 3. Add the source, migrations and docs.
-git add android/app/build.gradle.kts
-git add android/app/src/main/AndroidManifest.xml
-git add android/gradle.properties
-git add pubspec.yaml pubspec.lock
-git add lib/
-git add supabase/migrations/027_device_tokens_and_mode_queries.sql
-git add supabase/migrations/028_adult_only_enforcement.sql
-git add supabase/functions/translate-message/index.ts
-git add docs/
-git add tool/make_store_assets.py
-git add tests/python/conftest.py tests/python/weekend_checks.py
+### IMPORTANT
 
-# 4. Verify nothing secret is staged, then commit.
-git --no-pager diff --cached --stat
-git commit -m "fix(safety): enforce adults-only in the database, refuse debug-signed releases
+Committing the migration does **not** apply it. Migration 028 is in git but is
+still **not applied to the live database** — that is §4, and age enforcement
+remains **NOT VERIFIED** until it is.
 
-- migration 028: server-side 18+ enforcement (DOB trigger, matching guard,
-  discovery floor). A minor could previously bypass the client-side check via
-  the public anon key, set an under-18 DOB, match and message.
-- migration 027: device_tokens table + fixed get_nearby_profiles (the previous
-  body selected columns that do not exist and could never run).
-- build.gradle.kts: refuse to build a release artifact without a production
-  key instead of silently falling back to the Android debug key.
-- data safety doc: reconciled with the FCM dependency; FCM cannot initialise
-  in the shipped build (no google-services.json, plugin not applied).
-- python suite: fix latest_migration_text() and function_body() so the
 ---
 
 ## §2 — Publish the policy pages
@@ -767,26 +781,3 @@ Then confirm each is genuine:
 - no response contains `window.location.href="/lander"`
 
 Check from a phone browser and while signed out.
-  migration checks read the full schema again (8 failures -> 0).
-- store assets: generated 512 icon and 1024x500 feature graphic."
-
-git push origin master
-```
-
-### ALSO COMMIT THE POLICY DOCS
-`docs/terms.md`, `docs/community-guidelines.md`, `docs/safety-policy.md` and
-`docs/child-safety.md` are currently **untracked**, so they are not on GitHub at
-all. They must be committed for §2.
-
-### WHAT TO PROVIDE BACK
-Confirmation that `master` contains a commit including migration 028.
-
-### HOW TO VERIFY
-
-```bash
-git log --oneline -3
-git --no-pager show --stat HEAD
-```
-
-Confirm `supabase/migrations/028_adult_only_enforcement.sql` appears in the
-commit, then confirm CI builds green.

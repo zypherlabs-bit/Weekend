@@ -3,7 +3,8 @@
 **App:** Weekend — Dating & Matchmaking (`com.weekend.app`)
 **Version:** 2.7.0 · `versionCode` 12
 **Date:** 2026-10-02
-**Base commit:** `8d01432` on `master`
+**Audit baseline:** `8d01432` on `master`
+**Current HEAD:** `d5e49e5` (commits migrations 027/028, the signing guard and the Play documentation)
 **Supersedes:** `docs/PLAYSTORE_LAUNCH_CERTIFICATION.md` (2026-10-02, NO-GO)
 
 ---

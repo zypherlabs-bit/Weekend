@@ -15,6 +15,13 @@
     <!-- Notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- Voice intros - audio recording -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Storage permissions are intentionally NOT declared:
+         scoped storage (API 29+) makes legacy external storage
+         access unavailable, and the app uses the system Photo
+         Picker and scoped app-internal storage only. -->
+
     <!-- Biometric / Credential Manager for passkeys -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-permission android:name="android.permission.USE_FINGERPRINT"/>

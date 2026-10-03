@@ -42,11 +42,39 @@ serve(async (req: Request) => {
       );
     }
 
-    const {text, targetLanguage = 'English'} = await req.json();
+    const {messageId, targetLanguage = 'English'} = await req.json();
 
+    if (!messageId) {
+      return new Response(
+        JSON.stringify({error: 'messageId is required'}),
+        {status: 400, headers: {...corsHeaders, 'Content-Type': 'application/json'}},
+      );
+    }
+
+    // Fetch the message text from the database using the service role.
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
+    const { data: messageData, error: fetchError } = await supabase
+      .from('messages')
+      .select('text')
+      .eq('id', messageId)
+      .single();
+
+    if (fetchError || !messageData) {
+      console.error('Failed to fetch message:', fetchError?.message);
+      return new Response(
+        JSON.stringify({error: 'Message not found'}),
+        {status: 404, headers: {...corsHeaders, 'Content-Type': 'application/json'}},
+      );
+    }
+
+    const text = messageData.text;
     if (!text) {
       return new Response(
-        JSON.stringify({error: 'text is required'}),
+        JSON.stringify({error: 'Message has no text'}),
         {status: 400, headers: {...corsHeaders, 'Content-Type': 'application/json'}},
       );
     }
@@ -76,9 +104,20 @@ serve(async (req: Request) => {
     const data = await response.json();
     const translated = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
+    const cleanText = translated.trim().replace(/^["']|["']$/g, '');
+
+    // Persist the translation so it streams to all participants via Realtime.
+    await supabase
+      .from('messages')
+      .update({
+        translated_text: cleanText,
+        is_translated: true,
+      })
+      .eq('id', messageId);
+
     return new Response(
       JSON.stringify({
-        translatedText: translated.trim().replace(/^["']|["']$/g, ''),
+        translatedText: cleanText,
         source: 'gemini',
       }),
       {status: 200, headers: {...corsHeaders, 'Content-Type': 'application/json'}},
@@ -86,9 +125,11 @@ serve(async (req: Request) => {
   } catch (error) {
     const err = error as Error;
     console.error('Translation error:', err);
-    const {text = ''} = await req.clone().json().catch(() => ({}));
+    const body = await req.clone().json().catch(() => ({}));
+    const {messageId: fallbackId, text: fallbackText = ''} = body as {messageId?: string; text?: string};
+    const fallbackResult = fallbackText || `[Translation unavailable]`;
     return new Response(
-      JSON.stringify({translatedText: `[Translated]: ${text}`, source: 'fallback'}),
+      JSON.stringify({translatedText: fallbackResult, source: 'fallback', messageId: fallbackId}),
       {status: 200, headers: {...corsHeaders, 'Content-Type': 'application/json'}},
     );
   }

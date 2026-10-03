@@ -94,9 +94,18 @@ def migration_text() -> str:
 
 
 def latest_migration_text() -> str:
-    """Text of the highest-numbered migration only."""
-    files = migrations()
-    return read_text(files[-1]) if files else ""
+    """Concatenate every migration into one searchable blob, newest last.
+
+    Later migrations supersede earlier ones, so the concatenation reflects the
+    state the schema is actually in after every migration has run.
+
+    This deliberately mirrors :func:`conftest.latest_migration_text`, which has
+    always had this behaviour. Returning only the highest-numbered file made
+    every check that asserts on schema introduced by an EARLIER migration fail
+    as soon as a new migration was added - the checks were correct, the helper
+    was too narrow.
+    """
+    return migration_text()
 
 
 

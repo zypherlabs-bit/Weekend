@@ -7,6 +7,7 @@ import '../../providers/weekend_provider.dart';
 import '../../models/models.dart';
 import '../../repositories/message_repository.dart';
 import '../../widgets/date_ideas_widget.dart';
+import '../../widgets/icebreaker_widget.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final MatchItem match;
@@ -164,12 +165,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
          actions: [
-           DateIdeasButton(
-             partnerInterests: widget.match.user.interests,
-             city: state.currentUser.city.isNotEmpty
-                 ? state.currentUser.city
-                 : widget.match.user.city,
-           ),
+DateIdeasButton(
+              partnerInterests: widget.match.user.interests,
+              city: state.currentUser.city.isNotEmpty
+                  ? state.currentUser.city
+                  : widget.match.user.city,
+            ),
+            IcebreakerButton(
+              match: widget.match,
+              currentUser: state.currentUser,
+            ),
            IconButton(
              tooltip: 'Voice calls are not available in this release',
              onPressed: null,
@@ -308,16 +313,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             ),
 
                             if (message.isTranslated &&
-                                message.translatedText != null) ...[
+                              message.translatedText != null) ...[
                               const SizedBox(height: 4),
-
                               Text(
                                 '${message.translatedText}',
-
                                 style: TextStyle(
                                   color: const Color(0xFFFF9966),
-
                                   fontSize: 12,
+                                ),
+                              ),
+                            ],
+
+                            if (!isMe && !message.isTranslated) ...[
+                              const SizedBox(height: 4),
+                              GestureDetector(
+                                onTap: () async {
+                                  await _messageRepository.translateMessage(
+                                    widget.match.id,
+                                    message.id,
+                                  );
+                                  setState(() {});
+                                },
+                                child: Text(
+                                  'Translate',
+                                  style: TextStyle(
+                                    color: const Color(0xFFFF9966),
+                                    fontSize: 12,
+                                    decoration: TextDecoration.underline,
+                                  ),
                                 ),
                               ),
                             ],

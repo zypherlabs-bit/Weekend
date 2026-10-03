@@ -4,6 +4,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:ui' show Color;
 import '../config/supabase_config.dart';
 
+// Firebase imports — used when a Firebase project is configured.
+// The app works without Firebase (foreground notifications via Realtime);
+// FCM adds background and closed-app delivery.
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import '../firebase_options.dart';
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -12,31 +19,28 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
 
+  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+
   bool _initialized = false;
+  bool _firebaseInitialized = false;
 
-  // Notification Channels
   static const String _matchesChannelId = 'matches_channel';
-
   static const String _messagesChannelId = 'messages_channel';
-
   static const String _plansChannelId = 'plans_channel';
-
   static const String _safetyChannelId = 'safety_channel';
-
   static const String _generalChannelId = 'general_channel';
 
   Future<void> initialize() async {
     if (_initialized) return;
+
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
-
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-
     const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
@@ -50,7 +54,99 @@ class NotificationService {
 
     _createChannels();
 
+    // Initialize Firebase + FCM (optional — app works without it).
+    _initFirebase();
+
     _initialized = true;
+  }
+
+  Future<void> _initFirebase() async {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      _firebaseInitialized = true;
+
+      // Request FCM permissions.
+      await _messaging.requestPermission();
+
+      // Configure foreground message handling.
+      FirebaseMessaging.onMessage.listen(_onForegroundMessage);
+      FirebaseMessaging.onMessageOpenedApp.listen(_onNotificationOpenedApp);
+
+      // Get and store the FCM token for this user.
+      _saveDeviceToken();
+
+      debugPrint('FCM initialized successfully');
+    } catch (e) {
+      debugPrint('FCM not configured (using local notifications only): $e');
+    }
+  }
+
+  /// Saves the current FCM token to the device_tokens table so the backend
+  /// can send push notifications via FCM.
+  Future<void> _saveDeviceToken() async {
+    if (!_firebaseInitialized) return;
+
+    final client = SupabaseConfig.client;
+    if (client == null) return;
+    final userId = SupabaseConfig.currentUserId;
+    if (userId.isEmpty || userId == 'unauthenticated' || userId == 'me') return;
+
+    final token = await _messaging.getToken();
+    if (token == null) return;
+
+    final deviceId = await _getOrCreateDeviceId();
+    if (deviceId == null) return;
+
+    try {
+      await client.from('device_tokens').upsert({
+        'user_id': userId,
+        'device_id': deviceId,
+        'token': token,
+        'platform': 'android',
+        'created_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'user_id, device_id');
+    } catch (e) {
+      debugPrint('Failed to save FCM registration: $e');
+    }
+  }
+
+  static String? _persistentDeviceId;
+  String? get _deviceId => _persistentDeviceId;
+
+  Future<String?> _getOrCreateDeviceId() async {
+    if (_deviceId != null) return _deviceId;
+
+    // simple approach: use the FCM token hash as a stable device id
+    final token = await _messaging.getToken();
+    if (token == null) return null;
+    _persistentDeviceId = token.substring(0, 32);
+    return _persistentDeviceId;
+  }
+
+  void _onForegroundMessage(RemoteMessage message) {
+    final notification = message.notification;
+    if (notification == null) return;
+
+    final typeStr = message.data['type'] as String?;
+    final type = _typeFromString(typeStr);
+
+    showNotification(
+      id: notification.hashCode,
+      title: notification.title ?? 'Weekend',
+      body: notification.body ?? '',
+      type: type,
+      payload: message.data['payload'] as String?,
+    );
+  }
+
+  void _onNotificationOpenedApp(RemoteMessage message) {
+    debugPrint('Notification opened app: ${message.messageId}');
+  }
+
+  void _onNotificationTap(NotificationResponse response) {
+    debugPrint('Notification tapped: ${response.payload}');
   }
 
   void _createChannels() {
@@ -105,51 +201,19 @@ class NotificationService {
     }
   }
 
-  void _onNotificationTap(NotificationResponse response) {
-    // Handle notification tap - navigate to relevant screen.
-    // Full deep-link routing is handled via GoRouter payload parsing.
-    debugPrint('Notification tapped: ${response.payload}');
-  }
-
-  Future<void> showNotification({
-    required int id,
-    required String title,
-    required String body,
-
-    required NotificationType type,
-    String? payload,
-  }) async {
-    if (!_initialized) await initialize();
-
-    final channelId = _getChannelId(type);
-
-    final androidDetails = AndroidNotificationDetails(
-      channelId,
-
-      _getChannelName(type),
-
-      channelDescription: _getChannelDescription(type),
-      importance: Importance.high,
-
-      playSound: true,
-      enableVibration: true,
-      icon: '@mipmap/ic_launcher',
-      color: const Color(0xFFFF4B72),
-      colorized: true,
-    );
-
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _notifications.show(id, title, body, details, payload: payload);
+  NotificationType _typeFromString(String? typeStr) {
+    switch (typeStr) {
+      case 'new_match':
+        return NotificationType.match;
+      case 'new_message':
+        return NotificationType.message;
+      case 'plan_invitation':
+        return NotificationType.plan;
+      case 'safety_alert':
+        return NotificationType.safety;
+      default:
+        return NotificationType.general;
+    }
   }
 
   String _getChannelId(NotificationType type) {
@@ -197,6 +261,42 @@ class NotificationService {
     }
   }
 
+  Future<void> showNotification({
+    required int id,
+    required String title,
+    required String body,
+    required NotificationType type,
+    String? payload,
+  }) async {
+    if (!_initialized) await initialize();
+    final channelId = _getChannelId(type);
+
+    final androidDetails = AndroidNotificationDetails(
+      channelId,
+      _getChannelName(type),
+      channelDescription: _getChannelDescription(type),
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+      icon: '@mipmap/ic_launcher',
+      color: const Color(0xFFFF4B72),
+      colorized: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _notifications.show(id, title, body, details, payload: payload);
+  }
+
   Future<void> requestPermission() async {
     if (!_initialized) await initialize();
 
@@ -204,15 +304,18 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-
     await androidImpl?.requestNotificationsPermission();
 
     final iosImpl = _notifications
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
         >();
-
     await iosImpl?.requestPermissions(alert: true, badge: true, sound: true);
+
+    // FCM permission
+    if (_firebaseInitialized) {
+      await _messaging.requestPermission();
+    }
   }
 
   Future<void> cancelNotification(int id) async {
@@ -223,7 +326,7 @@ class NotificationService {
     await _notifications.cancelAll();
   }
 
-  // Supabase Realtime subscription for remote notifications
+  // Supabase Realtime subscription for foreground notifications
   RealtimeChannel? _notificationsChannel;
 
   Future<void> subscribeToNotifications() async {
@@ -252,23 +355,7 @@ class NotificationService {
     final title = newRecord['title'] as String? ?? 'Weekend';
     final body = newRecord['body'] as String? ?? '';
     final data = newRecord['data'] as Map<String, dynamic>?;
-    NotificationType type;
-    switch (typeStr) {
-      case 'new_match':
-        type = NotificationType.match;
-        break;
-      case 'new_message':
-        type = NotificationType.message;
-        break;
-      case 'plan_invitation':
-        type = NotificationType.plan;
-        break;
-      case 'safety_alert':
-        type = NotificationType.safety;
-        break;
-      default:
-        type = NotificationType.general;
-    }
+    final type = _typeFromString(typeStr);
     final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final notificationPayload = data?['payload'] as String?;
     showNotification(
@@ -287,3 +374,9 @@ class NotificationService {
 }
 
 enum NotificationType { match, message, plan, safety, general }
+
+/// Background handler for FCM messages when the app is not in the foreground.
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  debugPrint('Handling a background message: ${message.messageId}');
+}

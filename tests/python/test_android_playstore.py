@@ -97,6 +97,8 @@ class TestPermissions:
             "android.permission.ACCESS_COARSE_LOCATION",
             "android.permission.ACCESS_FINE_LOCATION",
             "android.permission.POST_NOTIFICATIONS",
+            # Justified: voice intro recording (RECORD_AUDIO for voice intros).
+            "android.permission.RECORD_AUDIO",
             "android.permission.USE_BIOMETRIC",
             "android.permission.USE_FINGERPRINT",
         }

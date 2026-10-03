@@ -63,6 +63,14 @@ __pycache__/
 build_*.log
 release_report.txt
 
+# JVM crash dumps. One of these (hs_err_pid13844.log) was committed by
+# accident: it is a 2 MB native-memory crash trace, and it was produced by the
+# -Xmx8G setting that android/gradle.properties no longer uses. Deleting it
+# keeps machine-specific paths and memory layouts out of history, and these
+# files must never be re-committed.
+hs_err_pid*.log
+replay_pid*.log
+
 # Original, uncompressed recordings kept for re-encoding only.
 # They are ~116 MB and must never be committed - the compressed clips
 # in assets/videos/ are what ships.

@@ -102,14 +102,28 @@ def function_body(sql: str, name: str) -> str | None:
         return None
 
     start = matches[-1].start()
-    # Locate the body delimiter that follows the signature.
-    dollar = re.search(r"\$\$(.*?)\$\$", sql[start:], re.DOTALL)
-    if dollar:
-        return dollar.group(1)
-    tagged = re.search(r"\$([A-Za-z_]\w*)\$.*?\$\1\$", sql[start:], re.DOTALL)
-    if tagged:
-        return tagged.group(0)
-    return sql[start:]
+    tail = sql[start:]
+
+    # Find the delimiter that actually opens THIS function's body, rather than
+    # the first `$$` pair anywhere later in the file.
+    #
+    # Bodies here use both `$$` and tagged delimiters (`as $fn$ ... $fn$`). A
+    # function using `$fn$` has no `$$` near its signature, so probing for `$$`
+    # first walked past the real body and returned an unrelated function's
+    # block - which then failed every assertion about the correct one. Match the
+    # delimiter that follows `as` instead, then return everything up to its twin.
+    opener = re.search(
+        r"\bas\s+(\$\$|\$[A-Za-z_]\w*\$)",
+        tail,
+        re.IGNORECASE,
+    )
+    if opener:
+        delim = opener.group(1)
+        body_start = opener.end()
+        close = tail.find(delim, body_start)
+        if close != -1:
+            return tail[body_start:close]
+    return tail
 
 
 def dart_defines_dart(source: str) -> bool:

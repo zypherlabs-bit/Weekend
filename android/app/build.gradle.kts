@@ -171,6 +171,18 @@ android {
     // Release signing is provided via an untracked key.properties file
     // (see key.properties.example). Builds without it fall back to a locally
     // generated debug keystore so CI and fresh checkouts remain friction-free.
+    //
+    // RELEASE GUARD (added 2026-10-02)
+    // ---------------------------------
+    // A release artifact signed with the Android debug key can be uploaded to
+    // Play, is not updatable by Play App Signing, and cannot be re-signed later -
+    // it permanently consumes that package's first signing key. The fallback
+    // below therefore FAILS the build unless the operator opts in explicitly,
+    // instead of silently producing an artifact that looks releasable but is not.
+    //
+    //   ./gradlew bundleRelease -PallowDebugSigning=true    (local/testing only)
+    //
+    // Real releases must supply android/key.properties instead.
     val keyPropsFile = rootProject.file("key.properties")
     val keyProps = Properties()
     var keyStoreFile: File? = null
@@ -198,14 +210,28 @@ android {
                 keyAlias = keyKeyAlias
                 keyPassword = keyKeyPassword
             } else {
-                // Fallback: reuse (or generate) the standard Android debug
-                // keystore when key.properties is absent. The path is set
-                // explicitly so the build does not depend on how the Android
-                // Gradle Plugin resolves ANDROID_USER_HOME on a given machine.
+                // Fallback: reuse the standard Android debug keystore. Only
+                // permitted for local builds that are explicitly opted in,
+                // because a debug-signed release artifact must never reach Play.
+                val allowDebugSigning = (
+                    project.findProperty("allowDebugSigning")
+                        ?: System.getenv("ALLOW_DEBUG_SIGNING")
+                    ) as String?
+                if (allowDebugSigning != "true") {
+                    throw GradleException(
+                        "REFUSING TO BUILD a release artifact: android/key.properties " +
+                            "is missing or incomplete, so the build would fall back to the " +
+                            "Android DEBUG key. A debug-signed release cannot be updated " +
+                            "through Play App Signing and permanently consumes the " +
+                            "package's first signing key.\n" +
+                            "Create android/key.properties (see key.properties.example) " +
+                            "for a real release, or pass -PallowDebugSigning=true if you " +
+                            "intend to produce a local, non-distributable artifact.",
+                    )
+                }
                 println(
-                    "WARNING: key.properties not found or incomplete. " +
-                        "The release build will be signed with a generated development " +
-                        "key and must not be distributed as a production build.",
+                    "WARNING: building with the Android debug key because " +
+                        "allowDebugSigning=true. This artifact is NOT distributable.",
                 )
                 val debugStore = File(System.getProperty("user.home"), ".android/debug.keystore")
                 if (!debugStore.exists()) {

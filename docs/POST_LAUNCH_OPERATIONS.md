@@ -1,4 +1,4 @@
-# Post-Launch Operations
+﻿# Post-Launch Operations
 
 This runbook documents the ongoing responsibilities after Weekend is published
 to the Google Play Store.
@@ -51,7 +51,7 @@ in the future (e.g., Sentry), it must be:
 ### 3.1 Version codes
 
 - Every Play Store release must increment `versionCode`. This is managed via
-  `pubspec.yaml` → `version: 2.7.0+12` (the `+12` suffix is the versionCode).
+  `pubspec.yaml` â†’ `version: 2.8.0+13` (the `+13` suffix is the versionCode).
 - Do **not** reuse a versionCode. Play Console will reject it.
 
 ### 3.2 AAB submission
@@ -136,5 +136,6 @@ If a release causes a critical issue:
 5. **Resume rollout** once validated.
 
 If the rollback requires backend changes (migration), apply a new migration
-that reverses the change. **Never modify a committed migration** — always add
+that reverses the change. **Never modify a committed migration** â€” always add
 a new one.
+

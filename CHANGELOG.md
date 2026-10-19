@@ -10,6 +10,94 @@ handful of conventions that are worth stating once:
 - **Server-side enforcement.** Search filters, distance computation and access
   control live in PostgreSQL, not in the client.
 
+## [2.8.0] - 2026-10-19
+
+### Added - unified discovery entitlements, match lifecycle, support and risk signals
+
+Server side (additive migrations 030-033; 030 fixes the advanced-search score
+type, 031-033 land the feature set):
+
+- **Server-authoritative entitlements** (`user_entitlements`): every product
+  feature is entitlement-gated and all grants currently come from
+  `system_free`. There is no billing provider integration yet; the
+  entitlement layer is an abstraction over the free tier, not a payment
+  system.
+- **Priority Likes and like notes** (migration 032). Priority weight is
+  computed inside `record_like` from the caller's entitlements and is never
+  accepted as a client argument. Notes go through the standing 140-char and
+  social-media policy validation.
+- **24-hour match initiation windows** (032). New matches receive an
+  initiator (women-led rule in heterosexual matching) and a deadline; the
+  first message settles the window server-side so a started match can never
+  expire retroactively.
+- **`extend_match`** (+24 h once per participant, idempotent conditional
+  update) and **rematch** (a fresh `record_like` re-opens an expired,
+  never-started match once per 7 days while the partner's like is
+  outstanding).
+- **Match surface** gains `conversation_id`, `initiation_status`,
+  `window_ends_at` and `away_message`; the match list renders status chips
+  from these server fields only.
+- **Privacy modes** (031): incognito, snooze (with duration), away status
+  with note (140 chars, no links; shown to connections only while their
+  window is active), travel mode and an online-now consent toggle.
+- **Spotlight and photo insights** (031): activation windows with
+  server-computed reasons and cooldowns; per-photo impressions with a
+  30-day insights RPC whose `sufficient_data=false` rows render an honest
+  "not enough data yet" state.
+- **Opening Moves** (032): up to three conversation-opening prompts per
+  user (160 chars, optionally linked to one of the user's own approved
+  photos), validated by trigger.
+- **Support tickets** (033): own-only RLS, service-role-only state
+  transitions, one acknowledgement notification per ticket, a 5-per-day
+  rate limit, and automatic high priority for safety/scam categories.
+- **Explainable message risk signals** (033): a `BEFORE INSERT` trigger
+  flags URL presence, money-language and off-platform contact attempts.
+  The message is still delivered; nothing is auto-banned or hidden - the
+  recipient decides, supported by the existing report/block flows.
+- **Discovery surface**: unified `get_nearby_profiles` (9-arg latest) and
+  `get_matches_for_user` additions; `primary_photo_id` now accompanies
+  `primary_photo_path`.
+
+Client side:
+
+- Models: `MatchItem` lifecycle fields, `ChatMessage.riskFlags`,
+  `ReceivedLike` note/priority, `UserProfile` online/spotlit/primary photo,
+  `SurgeState`, `SpotlightStatus`, `EntitlementEntry`, `SupportTicket`,
+  `OpeningMove`, `PhotoInsights` (+15 contract tests in
+  `test/feature_models_test.dart`).
+- New repositories: `privacy_repository.dart`, `engagement_repository.dart`.
+- Chat screen: away-note banner, initiation-window banners with Extend and
+  Rematch actions, server-only risk-flag chips.
+- Home/Likes/Profile/Settings: surge banner, stand-out note sheet, deck
+  impression recording, match status chips, profile tools dialogs
+  (Spotlight + Insights, selfie verification, Opening Moves), privacy modes
+  dialog, in-app support dialog.
+- Travel mode geocodes on-device via the `geocoding` package already in the
+  dependency tree.
+
+### Verification
+
+- `flutter analyze`: no issues.
+- `flutter test`: 310/310 passing (295 existing + 15 new contract tests).
+- Release APK built locally with the dedicated `weekend-release-key`
+  keystore (RSA-4096, valid to 2054) and verified: package `com.weekend.app`,
+  version 2.8.0 (code 13), V2 signature fingerprint matching the documented
+  SHA-256.
+
+### Not verified
+
+- **Migrations 030-033 are not applied to the live Supabase project.** They
+  ship in `supabase/migrations/` and are contract-tested statically; applying
+  them (and re-deploying any affected Edge Functions) is an operator step
+  that needs a Supabase access token, which was not available when this
+  release was cut. Until then the live backend keeps the pre-033 surface and
+  the 2.7.0 client degrades honestly to the neutral states the new model
+  defaults were designed for.
+- **No authenticated end-to-end run** against the live project was possible
+  in this environment (no access token; no local database).
+
+---
+
 ## [2.7.0] - 2026-09-30
 
 ### Added - Date Ideas UI (was BROKEN)
@@ -977,7 +1065,8 @@ confirmation can complete on a phone:
   the 2.0.x Flutter line and is no longer maintained; see the supported-versions
   table in [SECURITY.md](SECURITY.md).
 
-[Unreleased]: https://github.com/zypherlabs-bit/Weekend/compare/v2.7.0...HEAD
+[Unreleased]: https://github.com/zypherlabs-bit/Weekend/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/zypherlabs-bit/Weekend/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/zypherlabs-bit/Weekend/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/zypherlabs-bit/Weekend/compare/v2.3.0...v2.6.0
 [2.3.0]: https://github.com/zypherlabs-bit/Weekend/compare/v2.2.0...v2.3.0

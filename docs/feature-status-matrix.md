@@ -1,13 +1,13 @@
-# Weekend v2.7.0 — Feature Status Matrix (25-feature consolidated spec)
+﻿# Weekend v2.8.0 â€” Feature Status Matrix (25-feature consolidated spec)
 
 Verification bases:
 - **A** = verified in code + automated tests (`flutter analyze` clean, 310/310 tests pass, migrations parse/contract-tested against `test/database_contract_test.dart`)
-- **B** = verified in code but NOT verified against the live Supabase project (migrations 030–033 unapplied; no access token available at time of release)
+- **B** = verified in code but NOT verified against the live Supabase project (migrations 030â€“033 unapplied; no access token available at time of release)
 - **C** = shipped as honest placeholder / deliberately held back
 
 | # | Feature | Server | Client | Status | Note |
 |---|---------|--------|--------|--------|------|
-| 1 | Server-authoritative entitlements (`user_entitlements`, `system_free`) | 031 [B] | mirror + UI gates [A] | Implemented-B | All features free; no billing provider — entitlement integration is an abstraction layer only |
+| 1 | Server-authoritative entitlements (`user_entitlements`, `system_free`) | 031 [B] | mirror + UI gates [A] | Implemented-B | All features free; no billing provider â€” entitlement integration is an abstraction layer only |
 | 2 | Priority likes (server-computed weight) | 031/032 [B] | likes screen [A] | Implemented-B | weight computed in `record_like`; never accepted from client |
 | 3 | Like notes / compliments (140 chars) | 032 [B] | note sheet [A] | Implemented-B | server validates length + social-media policy |
 | 4 | 24 h match initiation windows | 032 [B] | banners/countdown [A] | Implemented-B | first message settles window server-side |
@@ -34,6 +34,7 @@ Verification bases:
 | 25 | Release signing identity | n/a | build.gradle key wiring [A] | Complete-verified | dedicated RSA-4096 keystore valid to 2054; fingerprint documented; CI builds are dev-key verification builds only |
 
 ## Honest bottom line
-- Every feature is **implemented and enforced server-side in code** with contract tests, and the Flutter client gates all UI on confirmed server state — nothing in the UI fakes success.
-- **Nothing in rows 1–22 has been exercised against the live Supabase database yet** (no access token at release time). Until `supabase db push` applies 030–033, the live backend continues serving the pre-033 surface; the 2.7.0 client degrades honestly to neutral states it was designed for (verified by the model-default tests).
-- No live database, no transaction execution of 031–033, and no authenticated end-to-end run (signup/probe) was possible in this environment (no access token; Docker unavailable). These remain the next steps.
+- Every feature is **implemented and enforced server-side in code** with contract tests, and the Flutter client gates all UI on confirmed server state â€” nothing in the UI fakes success.
+- **Nothing in rows 1â€“22 has been exercised against the live Supabase database yet** (no access token at release time). Until `supabase db push` applies 030â€“033, the live backend continues serving the pre-033 surface; the 2.7.0 client degrades honestly to neutral states it was designed for (verified by the model-default tests).
+- No live database, no transaction execution of 031â€“033, and no authenticated end-to-end run (signup/probe) was possible in this environment (no access token; Docker unavailable). These remain the next steps.
+

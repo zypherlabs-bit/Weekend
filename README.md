@@ -18,7 +18,7 @@ Free • Open Source • Android • Privacy-first
 [![Latest release](https://img.shields.io/github/v/release/zypherlabs-bit/Weekend?style=for-the-badge&color=blue)](https://github.com/zypherlabs-bit/Weekend/releases/latest)
 [![License: MIT](https://img.shields.io/github/license/zypherlabs-bit/Weekend?style=for-the-badge&color=yellow)](LICENSE)
 
-**[⬇️ Download Weekend v2.7.0](#download-weekend)** ·
+**[⬇️ Download Weekend v2.8.0](#download-weekend)** ·
 **[❓ FAQ](#faq)** ·
 **[💻 Source code](https://github.com/zypherlabs-bit/Weekend)**
 
@@ -420,7 +420,7 @@ and it ends at **real weekend plans** instead of endless swiping.
 Download the latest Weekend Android APK from **GitHub Releases** — free, no
 account needed to download, no store required.
 
-**Current version: 2.7.0** (versionCode 12) · APK ≈ 121 MB ·
+**Current version: 2.8.0** (versionCode 13) · APK ≈ 123 MB ·
 [📊 Analytics dashboard](https://zypherlabs-bit.github.io/Weekend/analytics/)
 
 <p align="center">
@@ -429,34 +429,40 @@ account needed to download, no store required.
   </a>
 </p>
 
-**Direct links for v2.7.0:**
+**Direct links for v2.8.0:**
 
 | Link | Purpose |
 | --- | --- |
-| [`Weekend-v2.7.0-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.7.0/Weekend-v2.7.0-release.apk) | The Android APK (≈121 MB) |
-| [`Weekend-v2.7.0-release.apk.sha256`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.7.0/Weekend-v2.7.0-release.apk.sha256) | SHA-256 checksum for the APK |
+| [`Weekend-v2.8.0-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.8.0/Weekend-v2.8.0-release.apk) | The Android APK (≈123 MB) |
+| [`Weekend-v2.8.0-release.apk.sha256`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.8.0/Weekend-v2.8.0-release.apk.sha256) | SHA-256 checksum for the APK |
 | [**Latest release page**](https://github.com/zypherlabs-bit/Weekend/releases/latest) | Always points at the newest stable Weekend release |
 | [All releases](https://github.com/zypherlabs-bit/Weekend/releases) | Full release history and notes |
 | [📊 **Analytics dashboard**](https://zypherlabs-bit.github.io/Weekend/analytics/) | Daily GitHub visitor and APK download statistics |
+
+> Signing note: the v2.8.0 APK is signed with the dedicated
+> `weekend-release-key` (RSA-4096, valid to 2054; SHA-256 fingerprint
+> `15:B2:F9:1A:EB:C8:5B:B2:6B:64:7E:94:F9:B3:22:36:89:41:0B:8E:CF:29:DD:E7:98:F9:C5:B0:CC:8C:25:94`).
+> Earlier releases (including the v2.7.0 artifact below) were CI verification
+> builds signed with a generated development key.
 
 **Requirements:** Android 7.0 (API 24) or newer ·
 `arm64-v8a` / `armeabi-v7a` / `x86_64` · ~150 MB free storage
 
 ### Install the APK
 
-1. Download `Weekend-v2.7.0-release.apk` from the link above.
+1. Download `Weekend-v2.8.0-release.apk` from the link above.
 2. Verify the download (recommended):
 
    ```bash
    # Windows (PowerShell)
-   Get-FileHash Weekend-v2.7.0-release.apk -Algorithm SHA256
+   Get-FileHash Weekend-v2.8.0-release.apk -Algorithm SHA256
 
    # macOS / Linux
-   sha256sum Weekend-v2.7.0-release.apk
+   sha256sum Weekend-v2.8.0-release.apk
    ```
 
     Compare the output with the contents of
-    `Weekend-v2.7.0-release.apk.sha256` in the same release.
+    `Weekend-v2.8.0-release.apk.sha256` in the same release.
 
 3. Open the APK on your device. Because Weekend is distributed directly through
    GitHub (not through an app store), Android will show its standard security
@@ -562,7 +568,7 @@ and ad serving.
 
 Download the latest APK from the
 [Weekend releases page](https://github.com/zypherlabs-bit/Weekend/releases/latest)
-(currently **v2.7.0**), verify its SHA-256 checksum, then open it on your
+(currently **v2.8.0**), verify its SHA-256 checksum, then open it on your
 Android device and confirm Android's "install from this source" prompt. Full
 instructions: [docs/installation.md](docs/installation.md).
 
@@ -932,7 +938,7 @@ certificate below:
 SHA-256: 15:B2:F9:1A:EB:C8:5B:B2:6B:64:7E:94:F9:B3:22:36:89:41:0B:8E:CF:29:DD:E7:98:F9:C5:B0:CC:8C:25:94
 ```
 
-**Versioning** lives in `pubspec.yaml` (`version: 2.7.0+12`). Pushing a `v*`
+**Versioning** lives in `pubspec.yaml` (`version: 2.8.0+13`). Pushing a `v*`
 tag triggers `.github/workflows/release.yml`, which builds the APK, generates
 `Weekend-v<version>-release.apk` plus a `.sha256` checksum, and publishes both
 to a GitHub Release.

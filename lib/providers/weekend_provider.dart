@@ -304,6 +304,8 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
         return 'crossed_paths';
       case DiscoveryMode.global:
         return 'global';
+      case DiscoveryMode.travelMode:
+        return 'travel';
       default:
         return 'for_you';
     }
@@ -422,6 +424,7 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
   Future<bool> swipeRight(
     UserProfile profile, {
     bool isStandOut = false,
+    String? note,
   }) async {
     if (state.swipedProfileIds.contains(profile.id)) return false;
 
@@ -443,6 +446,7 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
         userId,
         profile.id,
         isStandOut: isStandOut,
+        note: note,
       );
 
       switch (outcome) {

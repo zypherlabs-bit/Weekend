@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 import '../safety/safety_dialogs.dart';
+import 'privacy_modes_dialog.dart';
+import 'support_dialog.dart';
 import '../../services/biometric_auth_service.dart';
 import '../../services/app_lock_service.dart';
 import '../../services/notification_service.dart';
@@ -477,7 +479,49 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
           ListTile(
             title: const Text('Privacy', style: TextStyle(color: Colors.white)),
             subtitle: const Text(
-              'Discovery radius and visibility in Location settings',
+              'Incognito, snooze, away note, travel mode and online status',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            trailing: const Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white60,
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              showDialog(
+                context: context,
+                builder: (dialogContext) => const PrivacyModesDialog(),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text(
+              'Support',
+              style: TextStyle(color: Colors.white),
+            ),
+            subtitle: const Text(
+              'Questions, safety concerns and scam reports',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            trailing: const Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white60,
+            ),
+            onTap: () {
+              Navigator.pop(context);
+              showDialog(
+                context: context,
+                builder: (dialogContext) => const SupportDialog(),
+              );
+            },
+          ),
+          ListTile(
+            title: const Text(
+              'Location settings',
+              style: TextStyle(color: Colors.white),
+            ),
+            subtitle: const Text(
+              'Discovery radius and location sharing',
               style: TextStyle(color: Colors.white54, fontSize: 12),
             ),
             trailing: const Icon(

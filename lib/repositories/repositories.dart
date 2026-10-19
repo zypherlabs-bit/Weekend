@@ -11,3 +11,5 @@ export 'notification_repository.dart';
 export 'ad_repository.dart';
 export 'date_ideas_repository.dart';
 export 'icebreaker_repository.dart';
+export 'privacy_repository.dart';
+export 'engagement_repository.dart';

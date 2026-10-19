@@ -33,6 +33,9 @@ class MessageRepository {
           translatedText: msg['translated_text'],
           isTranslated: msg['is_translated'] ?? false,
           isRead: msg['is_read'] ?? false,
+          riskFlags: ((msg['risk_flags'] as List?) ?? const [])
+              .whereType<String>()
+              .toList(),
         );
       }).toList();
     } catch (e) {
@@ -89,6 +92,9 @@ class MessageRepository {
       text: message['text'] ?? '',
       timestamp: DateTime.parse(message['created_at']).millisecondsSinceEpoch,
       isRead: message['is_read'] ?? false,
+      riskFlags: ((message['risk_flags'] as List?) ?? const [])
+          .whereType<String>()
+          .toList(),
     );
   }
 
@@ -125,6 +131,9 @@ class MessageRepository {
                     translatedText: msg['translated_text'],
                     isTranslated: msg['is_translated'] ?? false,
                     isRead: msg['is_read'] ?? false,
+                    riskFlags: ((msg['risk_flags'] as List?) ?? const [])
+                        .whereType<String>()
+                        .toList(),
                   );
                 }).toList();
 

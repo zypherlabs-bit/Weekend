@@ -96,6 +96,21 @@ class _DiscoveryCardState extends State<DiscoveryCard> {
               _photoIndicator(),
               if (widget.profile.isPhotoVerified)
                 const Positioned(top: 16, left: 16, child: _VerifiedBadge()),
+              // Online Now: server-computed from the person's own consent and
+              // a 5-minute presence window. Never faked client-side.
+              if (widget.profile.isOnline)
+                const Positioned(
+                  top: 16,
+                  right: 16,
+                  child: _OnlineDot(),
+                ),
+              // Spotlight: reflects a live server-side window only.
+              if (widget.profile.isSpotlit)
+                const Positioned(
+                  bottom: 190,
+                  right: 16,
+                  child: _SpotlitBadge(),
+                ),
               if (widget.showDistance) _buildDistanceBadge(),
               _buildIdentity(),
             ],
@@ -577,6 +592,56 @@ class _VerifiedBadge extends StatelessWidget {
           SizedBox(width: 4),
           Text(
             'Verified',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OnlineDot extends StatelessWidget {
+  const _OnlineDot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Online now',
+      child: Container(
+        width: 22,
+        height: 22,
+        decoration: BoxDecoration(
+          color: const Color(0xFF6FD08C),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+      ),
+    );
+  }
+}
+
+class _SpotlitBadge extends StatelessWidget {
+  const _SpotlitBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFF7A5CFF).withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.flare_rounded, size: 12, color: Colors.white),
+          SizedBox(width: 4),
+          Text(
+            'Spotlit',
             style: TextStyle(
               color: Colors.white,
               fontSize: 11,

@@ -45,6 +45,7 @@ class DiscoveryRepository {
     List<String> preferredGenders = const [],
     int ageMin = 18,
     int ageMax = 65,
+    int? lastActiveHours,
   }) async {
     final client = _client;
 
@@ -62,6 +63,7 @@ class DiscoveryRepository {
           'p_age_min': ageMin,
           'p_age_max': ageMax,
           'p_discovery_mode': mode,
+          'p_last_active_hours': lastActiveHours,
         },
       );
 
@@ -119,10 +121,60 @@ class DiscoveryRepository {
             trustScore,
             compatibilityScore,
           ),
+          isOnline: row['is_online'] as bool? ?? false,
+          isSpotlit: row['is_spotlit'] as bool? ?? false,
+          // Real photo uuid from the server — needed downstream to record
+          // render impressions via `record_photo_impressions`.
+          primaryPhotoId: row['primary_photo_id'] as String? ?? '',
         );
       }).toList();
     } catch (e) {
       return [];
+    }
+  }
+
+  /// Provide the aggregated Swipe Surge state for the viewer's own city.
+  ///
+  /// Backed by `get_surge_state` (migration 031). The server derives it from
+  /// an explainable activity threshold; nothing about individual users'
+  /// activity or presence is exposed, and a surge is never permanent.
+  Future<SurgeState> getSurgeState() async {
+    final client = _client;
+    if (client == null) {
+      return const SurgeState(active: false);
+    }
+    try {
+      final result = await client.rpc('get_surge_state');
+      return SurgeState.fromJson(Map<String, dynamic>.from(result as Map));
+    } catch (_) {
+      return const SurgeState(active: false);
+    }
+  }
+
+  /// Record photo impressions for cards the signed-in user actually SAW.
+  ///
+  /// Backed by `record_photo_impressions` (migration 031): deduplicated
+  /// per viewer per UTC day, validated server-side, rate limited.
+  /// Returns the number the server confirmed.
+  Future<int> recordPhotoImpressions(List<String> photoIds) async {
+    final client = _client;
+    if (client == null || photoIds.isEmpty) return 0;
+
+    final ids = [
+      for (final p in photoIds)
+        if (p.length == 36) p,
+    ];
+    if (ids.isEmpty) return 0;
+
+    try {
+      final result = await client.rpc('record_photo_impressions', params: {
+        'p_photo_ids': ids.take(50).toList(),
+      });
+      if (result is Map) return result['recorded'] as int? ?? 0;
+      return 0;
+      // Parse errors must not break the deck.
+    } catch (_) {
+      return 0;
     }
   }
 
@@ -250,6 +302,8 @@ class DiscoveryRepository {
         (row['trust_score'] as num?)?.toInt() ?? 50,
         (row['compatibility_score'] as num?)?.toDouble() ?? 0,
       ),
+      isOnline: row['is_online'] as bool? ?? false,
+      isSpotlit: row['is_spotlit'] as bool? ?? false,
     );
   }
 

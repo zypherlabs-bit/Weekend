@@ -346,6 +346,20 @@ class UserProfile {
   /// Height in centimetres, or null when not stated.
   final int? heightCm;
 
+  /// Online Now flag. Server-computed from the OTHER person's own consent
+  /// (`user_settings.show_online_now`) and a 5-minute presence window, so a
+  /// stale or crash-frozen presence can never show as online, and a user
+  /// who hid their activity never appears online.
+  final bool isOnline;
+
+  /// True while the candidate has an active Spotlight window (server side).
+  final bool isSpotlit;
+
+  /// Server-reported uuid of the candidate's primary approved photo. Empty
+  /// when unknown (older backend). Used to record real render impressions —
+  /// the client cannot derive a photo id from a signed URL.
+  final String primaryPhotoId;
+
   const UserProfile({
     required this.id,
     required this.name,
@@ -379,6 +393,9 @@ class UserProfile {
     this.pets,
     this.children,
     this.heightCm,
+    this.isOnline = false,
+    this.isSpotlit = false,
+    this.primaryPhotoId = '',
   });
   UserProfile copyWith({
     String? id,
@@ -413,6 +430,9 @@ class UserProfile {
     String? pets,
     String? children,
     int? heightCm,
+    bool? isOnline,
+    bool? isSpotlit,
+    String? primaryPhotoId,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -448,6 +468,9 @@ class UserProfile {
       pets: pets ?? this.pets,
       children: children ?? this.children,
       heightCm: heightCm ?? this.heightCm,
+      isOnline: isOnline ?? this.isOnline,
+      isSpotlit: isSpotlit ?? this.isSpotlit,
+      primaryPhotoId: primaryPhotoId ?? this.primaryPhotoId,
     );
   }
 
@@ -603,6 +626,23 @@ class MatchItem {
   final int unreadCount;
   final List<String> sharedInterests;
   final String suggestedStarter;
+
+  /// Conversation row behind this match (server-resolved). Empty until the
+  /// conversation exists.
+  final String conversationId;
+
+  /// Initiation-window state, one of:
+  /// 'active' | 'no_window' | 'expired' | 'awaiting_you' | 'awaiting_them'.
+  /// Empty string for data received from an older backend.
+  final String initiationStatus;
+
+  /// Deadline of the initiation window in epoch millis; 0 = none/unknown.
+  final int windowEndsAtMs;
+
+  /// The other member's Away status message, only while they set one and it
+  /// has not expired; empty otherwise. Conversation-scoped by design.
+  final String awayMessage;
+
   const MatchItem({
     required this.id,
     required this.user,
@@ -612,6 +652,10 @@ class MatchItem {
     this.unreadCount = 0,
     this.sharedInterests = const [],
     this.suggestedStarter = '',
+    this.conversationId = '',
+    this.initiationStatus = '',
+    this.windowEndsAtMs = 0,
+    this.awayMessage = '',
   });
   MatchItem copyWith({
     String? id,
@@ -622,6 +666,10 @@ class MatchItem {
     int? unreadCount,
     List<String>? sharedInterests,
     String? suggestedStarter,
+    String? conversationId,
+    String? initiationStatus,
+    int? windowEndsAtMs,
+    String? awayMessage,
   }) {
     return MatchItem(
       id: id ?? this.id,
@@ -632,6 +680,10 @@ class MatchItem {
       unreadCount: unreadCount ?? this.unreadCount,
       sharedInterests: sharedInterests ?? this.sharedInterests,
       suggestedStarter: suggestedStarter ?? this.suggestedStarter,
+      conversationId: conversationId ?? this.conversationId,
+      initiationStatus: initiationStatus ?? this.initiationStatus,
+      windowEndsAtMs: windowEndsAtMs ?? this.windowEndsAtMs,
+      awayMessage: awayMessage ?? this.awayMessage,
     );
   }
 }
@@ -645,13 +697,27 @@ class MatchItem {
 class ReceivedLike {
   final UserProfile profile;
   final bool isStandOut;
+
+  /// Optional note attached to the like before a match exists
+  /// (the compliment feature). Empty when none was sent.
+  final String note;
+
+  /// Server-computed priority weight:
+  /// 1 = normal, 2 = Priority Like, 3 = Priority + stand-out.
+  /// It can never be set by the sender's client.
+  final int priorityWeight;
+
   final DateTime? likedAt;
 
   const ReceivedLike({
     required this.profile,
     this.isStandOut = false,
+    this.note = '',
+    this.priorityWeight = 1,
     this.likedAt,
   });
+
+  bool get isPriority => priorityWeight >= 2;
 }
 
 /// One entry in the notification centre.
@@ -741,6 +807,11 @@ class ChatMessage {
   final String? translatedText;
   final bool isTranslated;
   final bool isRead;
+
+  /// Explainable scam-signal flags computed by the server
+  /// (e.g. 'url_present', 'money_request', 'off_platform_contact').
+  /// The message is still delivered; the flags only inform the recipient.
+  final List<String> riskFlags;
   const ChatMessage({
     required this.id,
     required this.senderId,
@@ -749,6 +820,7 @@ class ChatMessage {
     this.translatedText,
     this.isTranslated = false,
     this.isRead = true,
+    this.riskFlags = const [],
   });
   ChatMessage copyWith({
     String? id,
@@ -758,6 +830,7 @@ class ChatMessage {
     String? translatedText,
     bool? isTranslated,
     bool? isRead,
+    List<String>? riskFlags,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -767,6 +840,7 @@ class ChatMessage {
       translatedText: translatedText ?? this.translatedText,
       isTranslated: isTranslated ?? this.isTranslated,
       isRead: isRead ?? this.isRead,
+      riskFlags: riskFlags ?? this.riskFlags,
     );
   }
 }
@@ -1287,4 +1361,189 @@ class QRInvitationResult {
       QRInvitationResult(isValid: true, invitation: invitation);
   factory QRInvitationResult.invalid(String errorMessage) =>
       QRInvitationResult(isValid: false, errorMessage: errorMessage);
+}
+
+// ============================================================
+// Server-backed extras landed with migrations 031-033
+// ============================================================
+
+/// Aggregated Swipe Surge state for the signed-in user's own city.
+/// `active` is true only while a server-tracked window covers now(); a
+/// caller holds no permanent surge and nothing about individual users'
+/// activity is exposed.
+class SurgeState {
+  final bool active;
+  final DateTime? endsAt;
+  final String city;
+  final int threshold;
+  const SurgeState({
+    required this.active,
+    this.endsAt,
+    this.city = '',
+    this.threshold = 30,
+  });
+  factory SurgeState.fromJson(Map<String, dynamic> json) => SurgeState(
+        active: json['active'] == true,
+        endsAt: json['ends_at'] is String
+            ? DateTime.tryParse(json['ends_at'] as String)
+            : null,
+        city: (json['city'] as String?) ?? '',
+        threshold: (json['threshold'] as num?)?.toInt() ?? 30,
+      );
+}
+
+/// The signed-in user's Spotlight window state (their own row only).
+class SpotlightStatus {
+  final bool active;
+  final DateTime? endsAt;
+  final int activationsLast30Days;
+  const SpotlightStatus({
+    required this.active,
+    this.endsAt,
+    this.activationsLast30Days = 0,
+  });
+  factory SpotlightStatus.fromJson(Map<String, dynamic> json) =>
+      SpotlightStatus(
+        active: json['active'] == true,
+        endsAt: json['ends_at'] is String
+            ? DateTime.tryParse(json['ends_at'] as String)
+            : null,
+        activationsLast30Days:
+            (json['activations_last_30_days'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// One server-authoritative entitlement row visible to its owner.
+class EntitlementEntry {
+  final String feature;
+  final DateTime? grantedAt;
+  final DateTime? expiresAt;
+  final bool active;
+  const EntitlementEntry({
+    required this.feature,
+    this.grantedAt,
+    this.expiresAt,
+    required this.active,
+  });
+  factory EntitlementEntry.fromJson(Map<String, dynamic> json) =>
+      EntitlementEntry(
+        feature: json['feature'] as String? ?? '',
+        grantedAt: json['granted_at'] is String
+            ? DateTime.tryParse(json['granted_at'] as String)
+            : null,
+        expiresAt: json['expires_at'] is String
+            ? DateTime.tryParse(json['expires_at'] as String)
+            : null,
+        active: json['active'] == true,
+      );
+}
+
+/// A customer-support ticket as persisted server-side. There is no fake
+/// "submitted" state: the UI only shows a ticket the server confirmed and
+/// returns, with the status the server reports.
+class SupportTicket {
+  final String id;
+  final String subject;
+  final String category;
+  final String status;
+  final String priority;
+  final int createdAtMs;
+  final int updatedAtMs;
+  const SupportTicket({
+    required this.id,
+    required this.subject,
+    required this.category,
+    required this.status,
+    required this.priority,
+    required this.createdAtMs,
+    required this.updatedAtMs,
+  });
+  factory SupportTicket.fromJson(Map<String, dynamic> json) => SupportTicket(
+        id: json['id'] as String? ?? '',
+        subject: json['subject'] as String? ?? '',
+        category: json['category'] as String? ?? 'other',
+        status: json['status'] as String? ?? 'open',
+        priority: json['priority'] as String? ?? 'normal',
+        createdAtMs: DateTime.tryParse(json['created_at'] as String? ?? '')
+                ?.millisecondsSinceEpoch ??
+            0,
+        updatedAtMs: DateTime.tryParse(json['updated_at'] as String? ?? '')
+                ?.millisecondsSinceEpoch ??
+            0,
+      );
+}
+
+/// A user-authored conversation-opening prompt (Opening Move).
+class OpeningMove {
+  final String id;
+
+  /// 1..3, matching the server-side slots.
+  final int sortOrder;
+  final String prompt;
+
+  /// Optional approved profile photo the prompt references.
+  final String photoId;
+  const OpeningMove({
+    required this.id,
+    required this.sortOrder,
+    required this.prompt,
+    this.photoId = '',
+  });
+  factory OpeningMove.fromJson(Map<String, dynamic> json) => OpeningMove(
+        id: json['id'] as String? ?? '',
+        sortOrder: (json['sort_order'] as num?)?.toInt() ?? 1,
+        prompt: json['prompt'] as String? ?? '',
+        photoId: json['photo_id'] as String? ?? '',
+      );
+}
+
+/// Aggregate photo insight for one of the user's own photos. The server
+/// refuses to fabricate numbers: insights only exist where real impression
+/// rows exist, and [hasSufficientData] says whether the sample is big
+/// enough to be shown to the user as a meaningful signal.
+class PhotoInsightEntry {
+  final String photoId;
+  final String storagePath;
+  final bool isPrimary;
+  final int impressions30d;
+  final int uniqueViewers30d;
+  final bool hasSufficientData;
+  const PhotoInsightEntry({
+    required this.photoId,
+    required this.storagePath,
+    required this.isPrimary,
+    required this.impressions30d,
+    required this.uniqueViewers30d,
+    required this.hasSufficientData,
+  });
+  factory PhotoInsightEntry.fromJson(Map<String, dynamic> json) =>
+      PhotoInsightEntry(
+        photoId: json['photo_id'] as String? ?? '',
+        storagePath: json['storage_path'] as String? ?? '',
+        isPrimary: json['is_primary'] == true,
+        impressions30d: (json['impressions_30d'] as num?)?.toInt() ?? 0,
+        uniqueViewers30d: (json['unique_viewers_30d'] as num?)?.toInt() ?? 0,
+        hasSufficientData: json['sufficient_data'] == true,
+      );
+}
+
+/// Container returned by get_my_photo_insights.
+class PhotoInsights {
+  final int windowDays;
+  final int minimumRequiredImpressions;
+  final List<PhotoInsightEntry> photos;
+  const PhotoInsights({
+    required this.windowDays,
+    required this.minimumRequiredImpressions,
+    required this.photos,
+  });
+  factory PhotoInsights.fromJson(Map<String, dynamic> json) => PhotoInsights(
+        windowDays: (json['window_days'] as num?)?.toInt() ?? 30,
+        minimumRequiredImpressions:
+            (json['minimum_required_impressions'] as num?)?.toInt() ?? 30,
+        photos: ((json['photos'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => PhotoInsightEntry.fromJson(Map<String, dynamic>.from(e)))
+            .toList(),
+      );
 }

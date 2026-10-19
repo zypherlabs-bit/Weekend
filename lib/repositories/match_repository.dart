@@ -95,6 +95,13 @@ class MatchRepository {
               : _formatRelativeTime(DateTime.parse(lastMessageAt)),
           unreadCount: row['unread_count'] as int? ?? 0,
           sharedInterests: shared,
+          conversationId: row['conversation_id'] as String? ?? '',
+          initiationStatus: row['initiation_status'] as String? ?? '',
+          windowEndsAtMs: DateTime.tryParse(
+                row['window_ends_at'] as String? ?? '',
+              )?.millisecondsSinceEpoch ??
+              0,
+          awayMessage: row['away_message'] as String? ?? '',
         );
       }).toList();
     } catch (e) {
@@ -119,6 +126,7 @@ class MatchRepository {
     String userId,
     String targetId, {
     bool isStandOut = false,
+    String? note,
   }) async {
     final client = _client;
     if (client == null) return LikeOutcome.failed;
@@ -129,6 +137,8 @@ class MatchRepository {
         params: {
           'p_target_id': targetId,
           'p_is_stand_out': isStandOut,
+          if (note != null && note.trim().isNotEmpty)
+            'p_note': note.trim().substring(0, 140),
         },
       );
 
@@ -230,9 +240,43 @@ class MatchRepository {
         // Surfaced so the card can be marked: `is_stand_out` was a write-only
         // column that no query ever read back.
         isStandOut: row['is_stand_out'] as bool? ?? false,
+        note: row['note'] as String? ?? '',
+        priorityWeight: (row['priority_weight'] as num?)?.toInt() ?? 1,
         likedAt: DateTime.tryParse(row['liked_at'] as String? ?? ''),
       );
     }).toList();
+  }
+
+  /// Extend a match's initiation window once per participant.
+  ///
+  /// Backed by `extend_match` (migration 032), which enforces server-side:
+  /// membership, no block between the pair, no started conversation, a live
+  /// window, and one extension each. Concurrent duplicates resolve to a
+  /// single successful extension; the loser raises and this returns 0.
+  ///
+  /// Returns the renewed `expires_at` deadline in epoch millis — the value
+  /// the server persisted — or 0 when the extension did not happen. The
+  /// caller must not invent a deadline on failure.
+  Future<int> extendMatch(String matchId) async {
+    final client = _client;
+    if (client == null) return 0;
+
+    try {
+      final result = await client.rpc(
+        'extend_match',
+        params: {'p_match_id': matchId},
+      );
+
+      if (result is Map && result['extended'] == true) {
+        return DateTime.tryParse(
+              result['expires_at'] as String? ?? '',
+            )?.millisecondsSinceEpoch ??
+            0;
+      }
+      return 0;
+    } catch (_) {
+      return 0;
+    }
   }
 
   String _formatRelativeTime(DateTime time) {

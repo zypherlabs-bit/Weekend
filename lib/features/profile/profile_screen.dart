@@ -10,6 +10,9 @@ import '../../services/image_optimizer.dart';
 import '../../repositories/profile_repository.dart';
 
 import '../settings/settings_dialog.dart';
+import 'opening_moves_dialog.dart';
+import 'verification_dialog.dart';
+import 'visibility_dialog.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -175,6 +178,64 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 label: 'Crossed Paths',
                 value: '${user.crossedPathsCount}',
                 color: const Color(0xFFFF4B72),
+              ),
+              const SizedBox(height: 24),
+              // Server-backed profile tools: Spotlight + Photo Insights,
+              // manual photo verification, and Opening Moves editing.
+              _ProfileSection(
+                title: 'Profile Tools',
+                child: Column(
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      leading: const Icon(Icons.visibility_rounded,
+                          color: Color(0xFFFF9966)),
+                      title: const Text('Spotlight & Photo Insights',
+                          style: TextStyle(color: Colors.white, fontSize: 15)),
+                      subtitle: const Text(
+                        'Boost your profile and see how your photos perform',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                      onTap: () => showDialog(
+                        context: context,
+                        builder: (dialogContext) => const VisibilityDialog(),
+                      ),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      leading: const Icon(Icons.verified_rounded,
+                          color: Color(0xFF4CAF50)),
+                      title: const Text('Photo Verification',
+                          style: TextStyle(color: Colors.white, fontSize: 15)),
+                      subtitle: const Text(
+                        'Verify your profile with a live selfie',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                      onTap: () => showDialog(
+                        context: context,
+                        builder: (dialogContext) => const VerificationDialog(),
+                      ),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      leading: const Icon(Icons.waving_hand_rounded,
+                          color: Color(0xFFFF9966)),
+                      title: const Text('Opening Moves',
+                          style: TextStyle(color: Colors.white, fontSize: 15)),
+                      subtitle: const Text(
+                        'Lines the server may use when you match',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                      onTap: () => showDialog(
+                        context: context,
+                        builder: (dialogContext) => const OpeningMovesDialog(),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 24),
               _ProfileSection(

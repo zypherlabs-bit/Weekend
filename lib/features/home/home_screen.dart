@@ -8,11 +8,13 @@ import '../../providers/weekend_provider.dart';
 import '../../models/models.dart';
 import '../../services/ad_service.dart';
 import '../../repositories/ad_repository.dart';
+import '../../repositories/discovery_repository.dart';
 import '../../widgets/discovery_card.dart';
 import '../../widgets/weekend_design_system.dart';
 import '../../widgets/weekend_empty_state.dart';
 import '../../services/location_service.dart';
 import '../../providers/interactions_provider.dart';
+import '../../providers/feature_providers.dart';
 import '../likes/likes_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../profile/profile_screen.dart';
@@ -28,7 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
   bool _showLocationBanner = false;
   /// Reads the notification badge.
-int get _unreadNotifications => ref.watch(unreadCountProvider);
+  int get _unreadNotifications => ref.watch(unreadCountProvider);
 
 /// The tab stack.
 ///
@@ -64,6 +66,10 @@ List<Widget> get _screens => [
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialData();
+      // Ask the server whether a Swipe Surge is live in the user's own
+      // city. The banner below only ever shows what the server reports -
+      // never a simulated surge.
+      ref.read(surgeProvider.notifier).refresh();
     });
   }
 
@@ -380,6 +386,134 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     }
   }
 
+  /// Stand-out like with an optional attached note (the compliment
+  /// feature, migration 032). The note is validated server-side; the
+  /// sheet only offers 140 characters and a plain text field.
+  void _showStandOutNoteSheet(UserProfile profile) {
+    final controller = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF22202A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          24,
+          20,
+          MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: StatefulBuilder(
+          builder: (context, setSheetState) {
+            final note = controller.text.trim();
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.star_rounded, color: Color(0xFFFF9966), size: 22),
+                    SizedBox(width: 8),
+                    Text(
+                      'Stand-out like',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Add an optional note to ${_firstName(profile.name)} - it is delivered with your like before you match.',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  maxLines: 3,
+                  maxLength: 140,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    counterStyle: TextStyle(color: Colors.white54),
+                    hintText: 'Say something they will remember...',
+                    hintStyle: TextStyle(color: Colors.white38),
+                    filled: true,
+                    fillColor: Color(0xFF2E2B3A),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onChanged: (_) => setSheetState(() {}),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.white54),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF9966),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        ref.read(weekendProvider.notifier).swipeRight(
+                              profile,
+                              isStandOut: true,
+                              note: note.isEmpty ? null : note,
+                            );
+                      },
+                      child: Text(
+                        note.isEmpty ? 'Stand-out like' : 'Send with note',
+                        style: const TextStyle(color: Color(0xFF22202A)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  String _firstName(String full) {
+    final trimmed = full.trim().isEmpty ? '' : full.trim();
+    if (trimmed.isEmpty || trimmed == 'Weekend member') return 'them';
+    return trimmed.split(' ').first;
+  }
+
+  /// Photo ids already submitted for impression recording this session.
+  final Set<String> _impressionSubmitted = {};
+
+  void _recordSeenImpression(UserProfile topCard) {
+    final photoId = topCard.primaryPhotoId;
+    if (photoId.isEmpty || _impressionSubmitted.contains(photoId)) return;
+    _impressionSubmitted.add(photoId);
+    unawaited(
+      DiscoveryRepository().recordPhotoImpressions([photoId]),
+    );
+    // Result is advisory (server dedupes and rate-limits); failures are
+    // deliberately silent — an impression is an analytics signal, not user
+    // state, so no snackbar may claim or fault it.
+  }
+
   void _onAdStateChanged() {
     if (_adService.shouldShowAd && !_isFetchingAd && !_adInjected) {
       _fetchAdAndInsert();
@@ -408,6 +542,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final state = ref.watch(weekendProvider);
+    // Photo impressions: the card the user actually SAW gets one impression
+    // recorded per person per day, server-side. Recording happens for the
+    // deck's top card whenever the deck puts a new profile on top, with a
+    // local dedupe so a rebuild does not fire the RPC repeatedly — the
+    // unique (photo, viewer, day) server constraint is the real guarantee.
+    if (state.deckProfiles.isNotEmpty) {
+      _recordSeenImpression(state.deckProfiles.last);
+    }
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
@@ -508,6 +650,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                 ],
               ),
             ),
+            const _SurgeBanner(),
             Expanded(
               child: state.deckProfiles.isEmpty
                   ? WeekendEmptyState(
@@ -576,12 +719,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                       semanticLabel: 'Send a stand-out like',
                       color: const Color(0xFF22202A),
                       iconColor: const Color(0xFFFF9966),
-                      onPressed: () => ref
-                          .read(weekendProvider.notifier)
-                          .swipeRight(
-                            state.deckProfiles.last,
-                            isStandOut: true,
-                          ),
+                      onPressed: () => _showStandOutNoteSheet(
+                        state.deckProfiles.last,
+                      ),
                     ),
                     _ActionButton(
                       icon: Icons.favorite_rounded,
@@ -742,8 +882,7 @@ class _FilterChip extends StatelessWidget {
     required this.label,
     required this.isSelected,
     required this.onTap,
-  });
-  @override
+  });  @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
@@ -766,6 +905,55 @@ class _FilterChip extends StatelessWidget {
                 : Colors.white.withValues(alpha: 0.7),
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Server-truth Swipe Surge banner. Hidden entirely when the server
+/// reports no active surge: no simulated urgency is ever shown.
+class _SurgeBanner extends ConsumerWidget {
+  const _SurgeBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final surge = ref.watch(surgeProvider);
+    if (!surge.active) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Semantics(
+        label: 'Swipe surge is active in ${surge.city}',
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF4B72).withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: const Color(0xFFFF4B72).withValues(alpha: 0.5),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.bolt_rounded,
+                color: Color(0xFFFF4B72),
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Swipe Surge is live in ${surge.city.isEmpty ? 'your area' : surge.city} - right now activity is higher than usual.',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -876,8 +1064,47 @@ class MatchCard extends StatelessWidget {
   final MatchItem match;
   const MatchCard({super.key, required this.match});
 
+  /// One honest status chip while a match has never been opened: whose turn
+  /// it is, or that the window passed. Derived only from `get_matches_for_user`
+  /// data; nothing is shown for started conversations or legacy matches.
+  Widget? _windowChip() {
+    if (match.lastMessage.isNotEmpty &&
+        match.lastMessage != 'No messages yet') {
+      return null;
+    }
+    final (String label, Color color) chipInfo;
+    switch (match.initiationStatus) {
+      case 'awaiting_you':
+        chipInfo = ('Your turn to open', const Color(0xFFFF9966));
+        break;
+      case 'awaiting_them':
+        chipInfo = ('Their opening message', Colors.white38);
+        break;
+      case 'expired':
+        chipInfo = ('Window expired — rematch?', Colors.redAccent);
+        break;
+      default:
+        return null;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: chipInfo.$2.withValues(alpha: 0.18),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
+      ),
+      child: Text(
+        chipInfo.$1,
+        style: TextStyle(
+          color: chipInfo.$2,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final chip = _windowChip();
     return Semantics(
       button: true,
       label: 'Conversation with ${match.user.name}'
@@ -940,7 +1167,9 @@ class MatchCard extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
+              )
+            else
+              chip ?? const SizedBox.shrink(),
           ],
         ),
         ),

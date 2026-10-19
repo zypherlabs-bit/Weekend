@@ -39,7 +39,7 @@ INSTALL APK → OPEN APP → SIGN UP
 | Step | Friction | Resolution |
 |------|----------|------------|
 | Hero | Visitor may not immediately see it's free or Android-only | H1 reads "Free Dating App for Android"; badges reinforce platform |
-| Screenshots | Some images are brand artwork, not app captures | Honesty note explicitly labels real captures vs. artwork; roadmap item for full screenshots |
+| Screenshots | Visitor may doubt the images are real app captures | Every image is a real capture; the note explains provenance, and signed-in states come from a synthetic account on a live backend |
 | Free positioning | "Free" could mean freemium | "Free dating on Weekend" section explicitly states no subscription, no paid likes, explains ad funding |
 | Download | Visitor needs APK + checksum verification | Direct download links + SHA-256 checksum + step-by-step install instructions |
 | After install | Visitor needs a Supabase backend for full features | Offline demo mode explained; clear "backend not configured" messaging |

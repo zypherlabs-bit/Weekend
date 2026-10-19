@@ -57,10 +57,11 @@ Rules:
 - Every `<img>` needs meaningful **alt text** containing the keyword context
   (for example: *"Weekend artwork — friends meeting, free dating app for Android"*).
 - Images must be **honest**: artwork is labelled artwork; only captures of the
-  running app may be called screenshots. The README's Screenshots section mixes
-  real captures (onboarding, sign-up) with clearly labelled brand artwork and
-  carries an explicit honesty note explaining which is which; captures of the
-  signed-in experience remain a roadmap item.
+  running app may be called screenshots. The README's Screenshots section
+  contains only real captures — onboarding and the sign-up wizard from the
+  shipped client, plus signed-in captures from a synthetic test account on a
+  live backend — and carries an explicit honesty note explaining the
+  provenance of each.
 - **No duplicate files.** The audit hashes every image in `docs/screenshots/`
   and `docs/assets/` and fails on identical bytes stored twice. One image = one
   file; reference it, don't copy it.

@@ -1,40 +1,98 @@
-﻿# Weekend v2.8.0 â€” Feature Status Matrix (25-feature consolidated spec)
+﻿# Weekend v2.8.0 — Feature Status Matrix (25-feature consolidated spec)
 
 Verification bases:
-- **A** = verified in code + automated tests (`flutter analyze` clean, 310/310 tests pass, migrations parse/contract-tested against `test/database_contract_test.dart`)
-- **B** = verified in code but NOT verified against the live Supabase project (migrations 030â€“033 unapplied; no access token available at time of release)
-- **C** = shipped as honest placeholder / deliberately held back
+
+- **A** = verified in code + automated tests (`flutter analyze` clean, 312/312
+  tests pass, migrations parse- and contract-tested against
+  `test/database_contract_test.dart`).
+- **L** = additionally exercised against the **live** Supabase project
+  (`ocypgybqfushqfzisnvs`) on 2026-10-19: the client's exact RPC call was made
+  as an authenticated user and the server answered. Raw responses are in
+  `tool/_auth_probe_results.json`; the run is described in
+  [live-backend-audit-2026-10-19.md](live-backend-audit-2026-10-19.md).
+- **S** = the server object exists on the live project (migration applied; table
+  / function / policy present and RLS enabled, confirmed by
+  `tool/live_schema_verify.py`) but that feature's behaviour was **not** driven
+  end to end.
+- **C** = shipped as an honest placeholder / deliberately held back.
+
+Allowed statuses: `Implemented-Live`, `Implemented-Live (partial)`,
+`Implemented-Live (schema)`, `Implemented-B`, `Complete-verified`,
+`Held back (C)`, `NOT VERIFIED`.
+
+- `Implemented-Live` — server **and** client behaviour observed live.
+- `Implemented-Live (partial)` — the live call was exercised but only a
+  guard / empty-result path was observed; the full behaviour remains `S`.
+- `Implemented-Live (schema)` — present and RLS-enabled live; behaviour not
+  exercised.
 
 | # | Feature | Server | Client | Status | Note |
 |---|---------|--------|--------|--------|------|
-| 1 | Server-authoritative entitlements (`user_entitlements`, `system_free`) | 031 [B] | mirror + UI gates [A] | Implemented-B | All features free; no billing provider â€” entitlement integration is an abstraction layer only |
-| 2 | Priority likes (server-computed weight) | 031/032 [B] | likes screen [A] | Implemented-B | weight computed in `record_like`; never accepted from client |
-| 3 | Like notes / compliments (140 chars) | 032 [B] | note sheet [A] | Implemented-B | server validates length + social-media policy |
-| 4 | 24 h match initiation windows | 032 [B] | banners/countdown [A] | Implemented-B | first message settles window server-side |
-| 5 | Women-led initiation (hetero matching) | 032 [B] | UI chips [A] | Implemented-B | initiator rule in `check_mutual_like` + `enforce_message_rules` |
-| 6 | Extend match (+24 h, once per participant, idempotent) | 032 [B] | Extend button [A] | Implemented-B | deadline returned by server call only |
-| 7 | Rematch (once per 7 days, expired+messageless) | 032 [B] | Rematch button [A] | Implemented-B | fresh `record_like`; partner's like must be outstanding |
-| 8 | Match list status chips | 032 (RPC output) [B] | MatchCard chips [A] | Implemented-B | derived only from server fields |
-| 9 | Incognito mode | 031 privacy_mode [B] | privacy dialog [A] | Implemented-B | discovery suppression server-side |
-| 10 | Snooze (with duration choice) | 031 [B] | privacy dialog [A] | Implemented-B | |
-| 11 | Away status + away note | 031 [B] | chat banner + dialog [A] | Implemented-B | shown to connections only, while window active |
-| 12 | Travel mode | 031 [B] | dialog + on-device geocoding [A] | Implemented-B | server rejects null coords; client requires lat/lon |
-| 13 | Online-now consent toggle | 031 [B] | privacy dialog [A] | Implemented-B | |
-| 14 | Spotlight activation window | 031 [B] | visibility dialog [A] | Implemented-B | server reasons + cooldowns, never client-decided |
-| 15 | Photo impressions recording | 032 record_photo_impressions [B] | deck top card [A] | Implemented-B | once per photo per session, real impressions only |
-| 16 | Photo insights (30 d) | 031 RPC [B] | visibility dialog [A] | Implemented-B | `sufficient_data=false` renders "Not enough data yet" |
-| 17 | Surge (city activity surge) | 031 RPC [B] | home banner [A] | Implemented-B | server-aggregated state only |
-| 18 | Opening moves (3 slots, 160 chars) | 032 table+RLS [B] | dialog editor [A] | Implemented-B | photo-linked prompts validated server-side |
-| 19 | Selfie verification | existing EF + 031 status [B] | verification dialog [A] | Implemented-B | submits to `photo-verification` Edge Function |
-| 20 | In-app support tickets | 033 [B] | support dialog [A] | Implemented-B | status transitions service-role only; 5/day limit |
-| 21 | Explainable message risk flags | 033 trigger [B] | chat chips [A] | Implemented-B | message delivered regardless; no auto-ban |
-| 22 | Unified discovery surface (`get_nearby_profiles` + `primary_photo_id`) | 031 [B] | discovery repository [A] | Implemented-B | 8-arg overload replaced (repo uses 9-arg latest) |
-| 23 | Migration 029 hold-back | `migrations-held/` [A] | n/a | Held back (C) | deliberate; documented, never applied blindly |
+| 1 | Server-authoritative entitlements (`user_entitlements`, `system_free`) | 031 [L] | mirror + UI gates [A] | Implemented-Live | signup trigger wrote 14 entitlements/account with `source='system_free'`; 280 rows backfilled live. All features free; no billing provider — entitlement integration is an abstraction layer only |
+| 2 | Priority likes (server-computed weight) | 031/032 [L] | likes screen [A] | Implemented-Live (partial) | `record_like` ran live but returned its adult guard (`HTTP 400`, "Only verified adults can use Weekend matching."); the computed weight value was not observed. Weight is never accepted from the client |
+| 3 | Like notes / compliments (140 chars) | 032 [S] | note sheet [A] | Implemented-Live (schema) | validated inside `record_like` + the social-media trigger; no real note was sent |
+| 4 | 24 h match initiation windows | 032 [L] | banners/countdown [A] | Implemented-Live (partial) | `get_matches_for_user` answered live (0 rows for the fresh probe account); window settling was not driven |
+| 5 | Women-led initiation (hetero matching) | 032 [S] | UI chips [A] | Implemented-Live (schema) | initiator rule in `check_mutual_like` + `enforce_message_rules`; not exercised with a real pair |
+| 6 | Extend match (+24 h, once per participant, idempotent) | 032 [L] | Extend button [A] | Implemented-Live (partial) | live guard path only (`"Match not found"`) |
+| 7 | Rematch (once per 7 days, expired+messageless) | 032 [S] | Rematch button [A] | Implemented-Live (schema) | needs an expired, messageless match plus an outstanding partner like |
+| 8 | Match list status chips | 032 (RPC output) [L] | MatchCard chips [A] | Implemented-Live (partial) | `get_matches_for_user` live; chips derive only from server fields |
+| 9 | Incognito mode | 031 privacy_mode [L] | privacy dialog [A] | Implemented-Live | `set_privacy_mode` live; discovery suppression proved separately by `tool/privacy_bypass_probe.py` (incognito account drops out of the hardened feed) |
+| 10 | Snooze (with duration choice) | 031 [L] | privacy dialog [A] | Implemented-Live (partial) | same live RPC as incognito; a snooze duration was not set |
+| 11 | Away status + away note | 031 [L] | chat banner + dialog [A] | Implemented-Live (partial) | `set_away_status` + `get_conversation_away_note` answered live; no live conversation existed to render the banner |
+| 12 | Travel mode | 031 [L] | dialog + on-device geocoding [A] | Implemented-Live (partial) | `set_travel_location` live and it correctly refused null coordinates; a real travel city was not set |
+| 13 | Online-now consent toggle | 031 [S] | privacy dialog [A] | Implemented-Live (schema) | `user_settings.show_online_now` owner-row upsert; not toggled live |
+| 14 | Spotlight activation window | 031 [L] | visibility dialog [A] | Implemented-Live | `activate_spotlight` + `get_my_spotlight` returned a real server window (`ends_at`, `activations_last_30_days`) and the dialog rendered "Spotlight is LIVE until …" |
+| 15 | Photo impressions recording | 032 [L] | deck top card [A] | Implemented-Live (partial) | `record_photo_impressions` live (`{"recorded":0}` — nothing to record, no impressions yet) |
+| 16 | Photo insights (30 d) | 031 [L] | visibility dialog [A] | Implemented-Live | `get_my_photo_insights` live with `window_days=30`, `minimum_required_impressions=30`; `sufficient_data=false` renders "Not enough data yet" |
+| 17 | Surge (city activity surge) | 031 [L] | home banner [A] | Implemented-Live | `get_surge_state` live and honest about its own limits (`reason: "no_city"`) |
+| 18 | Opening moves (3 slots, 160 chars) | 032 [L] | dialog editor [A] | Implemented-Live | **defect found and fixed during this run** — the client omitted the NOT NULL `user_id`, so the RLS insert policy rejected every save (42501). After the fix the prompt was saved on-device, confirmed in Postgres and reloaded by the editor |
+| 19 | Selfie verification | existing EF + 031 status [L] | verification dialog [A] | Implemented-Live (partial) | the dialog ran live and reported the true state ("Your profile is not verified yet."); the `photo-verification` Edge Function was not driven (no selfie submitted) |
+| 20 | In-app support tickets | 033 [S] | support dialog [A] | Implemented-Live (schema) | `support_tickets` present and RLS-enabled; no ticket was filed live. Status transitions service-role only; 5/day limit |
+| 21 | Explainable message risk flags | 033 [S] | chat chips [A] | Implemented-Live (schema) | the `033` trigger is live; no message was sent to trip it. Message is delivered regardless; no auto-ban |
+| 22 | Unified discovery surface (`get_nearby_profiles` + `primary_photo_id`) | 031 [L] | discovery repository [A] | Implemented-Live | `get_nearby_profiles` answered live (rows=1); schema check confirms the 8-arg overload is gone and the current one is granted to `authenticated` |
+| 23 | Migration 029 hold-back | `migrations-held/` [A] | n/a | Held back (C) | deliberate; documented and confirmed still **absent** from the live project |
 | 24 | Documentation honesty pass | n/a | README/store-listing [A] | Complete-verified | artwork removed, signing identity + limits documented |
-| 25 | Release signing identity | n/a | build.gradle key wiring [A] | Complete-verified | dedicated RSA-4096 keystore valid to 2054; fingerprint documented; CI builds are dev-key verification builds only |
+| 25 | Release signing identity | n/a | build.gradle key wiring [A] | Complete-verified | dedicated RSA-4096 keystore valid to 2054; fingerprint documented. **Caveat:** the published `v2.8.0` GitHub APK contains no baked `SUPABASE_URL`/`SUPABASE_ANON_KEY` and cannot sign in — see the audit document |
+
+## Live verification run — 2026-10-19
+
+Migrations **031** `unified_discovery_entitlements_and_modes`, **032**
+`like_priority_and_match_lifecycle`, **033** `support_and_message_risk` and the
+corrective **034** `fix_spotlight_lateral_alias` were applied to the live project
+and each verified. Remote state is `001`–`028` + `030`–`034`; `029` remains
+correctly absent. Schema grew 38 → 44 tables and 295 → 352 columns, with RLS
+enabled on every new table.
+
+The authenticated probe called all 35 client RPCs with client-accurate
+parameters: **28 LIVE / 5 GUARDED / 1 DENIED / 0 ABSENT**.
+
+Three server defects and one client defect were found and fixed rather than
+worked around:
+
+1. `031` — `search_profiles` failed with `42P13 cannot change return type`
+   (missing `drop` of the superseded 21-arg overload).
+2. `032` — `get_received_likes` failed with `42P13` (13 → 15 columns).
+3. `031` Spotlight lateral used `select 1 as mid` while the outer query read
+   `sw.id`, so the hardened discovery feed answered `HTTP 400 42703` on every
+   call — fixed by migration `034` (OUT row type unchanged).
+4. `lib/repositories/engagement_repository.dart` — Opening Moves never saved
+   (missing `user_id`); fixed and covered by two new contract tests.
+
+Still open and awaiting a decision (see the audit document): migration **035**
+(the legacy `search_profiles` overload privacy wrapper) is written and
+dry-run-verified but **not applied**; the anon-executable helpers flagged as
+finding F2 are still executable.
 
 ## Honest bottom line
-- Every feature is **implemented and enforced server-side in code** with contract tests, and the Flutter client gates all UI on confirmed server state â€” nothing in the UI fakes success.
-- **Nothing in rows 1â€“22 has been exercised against the live Supabase database yet** (no access token at release time). Until `supabase db push` applies 030â€“033, the live backend continues serving the pre-033 surface; the 2.7.0 client degrades honestly to neutral states it was designed for (verified by the model-default tests).
-- No live database, no transaction execution of 031â€“033, and no authenticated end-to-end run (signup/probe) was possible in this environment (no access token; Docker unavailable). These remain the next steps.
 
+- Every feature is **implemented and enforced server-side**, and the Flutter
+  client gates its UI on confirmed server state — nothing in the UI fakes
+  success.
+- Rows 1–22 are now **present and running on the live backend**. The distinction
+  that matters is between `Implemented-Live` (the behaviour was actually
+  driven) and `Implemented-Live (partial)` / `(schema)` (the object is live and
+  answers, but the full behaviour has not been exercised). No row claims more
+  evidence than it has.
+- `Implemented-Live (partial)` and `(schema)` are **not** failures; they are
+  places where the next live test should push harder. They are called out per
+  row rather than hidden behind a single "verified" label.

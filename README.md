@@ -95,13 +95,36 @@ keeping location and personal data deliberately private.
 
 <p align="center"><em>Real captures from the running app — onboarding & the 6-step sign-up wizard</em></p>
 
+<p align="center">
+  <img src="docs/screenshots/signed-in-profile.jpg" width="195" alt="Weekend app screenshot — signed-in profile screen with profile tools">
+  <img src="docs/screenshots/privacy-availability.jpg" width="195" alt="Weekend app screenshot — Privacy and Availability settings: incognito, snooze, online status, away note, travel mode">
+  <img src="docs/screenshots/privacy-incognito.jpg" width="195" alt="Weekend app screenshot — incognito mode switched on, confirmed by the server response">
+  <img src="docs/screenshots/opening-moves-saved.jpg" width="195" alt="Weekend app screenshot — opening move saved on the server, confirmation shown">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/opening-moves.jpg" width="195" alt="Weekend app screenshot — opening moves editor reloading the saved prompt from the server">
+  <img src="docs/screenshots/spotlight-photo-insights.jpg" width="195" alt="Weekend app screenshot — spotlight window and photo insights from server state">
+  <img src="docs/screenshots/photo-verification.jpg" width="195" alt="Weekend app screenshot — photo verification dialog reporting an unverified profile">
+</p>
+
+<p align="center"><em>Signed in against a live Supabase backend — privacy modes, opening
+moves, spotlight and photo verification</em></p>
+
 > **Screenshot honesty note:** every image above was captured from the running
-> app. Verified screenshots of the signed-in experience (discovery, matching,
-> chat) are tracked on the [roadmap](#roadmap) — they require a signed-in
-> account on a Supabase backend, and this repository never publishes captures
-> containing real people's profiles. You can explore the onboarding and
+> app; none is a mock-up. The signed-in captures are from a **synthetic test
+> account** on a live Supabase project, so the account shows no real person's
+> data. Every state they display came from a server response — the incognito
+> toggle, the saved opening move and the spotlight window are all confirmed by
+> the backend, not drawn by the client. This repository never publishes captures
+> containing real people's profiles, so the discovery feed (which renders real
+> accounts) is deliberately not shown here. You can explore the onboarding and
 > sign-up flow yourself in
 > [offline demo mode](#run-without-a-backend-offline-demo-mode).
+>
+> The account is **not photo-verified**, and the verification capture says so.
+> A verification badge created by a test fixture was reset before the captures
+> were taken, so nothing above claims a verification that was never earned.
 
 ---
 
@@ -445,6 +468,17 @@ account needed to download, no store required.
 > Earlier releases (including the v2.7.0 artifact below) were CI verification
 > builds signed with a generated development key.
 
+> [!WARNING]
+> **The published `v2.8.0` APK cannot sign in.** The tagged build was produced
+> without the `SUPABASE_URL` / `SUPABASE_ANON_KEY` build-time defines, so the
+> installed app starts in backend-less mode. This is confirmed by scanning the
+> artifact: the fallback string `not connected to a backend` is present in
+> `libapp.so` while the project URL and anon key are absent. A correctly built
+> APK (same release key and version) is produced by
+> `python tool/build_release.py`; replacing the release asset is pending a
+> maintainer decision. Tracked in
+> [docs/live-backend-audit-2026-10-19.md](docs/live-backend-audit-2026-10-19.md).
+
 **Requirements:** Android 7.0 (API 24) or newer ·
 `arm64-v8a` / `armeabi-v7a` / `x86_64` · ~150 MB free storage
 
@@ -642,7 +676,7 @@ does today:
 | **Email confirmation** | Behaviour depends on your own Supabase Auth settings (email confirmation on/off). |
 | **iOS** | An `ios/` host project is present, but only Android is built, released and tested. |
 | **Sign-in methods** | Email + password (plus optional TOTP two-factor). Google/other OAuth providers are not implemented. |
-| **Screenshots** | Every screenshot in this README is a real capture from the running app (onboarding and sign-up wizard). Verified screenshots of the signed-in experience are a roadmap item — see [Screenshots](#screenshots). |
+| **Screenshots** | Every screenshot in this README is a real capture from the running app. Onboarding and the sign-up wizard are shown from the shipped client; the signed-in captures are from a **synthetic test account against a live Supabase backend** (never a real person's profile). See [Screenshots](#screenshots). |
 
 What Weekend does **not** do: it does not collect exact GPS coordinates for other
 users, does not sell or share personal data with advertisers, and does not gate
@@ -675,10 +709,11 @@ likes, matches or messaging behind a paywall.
 - [x] Date ideas surfaced in the chat screen via the "Date ideas" button, calling the `date-ideas` Edge Function
 - [x] Row Level Security hardened on every table; pinned `search_path` on functions
 - [x] CI (analyze, tests, release APK build) and tag-driven releases with checksums
+- [x] Live-verified feature migrations (031–034) applied to the live Supabase project and exercised with an authenticated probe — see [docs/live-backend-audit-2026-10-19.md](docs/live-backend-audit-2026-10-19.md)
+- [x] Signed-in screenshots for this README, captured on a synthetic test account against the live backend (privacy modes, opening moves, spotlight, photo verification — see [Screenshots](#screenshots))
 
 ### Planned
 
-- [ ] Verified in-app screenshots of the signed-in experience for this README (discovery, matching, chat — onboarding and sign-up captures already shipped, see [Screenshots](#screenshots))
 - [ ] Mode-specific discovery queries (per-mode result sets beyond today's shared proximity query)
 - [ ] Translate-on-tap in chat using the existing `translate-message` function
 - [ ] Surface icebreakers in the UI (date ideas are now surfaced via the chat screen)

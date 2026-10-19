@@ -1,0 +1,282 @@
+{
+  "probe_uid": "636658c5-898b-48f6-881c-4d53cb663d0f",
+  "counts": {
+    "LIVE": 28,
+    "GUARDED": 5,
+    "DENIED": 1
+  },
+  "results": [
+    {
+      "label": "discovery/get_nearby_profiles",
+      "rpc": "get_nearby_profiles",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "rows=1"
+    },
+    {
+      "label": "discovery/search_profiles (21-arg, hardened)",
+      "rpc": "search_profiles",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "rows=5"
+    },
+    {
+      "label": "search/search_profiles (13-arg, used by search screen)",
+      "rpc": "search_profiles",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "rows=0"
+    },
+    {
+      "label": "discovery/get_surge_state",
+      "rpc": "get_surge_state",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "{\"city\": null, \"active\": false, \"reason\": \"no_city\", \"ends_at\": null}"
+    },
+    {
+      "label": "engagement/activate_spotlight",
+      "rpc": "activate_spotlight",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "{\"reason\": \"already_active\", \"ends_at\": \"2026-10-19T08:49:29.25617+00:00\", \"activated\": false}"
+    },
+    {
+      "label": "engagement/get_my_spotlight",
+      "rpc": "get_my_spotlight",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "{\"active\": true, \"ends_at\": \"2026-10-19T08:49:29.25617+00:00\", \"activations_last_30_days\": 1}"
+    },
+    {
+      "label": "engagement/get_my_photo_insights",
+      "rpc": "get_my_photo_insights",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "{\"photos\": [], \"window_days\": 30, \"minimum_required_impressions\": 30}"
+    },
+    {
+      "label": "discovery/record_photo_impressions",
+      "rpc": "record_photo_impressions",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "{\"recorded\": 0}"
+    },
+    {
+      "label": "likes/get_received_likes",
+      "rpc": "get_received_likes",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "rows=0"
+    },
+    {
+      "label": "matches/get_matches_for_user",
+      "rpc": "get_matches_for_user",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "rows=0"
+    },
+    {
+      "label": "likes/record_like (nil target -> expect guard)",
+      "rpc": "record_like",
+      "http": 400,
+      "verdict": "GUARDED",
+      "cross_user_target": true,
+      "summary": "Only verified adults can use Weekend matching."
+    },
+    {
+      "label": "likes/record_pass (nil target -> expect guard)",
+      "rpc": "record_pass",
+      "http": 409,
+      "verdict": "GUARDED",
+      "cross_user_target": true,
+      "summary": "insert or update on table \"passes\" violates foreign key constraint \"passes_target_id_fkey\""
+    },
+    {
+      "label": "matches/extend_match (nil match -> expect guard)",
+      "rpc": "extend_match",
+      "http": 400,
+      "verdict": "GUARDED",
+      "cross_user_target": true,
+      "summary": "Match not found"
+    },
+    {
+      "label": "matches/unmatch_match (nil match -> expect guard)",
+      "rpc": "unmatch_match",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": true,
+      "summary": "False"
+    },
+    {
+      "label": "chat/get_conversation_away_note (nil conv -> expect guard)",
+      "rpc": "get_conversation_away_note",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": true,
+      "summary": "None"
+    },
+    {
+      "label": "privacy/set_privacy_mode",
+      "rpc": "set_privacy_mode",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "{\"mode\": \"incognito\", \"enabled\": false}"
+    },
+    {
+      "label": "privacy/set_away_status",
+      "rpc": "set_away_status",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "None"
+    },
+    {
+      "label": "privacy/set_travel_location (null coords -> expect guard)",
+      "rpc": "set_travel_location",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "{\"travel_enabled\": false}"
+    },
+    {
+      "label": "profile/get_my_profile_completion",
+      "rpc": "get_my_profile_completion",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "{\"has_bio\": false, \"has_city\": false, \"has_name\": false, \"is_complete\": false, \"photo_count\": 0, \"has_birthdate\": false, \"minimum_photos\": 4, \"profile_exists\": "
+    },
+    {
+      "label": "profile/minimum_profile_photos",
+      "rpc": "minimum_profile_photos",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "4"
+    },
+    {
+      "label": "profile/maximum_profile_photos",
+      "rpc": "maximum_profile_photos",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "6"
+    },
+    {
+      "label": "profile/set_primary_profile_photo (nil photo -> expect guard)",
+      "rpc": "set_primary_profile_photo",
+      "http": 403,
+      "verdict": "DENIED",
+      "cross_user_target": false,
+      "summary": "That photo does not belong to you"
+    },
+    {
+      "label": "profile/set_profile_photo_order",
+      "rpc": "set_profile_photo_order",
+      "http": 400,
+      "verdict": "GUARDED",
+      "cross_user_target": false,
+      "summary": "No photo ids supplied"
+    },
+    {
+      "label": "profile/get_user_interests",
+      "rpc": "get_user_interests",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "rows=0"
+    },
+    {
+      "label": "notifications/notification_unread_count",
+      "rpc": "notification_unread_count",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "0"
+    },
+    {
+      "label": "notifications/get_notifications",
+      "rpc": "get_notifications",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "rows=0"
+    },
+    {
+      "label": "notifications/mark_all_notifications_read",
+      "rpc": "mark_all_notifications_read",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "0"
+    },
+    {
+      "label": "safety/detect_social_media_in_text",
+      "rpc": "detect_social_media_in_text",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "{\"matches\": [], \"detected\": false}"
+    },
+    {
+      "label": "safety/submit_report (nil target -> expect guard)",
+      "rpc": "submit_report",
+      "http": 400,
+      "verdict": "GUARDED",
+      "cross_user_target": true,
+      "summary": "Profile unavailable"
+    },
+    {
+      "label": "referral/get_referral_stats",
+      "rpc": "get_referral_stats",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "rows=1"
+    },
+    {
+      "label": "referral/record_referral (nil inviter -> expect guard)",
+      "rpc": "record_referral",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": true,
+      "summary": "False"
+    },
+    {
+      "label": "auth/mfa_recovery_code_count",
+      "rpc": "mfa_recovery_code_count",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "0"
+    },
+    {
+      "label": "auth/consume_mfa_recovery_code",
+      "rpc": "consume_mfa_recovery_code",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "False"
+    },
+    {
+      "label": "discovery/compute_crossed_paths",
+      "rpc": "compute_crossed_paths",
+      "http": 200,
+      "verdict": "LIVE",
+      "cross_user_target": false,
+      "summary": "rows=0"
+    }
+  ]
+}

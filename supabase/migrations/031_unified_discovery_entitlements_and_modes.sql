@@ -1000,6 +1000,19 @@ grant execute on function public.get_nearby_profiles(
 -- snoozed and incognito candidates excluded (same rules as the nearby deck),
 -- spotlight in SOFT ranking, and last_active_at consent gating in the
 -- OUTPUT columns only (the ranking uses the internal value from `candidate`).
+--
+-- The 030 version of this function returns a DIFFERENT OUT row type (it lacks
+-- primary_photo_id / is_online / is_spotlit), and Postgres refuses
+-- CREATE OR REPLACE across a row-type change, so the previous overload is
+-- dropped first - exactly as this migration already does for
+-- get_nearby_profiles above. Nothing depends on the old function (clients call
+-- the RPC with named parameters, which re-resolve the overload at call time).
+drop function if exists public.search_profiles(
+    uuid, integer, integer, double precision, double precision, double precision,
+    text, text[], integer, integer, text[], text[], text[], text[], text[],
+    text, text, text, text, text, boolean
+);
+
 create or replace function public.search_profiles(p_user_id uuid, p_limit integer DEFAULT 20, p_offset integer DEFAULT 0, p_max_distance_km double precision DEFAULT 50, p_search_lat double precision DEFAULT NULL::double precision, p_search_lon double precision DEFAULT NULL::double precision, p_search_city text DEFAULT NULL::text, p_genders text[] DEFAULT ARRAY[]::text[], p_age_min integer DEFAULT NULL::integer, p_age_max integer DEFAULT NULL::integer, p_interested_in text[] DEFAULT ARRAY[]::text[], p_relationship_intents text[] DEFAULT ARRAY[]::text[], p_cities text[] DEFAULT ARRAY[]::text[], p_interests text[] DEFAULT ARRAY[]::text[], p_languages text[] DEFAULT ARRAY[]::text[], p_smoking text DEFAULT NULL::text, p_drinking text DEFAULT NULL::text, p_exercise text DEFAULT NULL::text, p_children text DEFAULT NULL::text, p_pets text DEFAULT NULL::text, p_include_dealt boolean DEFAULT false)
  RETURNS TABLE(profile_id uuid, display_name text, age integer, gender text, bio text, city text, locality text, distance_km double precision, distance_label text, relationship_intent text, is_photo_verified boolean, verification_status text, trust_score integer, profile_completion integer, primary_photo_id uuid, primary_photo_path text, interests text[], languages text[], last_active_at timestamp with time zone, is_online boolean, is_spotlit boolean, compatibility_score numeric)
  LANGUAGE plpgsql

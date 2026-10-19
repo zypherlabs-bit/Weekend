@@ -762,6 +762,13 @@ grant execute on function public.get_matches_for_user(uuid, integer, integer)
 -- ============================================================
 -- Same two parameters. Notes attach to the LIKE (pre-match, like the
 -- compliment feature); ordering is stand-out > priority weight > newest.
+--
+-- The 026 version returned a DIFFERENT OUT row type (13 columns, no note /
+-- priority_weight), and Postgres refuses CREATE OR REPLACE across a row-type
+-- change, so the previous overload is dropped first (same pattern as
+-- get_matches_for_user directly above).
+drop function if exists public.get_received_likes(integer, integer);
+
 create or replace function public.get_received_likes(
     p_limit integer default 50,
     p_offset integer default 0

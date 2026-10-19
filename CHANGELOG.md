@@ -10,6 +10,77 @@ handful of conventions that are worth stating once:
 - **Server-side enforcement.** Search filters, distance computation and access
   control live in PostgreSQL, not in the client.
 
+## [2.8.1] - 2026-10-19
+
+Patch release. Nothing here is a new feature: it is the result of running the
+2.8.0 feature set against the live Supabase project, and it fixes what that
+found. The evidence for every claim is in
+[docs/live-backend-audit-2026-10-19.md](docs/live-backend-audit-2026-10-19.md).
+
+### Fixed
+
+- **Discovery could return nothing at all.** Migration 031's hardened
+  `search_profiles` joined a lateral spotlight subquery aliased `sw` but
+  selected `1 as mid` while the outer query read `sw.id`. The function compiled
+  and then failed on *every* call (`42703 column sw.id does not exist`), so the
+  discovery feed answered `HTTP 400` to every request. The advanced-search
+  screen used a different overload and kept working, which is why it went
+  unnoticed. Fixed by migration **034**.
+- **Migration 031/032 could not be applied at all.** Both used
+  `create or replace` while changing a function's OUT row type, which Postgres
+  refuses (`42P13 cannot change return type`). Both now drop the superseded
+  overload first, the pattern they already used for other functions.
+- **Opening Moves never saved.** The editor's upsert omitted `user_id`, which
+  is `NOT NULL` with no default and is required by the insert policy
+  (`user_id = auth.uid()`), so every save was refused with `42501` and the
+  editor silently reopened empty. Fixed in `OpeningMoveRepository.upsertAll`
+  and covered by two contract tests.
+- **Privacy bypass through the legacy search overload** (migration **035**).
+  `search_profiles` had two live overloads: the 21-argument one the discovery
+  feed uses (which honours incognito, snooze and online-consent) and the
+  13-argument one the advanced-search screen uses, which honoured none of them.
+  A user who switched incognito on was still discoverable through search. The
+  13-argument overload is now a thin wrapper that delegates to the hardened
+  one; verified closed with fixtures against the live database.
+- **Internal helpers were callable with the public anon key** (migration
+  **036**). `get_user_interests`, `approved_photo_count`,
+  `has_feature_entitlement` and — most seriously —
+  `mfa_recovery_code_hash` were all executable by anyone holding the public
+  anon key. `mfa_recovery_code_hash` is a hashing oracle: `select
+  public.mfa_recovery_code_hash('<any uid>', '<guess>')` let a caller test
+  recovery-code guesses against an arbitrary account without that account's
+  session. Anon/PUBLIC EXECUTE is revoked (the client-facing
+  `get_user_interests` keeps `authenticated`), and the `tmp_probe_dollar` debris
+  function is dropped. No client-observable behaviour changes.
+- **The published `v2.8.0` APK could not sign in.** That artifact was built
+  without the `SUPABASE_URL` / `SUPABASE_ANON_KEY` definitions, so it started in
+  backend-less mode. `v2.8.1` is built by `tool/build_release.py`, which injects
+  them from the git-ignored `.env`; the release workflow already refuses to
+  build without them.
+
+### Changed
+
+- Migrations **031–034** are applied to the live project and verified; the
+  authenticated probe calls all 35 client RPCs and reports 28 LIVE, 5 GUARDED,
+  1 DENIED, 0 ABSENT both before and after the `036` grant hardening.
+- Six static tests that asserted the pre-031 wording of `search_profiles` were
+  made wrapper-aware instead of being left to fail: they now assert the
+  invariants they were written for (ownership, the 18+ floor, no raw
+  coordinates) across the whole definition chain, and one new test locks in that
+  the legacy overload delegates rather than re-implementing the filters.
+
+### Added
+
+- Signed-in screenshots in the README, captured on a synthetic account against
+  the live backend, with the provenance stated in the caption and the honesty
+  note.
+
+### Not verified
+
+- The `v2.8.1` APK has not been driven on physical Android hardware, only on an
+  emulator. Passkeys remain unverifiable here (no device with a credential
+  provider).
+
 ## [2.8.0] - 2026-10-19
 
 ### Added - unified discovery entitlements, match lifecycle, support and risk signals

@@ -12,7 +12,7 @@
       "http": 200,
       "verdict": "LIVE",
       "cross_user_target": false,
-      "summary": "rows=1"
+      "summary": "rows=2"
     },
     {
       "label": "discovery/search_profiles (21-arg, hardened)",
@@ -28,7 +28,7 @@
       "http": 200,
       "verdict": "LIVE",
       "cross_user_target": false,
-      "summary": "rows=0"
+      "summary": "rows=5"
     },
     {
       "label": "discovery/get_surge_state",
@@ -36,7 +36,7 @@
       "http": 200,
       "verdict": "LIVE",
       "cross_user_target": false,
-      "summary": "{\"city\": null, \"active\": false, \"reason\": \"no_city\", \"ends_at\": null}"
+      "summary": "{\"city\": \"Probe City\", \"active\": false, \"ends_at\": null, \"threshold\": 30}"
     },
     {
       "label": "engagement/activate_spotlight",
@@ -156,7 +156,7 @@
       "http": 200,
       "verdict": "LIVE",
       "cross_user_target": false,
-      "summary": "{\"has_bio\": false, \"has_city\": false, \"has_name\": false, \"is_complete\": false, \"photo_count\": 0, \"has_birthdate\": false, \"minimum_photos\": 4, \"profile_exists\": "
+      "summary": "{\"has_bio\": false, \"has_city\": true, \"has_name\": true, \"is_complete\": false, \"photo_count\": 0, \"has_birthdate\": true, \"minimum_photos\": 4, \"profile_exists\": tru"
     },
     {
       "label": "profile/minimum_profile_photos",

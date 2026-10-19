@@ -225,12 +225,24 @@ class TestRpcSecurity:
             "delete_user_account",
         ]:
             # Anchor on the CREATE, not a GRANT/REVOKE that merely names it.
-            idx = sql.lower().rfind(
-                f"create or replace function public.{rpc.lower()}"
+            # Every definition of the RPC is considered, not just the last:
+            # migration 035 makes the legacy 13-argument search_profiles
+            # overload delegate to the hardened overload, so the assert_self
+            # call lives in the definition the wrapper forwards to.
+            windows = [
+                sql[m.start() : m.start() + 3000]
+                for m in re.finditer(
+                    r"create\s+or\s+replace\s+function\s+public\."
+                    + re.escape(rpc.lower())
+                    + r"\b",
+                    sql,
+                    re.IGNORECASE,
+                )
+            ]
+            assert windows, f"{rpc} definition not found"
+            assert any("assert_self" in window for window in windows), (
+                f"{rpc} does not enforce ownership"
             )
-            assert idx != -1, f"{rpc} definition not found"
-            window = sql[idx : idx + 3000]
-            assert "assert_self" in window, f"{rpc} does not enforce ownership"
 
     def test_discovery_never_returns_coordinates(self, sql: str) -> None:
         # The return shape exposes a distance, never lat/lon.

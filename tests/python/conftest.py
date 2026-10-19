@@ -84,24 +84,8 @@ def strip_sql_comments(sql: str) -> str:
     return re.sub(r"--[^\n]*", "", sql)
 
 
-def function_body(sql: str, name: str) -> str | None:
-    """Return the body of the LAST definition of ``name`` in ``sql``.
-
-    Finds ``create or replace function <name>`` and returns everything from
-    the opening ``$$``/``$fn$`` delimiter to its match, so the caller sees
-    the definition that would actually be in force after all migrations ran.
-    """
-    pattern = re.compile(
-        r"create\s+or\s+replace\s+function\s+(?:public\.)?"
-        + re.escape(name)
-        + r"\s*\(",
-        re.IGNORECASE,
-    )
-    matches = list(pattern.finditer(sql))
-    if not matches:
-        return None
-
-    start = matches[-1].start()
+def _body_at(sql: str, start: int) -> str:
+    """Body of the function whose ``create ... function`` begins at ``start``."""
     tail = sql[start:]
 
     # Find the delimiter that actually opens THIS function's body, rather than
@@ -124,6 +108,47 @@ def function_body(sql: str, name: str) -> str | None:
         if close != -1:
             return tail[body_start:close]
     return tail
+
+
+def function_definitions(sql: str, name: str) -> list[str]:
+    """Bodies of EVERY definition of ``name``, oldest first.
+
+    ``function_body`` returns only the last one, which is right when a later
+    migration *replaces* a function outright. Migration 035 instead makes the
+    legacy 13-argument ``search_profiles`` overload a thin wrapper that
+    delegates to the hardened overload, so "the last definition" is a `select
+    ... from public.search_profiles(...)` with no rules of its own. Assertions
+    about enforcement therefore have to look at the whole chain: the wrapper
+    for the delegation, and the hardened overload for ``assert_self`` and the
+    filters.
+    """
+    pattern = re.compile(
+        r"create\s+or\s+replace\s+function\s+(?:public\.)?"
+        + re.escape(name)
+        + r"\s*\(",
+        re.IGNORECASE,
+    )
+    return [_body_at(sql, m.start()) for m in pattern.finditer(sql)]
+
+
+def function_body(sql: str, name: str) -> str | None:
+    """Return the body of the LAST definition of ``name`` in ``sql``.
+
+    Finds ``create or replace function <name>`` and returns everything from
+    the opening ``$$``/``$fn$`` delimiter to its match, so the caller sees
+    the definition that would actually be in force after all migrations ran.
+    """
+    pattern = re.compile(
+        r"create\s+or\s+replace\s+function\s+(?:public\.)?"
+        + re.escape(name)
+        + r"\s*\(",
+        re.IGNORECASE,
+    )
+    matches = list(pattern.finditer(sql))
+    if not matches:
+        return None
+
+    return _body_at(sql, matches[-1].start())
 
 
 def dart_defines_dart(source: str) -> bool:

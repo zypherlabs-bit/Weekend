@@ -13,6 +13,7 @@ import pytest
 
 from conftest import (
     function_body,
+    function_definitions,
     latest_migration_text,
     migration_files,
     read,
@@ -63,8 +64,33 @@ class TestMigrations:
 
 
 class TestSearchProfilesRpc:
-    def test_rpc_exists(self, search_body: str) -> None:
-        assert "return query" in search_body
+    def test_rpc_exists(self, sql: str) -> None:
+        # The legacy 13-argument overload is a delegating wrapper (035) and has
+        # no body of its own, so look at the whole chain of definitions.
+        bodies = function_definitions(sql, "search_profiles")
+        assert bodies, "search_profiles RPC not found in any migration"
+        assert any("return query" in body for body in bodies), (
+            "no search_profiles overload contains an implementation body"
+        )
+
+    def test_legacy_overload_delegates_to_the_hardened_one(self, sql: str) -> None:
+        # 035 turns the 13-argument overload the search screen calls into a
+        # wrapper, so the privacy filters cannot be re-implemented (and drift)
+        # there. If this ever stops delegating, the incognito/snooze bypass
+        # described in the 2026-10-19 audit comes straight back.
+        bodies = function_definitions(sql, "search_profiles")
+        wrappers = [
+            body for body in bodies if "from public.search_profiles(" in body
+        ]
+        assert wrappers, (
+            "the legacy 13-argument search_profiles overload must delegate to "
+            "the hardened overload"
+        )
+        # ...and it must forward pagination, or the wrapper silently changes the
+        # paging contract the shipped client relies on.
+        assert any(
+            "p_offset" in body and "p_limit" in body for body in wrappers
+        ), "the delegating overload does not map p_page/p_page_size to offset/limit"
 
     def test_rpc_is_security_definer_with_pinned_search_path(self, sql: str) -> None:
         idx = sql.lower().find("create or replace function public.search_profiles")
@@ -73,9 +99,16 @@ class TestSearchProfilesRpc:
         assert "security definer" in window
         assert "set search_path = public" in window
 
-    def test_rpc_enforces_caller_is_the_subject(self, search_body: str) -> None:
+    def test_rpc_enforces_caller_is_the_subject(self, sql: str) -> None:
         # Without this the function is a database-wide enumeration oracle.
-        assert "assert_self" in search_body
+        #
+        # The 13-argument overload forwards p_user_id to the hardened overload
+        # (035), which is where the assert_self call lives, so check the whole
+        # chain rather than only the outermost definition.
+        bodies = function_definitions(sql, "search_profiles")
+        assert any("assert_self" in body for body in bodies), (
+            "no search_profiles overload calls assert_self"
+        )
 
     def test_all_hard_filters_present(self, search_body: str) -> None:
         required = {

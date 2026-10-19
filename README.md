@@ -18,7 +18,7 @@ Free • Open Source • Android • Privacy-first
 [![Latest release](https://img.shields.io/github/v/release/zypherlabs-bit/Weekend?style=for-the-badge&color=blue)](https://github.com/zypherlabs-bit/Weekend/releases/latest)
 [![License: MIT](https://img.shields.io/github/license/zypherlabs-bit/Weekend?style=for-the-badge&color=yellow)](LICENSE)
 
-**[⬇️ Download Weekend v2.8.0](#download-weekend)** ·
+**[⬇️ Download Weekend v2.8.1](#download-weekend)** ·
 **[❓ FAQ](#faq)** ·
 **[💻 Source code](https://github.com/zypherlabs-bit/Weekend)**
 
@@ -443,7 +443,7 @@ and it ends at **real weekend plans** instead of endless swiping.
 Download the latest Weekend Android APK from **GitHub Releases** — free, no
 account needed to download, no store required.
 
-**Current version: 2.8.0** (versionCode 13) · APK ≈ 123 MB ·
+**Current version: 2.8.1** (versionCode 14) · APK ≈ 123 MB ·
 [📊 Analytics dashboard](https://zypherlabs-bit.github.io/Weekend/analytics/)
 
 <p align="center">
@@ -452,51 +452,51 @@ account needed to download, no store required.
   </a>
 </p>
 
-**Direct links for v2.8.0:**
+**Direct links for v2.8.1:**
 
 | Link | Purpose |
 | --- | --- |
-| [`Weekend-v2.8.0-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.8.0/Weekend-v2.8.0-release.apk) | The Android APK (≈123 MB) |
-| [`Weekend-v2.8.0-release.apk.sha256`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.8.0/Weekend-v2.8.0-release.apk.sha256) | SHA-256 checksum for the APK |
+| [`Weekend-v2.8.1-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.8.1/Weekend-v2.8.1-release.apk) | The Android APK (≈123 MB) |
+| [`Weekend-v2.8.1-release.apk.sha256`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.8.1/Weekend-v2.8.1-release.apk.sha256) | SHA-256 checksum for the APK |
 | [**Latest release page**](https://github.com/zypherlabs-bit/Weekend/releases/latest) | Always points at the newest stable Weekend release |
 | [All releases](https://github.com/zypherlabs-bit/Weekend/releases) | Full release history and notes |
 | [📊 **Analytics dashboard**](https://zypherlabs-bit.github.io/Weekend/analytics/) | Daily GitHub visitor and APK download statistics |
 
-> Signing note: the v2.8.0 APK is signed with the dedicated
+> Signing note: the v2.8.1 APK is signed with the dedicated
 > `weekend-release-key` (RSA-4096, valid to 2054; SHA-256 fingerprint
-> `15:B2:F9:1A:EB:C8:5B:B2:6B:64:7E:94:F9:B3:22:36:89:41:0B:8E:CF:29:DD:E7:98:F9:C5:B0:CC:8C:25:94`).
-> Earlier releases (including the v2.7.0 artifact below) were CI verification
-> builds signed with a generated development key.
+> `15:B2:F9:1A:EB:C8:5B:B2:6B:64:7E:94:F9:B3:22:36:89:41:0B:8E:CF:29:DD:E7:98:F9:C5:B0:CC:8C:25:94`),
+> the same key as v2.8.0, so it upgrades in place. Builds produced by the
+> `Release` CI workflow are signed with a generated development key instead —
+> the workflow says so in its own release notes.
 
-> [!WARNING]
-> **The published `v2.8.0` APK cannot sign in.** The tagged build was produced
-> without the `SUPABASE_URL` / `SUPABASE_ANON_KEY` build-time defines, so the
-> installed app starts in backend-less mode. This is confirmed by scanning the
-> artifact: the fallback string `not connected to a backend` is present in
-> `libapp.so` while the project URL and anon key are absent. A correctly built
-> APK (same release key and version) is produced by
-> `python tool/build_release.py`; replacing the release asset is pending a
-> maintainer decision. Tracked in
-> [docs/live-backend-audit-2026-10-19.md](docs/live-backend-audit-2026-10-19.md).
+> **Superseded: `v2.8.0` cannot sign in.** That artifact was built without the
+> `SUPABASE_URL` / `SUPABASE_ANON_KEY` definitions, so it started in
+> backend-less mode. It is confirmed by scanning the file: the fallback string
+> `not connected to a backend` is present in `libapp.so` while the project URL
+> and anon key are absent. **Install v2.8.1 instead.** The audit that found this
+> is in
+> [docs/live-backend-audit-2026-10-19.md](docs/live-backend-audit-2026-10-19.md);
+> the `Release` workflow now refuses to publish a build without those
+> definitions.
 
 **Requirements:** Android 7.0 (API 24) or newer ·
 `arm64-v8a` / `armeabi-v7a` / `x86_64` · ~150 MB free storage
 
 ### Install the APK
 
-1. Download `Weekend-v2.8.0-release.apk` from the link above.
+1. Download `Weekend-v2.8.1-release.apk` from the link above.
 2. Verify the download (recommended):
 
    ```bash
    # Windows (PowerShell)
-   Get-FileHash Weekend-v2.8.0-release.apk -Algorithm SHA256
+   Get-FileHash Weekend-v2.8.1-release.apk -Algorithm SHA256
 
    # macOS / Linux
-   sha256sum Weekend-v2.8.0-release.apk
+   sha256sum Weekend-v2.8.1-release.apk
    ```
 
     Compare the output with the contents of
-    `Weekend-v2.8.0-release.apk.sha256` in the same release.
+    `Weekend-v2.8.1-release.apk.sha256` in the same release.
 
 3. Open the APK on your device. Because Weekend is distributed directly through
    GitHub (not through an app store), Android will show its standard security
@@ -602,7 +602,7 @@ and ad serving.
 
 Download the latest APK from the
 [Weekend releases page](https://github.com/zypherlabs-bit/Weekend/releases/latest)
-(currently **v2.8.0**), verify its SHA-256 checksum, then open it on your
+(currently **v2.8.1**), verify its SHA-256 checksum, then open it on your
 Android device and confirm Android's "install from this source" prompt. Full
 instructions: [docs/installation.md](docs/installation.md).
 
@@ -973,7 +973,7 @@ certificate below:
 SHA-256: 15:B2:F9:1A:EB:C8:5B:B2:6B:64:7E:94:F9:B3:22:36:89:41:0B:8E:CF:29:DD:E7:98:F9:C5:B0:CC:8C:25:94
 ```
 
-**Versioning** lives in `pubspec.yaml` (`version: 2.8.0+13`). Pushing a `v*`
+**Versioning** lives in `pubspec.yaml` (`version: 2.8.1+14`). Pushing a `v*`
 tag triggers `.github/workflows/release.yml`, which builds the APK, generates
 `Weekend-v<version>-release.apk` plus a `.sha256` checksum, and publishes both
 to a GitHub Release.

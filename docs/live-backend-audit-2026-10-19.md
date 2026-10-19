@@ -25,6 +25,13 @@ Applied in this session, in order, each verified:
 | 032 | like_priority_and_match_lifecycle | needed a fix, see §2 |
 | 033 | support_and_message_risk | clean |
 | 034 | fix_spotlight_lateral_alias | corrective, see §2 |
+| 035 | search_profiles_legacy_overload_privacy_wrapper | closes finding F1, see §4 |
+| 036 | harden_helper_function_grants | closes finding F2, see §4 |
+
+After all six the live ledger reads `001`–`028` + `030`–`036`; `029` is still
+absent. The authenticated probe was re-run after 036 and reports the same
+**28 LIVE / 5 GUARDED / 1 DENIED / 0 ABSENT** — the grant change is not
+observable to a signed-in client.
 
 Verified with `tool/live_schema_verify.py` (diffs the live `public` schema
 against a pre-migration inventory):
@@ -143,11 +150,14 @@ Entitlement path verified end-to-end: creating the probe account fired
 20 existing accounts, i.e. the backfill also worked). No billing provider is
 configured; entitlements are server-authoritative but uniformly free.
 
-## 4. Open findings (not fixed here)
+## 4. Findings and their resolution
 
-### F1 — privacy-mode bypass via the legacy `search_profiles` overload — **privacy, high**
+Both findings were fixed and applied with the maintainer's approval; each fix has
+its own migration and its own before/after evidence below.
 
-Two overloads are live simultaneously:
+### F1 — privacy-mode bypass via the legacy `search_profiles` overload — **privacy, high** — ✅ FIXED (migration 035)
+
+Two overloads were live simultaneously:
 
 | overload | called by | incognito | snooze | online-consent gating |
 |---|---|---|---|---|
@@ -172,44 +182,75 @@ VERDICT: BYPASS CONFIRMED
 
 So a user who switches on incognito (or snooze, or turns online status off) is
 still reachable — with `last_active_at` disclosed — through the search screen.
-Recommended fix, in order of preference:
+**Resolution — migration 035, applied.** The 13-arg overload is now a
+compatibility wrapper that delegates to the hardened 21-arg function, mapping
+`p_page/p_page_size → p_offset/p_limit` and projecting the old column names, so
+the shipped client keeps working unchanged while inheriting the privacy
+filters. No app release was needed.
 
-1. server-side only, no app release: migration 035 replaces the 13-arg overload
-   with a compatibility wrapper that delegates to the hardened 21-arg function,
-   mapping `p_page/p_page_size → p_offset/p_limit` and projecting the old
-   column names, so the shipped client keeps working while inheriting the
-   privacy filters;
-2. or point the client at the 21-arg signature (needs an app release).
+It was dry-run first (`tool/dry_run_migration.py` runs the file against the live
+database inside a transaction that is always rolled back, and diffs the live
+function definitions before and after to prove nothing else moved), then applied
+and re-probed with the same fixtures:
 
-Option 1 is written and dry-run verified but **not applied**:
-`supabase/migrations-held/035_search_profiles_legacy_overload_privacy_wrapper.sql`
-(held, not `supabase/migrations/`, so `supabase db push` cannot pick it up and
-the static search-SQL tests keep measuring the applied surface).
-`tool/dry_run_migration.py` executes it against the live database inside a
-transaction that is rolled back, which confirmed the replacement compiles, the
-inner call resolves, and the live function definitions were byte-for-byte
-unchanged afterwards. Applying it is a production behaviour change, so it is
-held for an explicit go-ahead.
+```
+=== control: B discoverable, incognito OFF ===
+   21-arg (discovery feed): rows=11 B_present=True
+   13-arg (search screen) : rows=11 B_present=True
+=== test: B is INCOGNITO ===
+   21-arg (discovery feed): rows=10 B_present=False   [expected: absent]
+   13-arg (search screen) : rows=10 B_present=False   [now also absent]
+VERDICT: no bypass observed
+```
 
-### F2 — anon-executable helper functions — **defence in depth, low–medium**
+Both overloads now return the same population (11 → 10 with B removed), so
+incognito, snooze and online-consent are enforced no matter which screen asks.
+A new static test,
+`test_search_sql.py::TestSearchProfilesRpc::test_legacy_overload_delegates_to_the_hardened_one`,
+fails if the wrapper ever stops delegating (verified by temporarily removing
+035 and watching it fail).
 
-Several `public` functions keep PostgreSQL's default `EXECUTE TO PUBLIC`, so the
-public anon key (which ships inside the APK) can call them. Most are guarded
-internally (`assert_self` / `auth.uid()`), but these are not:
+### F2 — anon-executable helper functions — **defence in depth, low–medium** — ✅ FIXED (migration 036)
+
+Several `public` functions kept PostgreSQL's default `EXECUTE TO PUBLIC`, so the
+public anon key (which ships inside the APK) could call them. Most are guarded
+internally (`assert_self` / `auth.uid()`); these were not:
 
 | function | exposure |
 |---|---|
 | `get_user_interests(p_user_id)` | reads any user's interests (SECURITY DEFINER, no guard) |
 | `approved_photo_count(p_user_id)` | counts any user's approved photos |
 | `has_feature_entitlement(p_user_id, p_feature)` | probes any user's entitlements (new in 031; the client never calls it) |
-| `mfa_recovery_code_hash(p_user_id, p_code)` | hash oracle; not exploitable without the stored hash, but unnecessary exposure |
-| `tmp_probe_dollar()` | stray test function left in the live database — debris, should be dropped |
+| `mfa_recovery_code_hash(p_user_id, p_code)` | hashing oracle — a caller could test recovery-code guesses against **any** account without that account's session |
+| `tmp_probe_dollar()` | stray test function left in the live database — debris |
 
-Trigger functions in the list are not reachable over PostgREST (it does not
-expose `trigger`-returning functions). A follow-up migration should
-`revoke execute … from public, anon` on these and drop `tmp_probe_dollar()`;
-that is a behaviour-neutral hardening, but it is a production ACL change and so
-was not made without approval.
+**Resolution — migration 036, applied.** Anon and PUBLIC EXECUTE is revoked on
+all four; `get_user_interests` keeps its `authenticated` grant because the client
+calls it, the other three keep only the owner and `service_role` because they are
+only ever invoked from `SECURITY DEFINER` functions (which run as the owner), and
+`tmp_probe_dollar()` is dropped. Verified live with the public anon key:
+
+```
+mfa_recovery_code_hash   HTTP 401  42501 permission denied for function mfa_recovery_code_hash
+approved_photo_count     HTTP 401  42501 permission denied for function approved_photo_count
+has_feature_entitlement  HTTP 401  42501 permission denied for function has_feature_entitlement
+get_user_interests       HTTP 401  42501 permission denied for function get_user_interests
+```
+
+and the client-facing paths were re-checked as a signed-in user:
+`profile/get_user_interests`, `auth/mfa_recovery_code_count` and
+`auth/consume_mfa_recovery_code` all still return `HTTP 200`. Before revoking,
+the live catalogue was checked for dependents that would run as the *caller* —
+no RLS policy, view, column default or check constraint references any of the
+four, and every known caller (`search_profiles`, `activate_spotlight`,
+`set_privacy_mode`, `set_travel_location`, `record_like`,
+`consume_mfa_recovery_code`) is `SECURITY DEFINER`.
+
+**Still open (deliberately out of scope).** 57 project functions still carry
+`EXECUTE TO PUBLIC` — the remainder are trigger functions (not reachable over
+PostgREST) and guarded RPCs whose callers are checked by `assert_self`. A
+blanket "no anon EXECUTE" policy would be a larger ACL change than this finding
+justifies and is left as a follow-up.
 
 ## 5. Release artefact finding
 
@@ -233,9 +274,14 @@ and never writes them to a tracked file):
   release identity as the published asset
 * `Weekend-v2.8.0-release.apk.sha256` regenerated alongside it
 
-**Still open:** the *published* `v2.8.0` asset on GitHub is defective and has not
-been replaced. Replacing an asset in place vs. publishing `2.8.1` is a release
-decision and is intentionally left to the maintainer.
+**Resolved by publishing `v2.8.1`.** The defective asset was **not** replaced in
+place — the maintainer chose a new tag, so `v2.8.0` stays as published with its
+warning intact and `v2.8.1` (`versionCode 14`) becomes the current release. It is
+built the same way, with the same release keystore (signer SHA-256
+`15b2f91aebc85bb26b647e94f9b3223689410b8ecf29dde798f9c5b0cc8c2594`), so it
+installs as an upgrade over the release-signed `v2.8.0`. The `Release` workflow
+already refuses to build when the `SUPABASE_URL` / `SUPABASE_ANON_KEY` secrets
+are missing or are placeholders, which is the check that would have caught this.
 
 ## 6. On-device run against the live backend
 
@@ -265,12 +311,12 @@ The account is a **synthetic probe account**, and the published screenshots say
 so. They are not captures of a real user's data and must not be presented as
 such.
 
-## 7. Pre-existing Python verification-suite failures (not introduced here)
+## 7. Static-test suite: the pre-existing baseline, and what this work changed
 
-`python -m pytest tests/python` reports **15 failures on a clean `master`
-checkout** (`9fd8da4`), before any change in this session. Confirmed by running
-the same four files in a `git worktree` at `HEAD` and diffing the failure sets:
-identical, with no new failure and none fixed by this work.
+`python -m pytest tests/python` reports **15 failures on a clean `HEAD`
+checkout**, before any change in this session. Confirmed by running the same
+files in a `git worktree` at the baseline commit and diffing the failure sets,
+so the regression question is answered with a control and not an assumption.
 
 They are **stale text assertions, not behavioural regressions**: each greps the
 concatenated migration SQL for the exact wording of a pre-031 definition of
@@ -285,9 +331,32 @@ assumed:
 | `test_user_scoped_rpcs_assert_self` | same | `assert_self` **is present** in both overloads |
 | `test_discovery_never_returns_coordinates` | `pg_get_function_result` of both overloads | both return `distance_km`; **neither** returns `latitude`/`longitude`/raw `lat`/`lon` |
 
-The remaining failures (`test_search_sql.py` filter/pagination/interests
-wordings, `TestMigration027SchemaIntegrity::test_no_travel_mode_column`) are the
-same class of stale pattern.
+The other thirteen failures are the same class of stale wording, split between
+`test_search_sql.py` (filter / pagination / interests / photo-minimum phrasings
+and `TestMigration027SchemaIntegrity::test_no_travel_mode_column`) and
+`test_adult_only_enforcement.py` (the same invariants asserted against the old
+body). The fourteenth is the scanner false positive described next.
+
+**What this work changed.** `tests/python/conftest.py` gained
+`function_definitions()` / `_body_at()` so a test can inspect the whole
+*definition chain* for a function name instead of one concatenated blob, and
+`function_body` was refactored to share them. On top of that:
+
+* applying 035 broke four assertions that matched the 13-arg overload by its old
+  body — those were rewritten to assert the invariant across the chain (the
+  caller-ownership guard, the unconditional 18+ floor, no raw coordinates)
+  rather than deleted;
+* `test_discovery_never_returns_coordinates` is the one **baseline** failure this
+  work resolved;
+* one test was **added**,
+  `test_legacy_overload_delegates_to_the_hardened_one`, which fails if the
+  035 wrapper ever stops delegating to the hardened function. Verified
+  non-vacuous: it fails when 035 is hidden from the migration set and passes
+  when it is restored.
+
+So the suite now reports **14 failures against the 15-failure baseline: zero
+new, one resolved** (`14 failed, 330 passed, 1 skipped`), and every remaining
+failure is still the stale-wording class described above.
 
 One failure is a **scanner false positive**: `test_no_jwt_in_shipped_code` flags
 `tool/_inject_migrations.sh:19` and `:25`. That file (tracked since `8d80803`)
@@ -297,8 +366,7 @@ containing JSON examples — `{"Sunday": false} is NOT contained in
 scanner matches is the base64 of `{"`. **No credential is present**; the
 scanner cannot distinguish base64-of-JSON from base64-of-JWT.
 
-Also pre-existing and unrelated: `tool/seo_audit.py` fails its
-`download.version_match` check because `docs/installation.md` still points at
-`Weekend-v2.6.0-release.apk` while `pubspec.yaml` is on `2.8.0`. Fixing that
-would send readers at the currently-defective `v2.8.0` asset, so it is left to
-the maintainer together with the asset decision in §5.
+`tool/seo_audit.py`'s `download.version_match` failure — `docs/installation.md`
+pointed at `Weekend-v2.6.0-release.apk` while `pubspec.yaml` was on `2.8.0` — is
+also fixed: `installation.md` now points at the current `v2.8.1` asset, so the
+check passes.

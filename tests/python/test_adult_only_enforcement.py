@@ -18,6 +18,7 @@ import pytest
 
 from conftest import (
     function_body,
+    function_definitions,
     latest_migration_text,
     migration_files,
     read,
@@ -275,8 +276,13 @@ class TestSearchProfilesRegression:
         assert "limit v_limit offset v_offset" in search
         assert "match_score" in search
 
-    def test_caller_is_still_the_subject(self, search: str) -> None:
-        assert "assert_self" in search
+    def test_caller_is_still_the_subject(self, sql: str) -> None:
+        # The 13-argument overload delegates to the hardened one (035), so the
+        # ownership guard sits further down the chain than the last definition.
+        bodies = function_definitions(sql, "search_profiles")
+        assert any("assert_self" in body for body in bodies), (
+            "no search_profiles overload calls assert_self"
+        )
 
 
 class TestMigrationsWellFormed:

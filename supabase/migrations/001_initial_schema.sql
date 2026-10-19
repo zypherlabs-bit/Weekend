@@ -5,7 +5,7 @@
 -- EXTENSIONS
 -- ============================================================
 create extension if not exists "uuid-ossp";
-create extension if not exists "postgis" schema if not exists public;
+create extension if not exists "postgis" schema public;
 
 -- ============================================================
 -- PROFILES TABLE

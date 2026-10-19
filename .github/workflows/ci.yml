@@ -29,6 +29,11 @@ jobs:
         run: flutter test
 
       - name: Build release APK
+        env:
+          # CI has no keystore: the signing guard would refuse the build
+          # otherwise. The artifact CI produces is explicitly a development-key
+          # verification build, never published directly as a release.
+          ALLOW_DEBUG_SIGNING: "true"
         run: flutter build apk --release
 
       - name: Verify APK exists

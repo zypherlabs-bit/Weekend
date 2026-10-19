@@ -112,8 +112,10 @@ declare
     v_viewer_city text;
     v_limit integer := least(greatest(coalesce(p_limit, 20), 1), 50);
     v_offset integer := greatest(coalesce(p_offset, 0), 0);
-    v_gender_set boolean := p_preferred_genders is not null
-                          and array_length(p_preferred_genders, 1) > 0;
+    -- `cardinality` is used deliberately instead of `array_length`: the length
+    -- of an EMPTY array is NULL, which would make `v_gender_set` NULL and drop
+    -- every row. coalesce keeps NULL and empty both meaning "no restriction".
+    v_gender_set boolean := coalesce(cardinality(p_preferred_genders), 0) > 0;
     -- Normalised once, then switched on per row. 023 accepted
     -- p_discovery_mode and ignored it; this is the fix for that.
     v_mode text := coalesce(p_discovery_mode, 'nearby');
@@ -124,9 +126,12 @@ begin
 
     -- The viewer's own coordinates and city are read ONCE, server-side. They
     -- are never returned to the client and are not directly selectable.
-    select latitude, longitude, city
+    -- NOTE: qualify these columns with a table alias. `city` is also an OUT
+    -- parameter of this function (RETURNS TABLE), so an unqualified `city`
+    -- here is ambiguous and makes the whole function raise at runtime.
+    select pr.latitude, pr.longitude, pr.city
       into v_viewer_lat, v_viewer_lon, v_viewer_city
-    from public.profiles where id = p_user_id;
+    from public.profiles pr where pr.id = p_user_id;
 
     return query
     select

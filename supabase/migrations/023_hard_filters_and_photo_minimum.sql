@@ -458,7 +458,7 @@ begin
                 else null
             end as real_distance_km,
             -- SOFT ranking only; never consulted for eligibility.
-            (case when e.trust_score is not null then e.trust_score * 0.2 else 0 end)
+            ((case when e.trust_score is not null then e.trust_score * 0.2 else 0 end)
             + (case when e.is_photo_verified then 15 else 0 end)
             + (case when e.last_active_at > now() - interval '14 days'
                    then 10 else 0 end)

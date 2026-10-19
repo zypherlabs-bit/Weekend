@@ -95,21 +95,12 @@ keeping location and personal data deliberately private.
 
 <p align="center"><em>Real captures from the running app — onboarding & the 6-step sign-up wizard</em></p>
 
-<p align="center">
-  <img src="docs/screenshots/discovery.jpg" width="200" alt="Weekend artwork — friends meeting for a rooftop plan, free dating app for Android">
-  <img src="docs/screenshots/match.jpg" width="200" alt="Weekend artwork — crossed-paths map from the location-based dating app">
-  <img src="docs/screenshots/messaging.jpg" width="200" alt="Weekend artwork — two people connecting, real-time chat dating app">
-  <img src="docs/screenshots/profile.jpg" width="200" alt="Weekend artwork — a couple watching the sunset, open source dating app">
-</p>
-
-<p align="center"><em>Brand artwork — discovery, matching, chat and profiles</em></p>
-
-> **Screenshot honesty note:** the first row was captured from the running app;
-> the second row is brand artwork, not app captures. Verified screenshots of the
-> signed-in experience (discovery, matching, chat) are tracked on the
-> [roadmap](#roadmap) — they require a signed-in account on a Supabase backend,
-> and this repository never publishes captures containing real people's
-> profiles. You can explore the onboarding and sign-up flow yourself in
+> **Screenshot honesty note:** every image above was captured from the running
+> app. Verified screenshots of the signed-in experience (discovery, matching,
+> chat) are tracked on the [roadmap](#roadmap) — they require a signed-in
+> account on a Supabase backend, and this repository never publishes captures
+> containing real people's profiles. You can explore the onboarding and
+> sign-up flow yourself in
 > [offline demo mode](#run-without-a-backend-offline-demo-mode).
 
 ---
@@ -645,7 +636,7 @@ does today:
 | **Email confirmation** | Behaviour depends on your own Supabase Auth settings (email confirmation on/off). |
 | **iOS** | An `ios/` host project is present, but only Android is built, released and tested. |
 | **Sign-in methods** | Email + password (plus optional TOTP two-factor). Google/other OAuth providers are not implemented. |
-| **Screenshots** | The onboarding and sign-up images in this README are real captures from the running app; the discovery/match/chat/profile images are brand artwork, not app captures. Verified screenshots of the signed-in experience are a roadmap item — see [Screenshots](#screenshots). |
+| **Screenshots** | Every screenshot in this README is a real capture from the running app (onboarding and sign-up wizard). Verified screenshots of the signed-in experience are a roadmap item — see [Screenshots](#screenshots). |
 
 What Weekend does **not** do: it does not collect exact GPS coordinates for other
 users, does not sell or share personal data with advertisers, and does not gate
@@ -927,6 +918,19 @@ flutter build apk --release \
 CI builds and signs a **development-key release**. Production releases must
 provide a real `key.properties` with your own keystore
 (see `android/key.properties.example`).
+
+Release builds now sign with a dedicated **Weekend release key**
+(`weekend-release-key`, RSA-4096, valid to 2054). The keystore and its
+passwords stay untracked (`android/*.jks`, `android/key.properties` are
+gitignored); local builds with a fresh checkout fall back to the documented
+debug-signing guard, which refuses to build unless explicitly opted in.
+Passkey (WebAuthn) device association for this identity requires publishing a
+`assetlinks.json` whose `sha256_cert_fingerprints` entry is the release
+certificate below:
+
+```
+SHA-256: 15:B2:F9:1A:EB:C8:5B:B2:6B:64:7E:94:F9:B3:22:36:89:41:0B:8E:CF:29:DD:E7:98:F9:C5:B0:CC:8C:25:94
+```
 
 **Versioning** lives in `pubspec.yaml` (`version: 2.7.0+12`). Pushing a `v*`
 tag triggers `.github/workflows/release.yml`, which builds the APK, generates

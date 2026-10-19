@@ -61,6 +61,11 @@ jobs:
             --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
             -PSUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
             -PPASSKEY_REQUIRE_RP_ID=true
+        env:
+          # CI has no release keystore: ALLOW_DEBUG_SIGNING keeps the existing
+          # dev-key verification-build behaviour instead of failing the guard.
+          # The release notes already state this APK is a verification build.
+          ALLOW_DEBUG_SIGNING: "true"
 
       - name: Log passkey configuration
         run: |

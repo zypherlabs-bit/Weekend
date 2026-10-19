@@ -345,7 +345,11 @@ begin
 end;
 $$ language plpgsql security definer;
 
-set search_path = public;
+-- NOTE: this must be an ALTER, not a bare `SET search_path = public;`. The
+-- `;` above already terminated the CREATE FUNCTION, so a standalone SET only
+-- affected the migration session and left this SECURITY DEFINER function
+-- unpinned (the 024 sweep had already run by the time 028 was applied).
+alter function public.check_mutual_like() set search_path = public, pg_temp;
 
 -- ============================================================
 -- 6. search_profiles must not return minors or unknown-age profiles
@@ -411,8 +415,9 @@ declare
     v_limit integer;
     -- An explicit "did the caller set this" test. `array_length(.., 1) > 0`
     -- means "no restriction", which is distinct from "restricted to empty".
-    v_gender_set boolean := p_genders is not null
-                          and array_length(p_genders, 1) > 0;
+    -- cardinality, not array_length: the length of an EMPTY array is NULL, and
+    -- a NULL `v_gender_set` would silently drop every row.
+    v_gender_set boolean := coalesce(cardinality(p_genders), 0) > 0;
     v_age_set boolean := p_age_min is not null or p_age_max is not null;
     v_distance_set boolean := p_max_distance_km is not null;
     v_city_set boolean := nullif(btrim(coalesce(p_city, '')), '') is not null;
@@ -619,7 +624,7 @@ begin
                 else null
             end as real_distance_km,
             -- SOFT ranking only; never consulted for eligibility.
-            (case when e.trust_score is not null then e.trust_score * 0.2 else 0 end)
+            ((case when e.trust_score is not null then e.trust_score * 0.2 else 0 end)
             + (case when e.is_photo_verified then 15 else 0 end)
             + (case when e.last_active_at > now() - interval '14 days'
                    then 10 else 0 end)

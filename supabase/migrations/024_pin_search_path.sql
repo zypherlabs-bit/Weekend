@@ -39,6 +39,18 @@ begin
         join pg_namespace n on n.oid = p.pronamespace
         where n.nspname = 'public'
           and p.prosecdef
+          -- Extension-managed functions (PostGIS, pg_net, ...) are owned by
+          -- the extension owner rather than by the project role, so they
+          -- cannot be altered from here - and they must not be: their
+          -- search_path is managed upstream and an extension upgrade would
+          -- revert any manual change. Supabase's advisor excludes them too.
+          and not exists (
+              select 1
+              from pg_depend d
+              where d.objid = p.oid
+                and d.deptype = 'e'
+                and d.refclassid = 'pg_extension'::regclass
+          )
           and (p.proconfig is null
                or not exists (
                    select 1
@@ -76,6 +88,15 @@ begin
         join pg_namespace n on n.oid = p.pronamespace
         where n.nspname = 'public'
           and p.prosecdef
+          -- Same exclusion as above: extension functions are not project code
+          -- and cannot be pinned from here.
+          and not exists (
+              select 1
+              from pg_depend d
+              where d.objid = p.oid
+                and d.deptype = 'e'
+                and d.refclassid = 'pg_extension'::regclass
+          )
           and not exists (
               select 1
               from unnest(coalesce(p.proconfig, '{}'::text[])) cfg

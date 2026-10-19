@@ -59,6 +59,10 @@
 --
 -- This loop re-asserts the setting on ALL SECURITY DEFINER functions in the
 -- public schema, so it is self-healing for anything added later too.
+--
+-- Extension-managed functions are excluded: they are owned by the extension
+-- owner (e.g. `supabase_admin` for PostGIS), so `alter function` here would
+-- fail with "must be owner of function" and abort the migration.
 do $$
 declare
     fn record;
@@ -69,6 +73,13 @@ begin
         join pg_namespace n on n.oid = p.pronamespace
         where n.nspname = 'public'
           and p.prosecdef
+          and not exists (
+              select 1
+              from pg_depend d
+              where d.objid = p.oid
+                and d.deptype = 'e'
+                and d.refclassid = 'pg_extension'::regclass
+          )
     loop
         execute format(
             'alter function %s security definer set search_path = public, pg_temp',
@@ -279,34 +290,45 @@ create or replace function public.enforce_interaction_rate_limit()
 returns trigger as $$
 declare
     v_actor uuid;
+    v_target uuid;
+    v_row jsonb;
     v_recent integer;
     v_likes integer;
 begin
-    v_actor := case when tg_table_name = 'likes'
-                   then new.liker_id else new.user_id end;
+    -- `new` is read via jsonb on purpose: this trigger is attached to BOTH
+    -- `likes` and `passes`, whose columns differ. Referring to `new.liker_id`
+    -- while firing on `passes` (or `new.user_id` while firing on `likes`) is
+    -- resolved at plan time and raises `record "new" has no field ...`, so
+    -- every field access below must be dynamic.
+    v_row := to_jsonb(new);
 
-    -- Self-interaction is never legitimate and would corrupt the deck.
-    if tg_table_name = 'likes' and new.liked_id = new.liker_id then
-        raise exception 'Cannot like your own profile';
-    end if;
-    if tg_table_name = 'passes' and new.target_id = new.user_id then
-        raise exception 'Cannot pass on your own profile';
-    end if;
+    if tg_table_name = 'likes' then
+        v_actor  := (v_row ->> 'liker_id')::uuid;
+        v_target := (v_row ->> 'liked_id')::uuid;
 
-    -- Already-interacted-with is not an error: the client relies on duplicates
-    -- being absorbed (MatchRepository swallows 23505). Counting is skipped.
-    if tg_table_name = 'likes' and exists (
-        select 1 from public.likes
-        where liker_id = new.liker_id and liked_id = new.liked_id
-    ) then
-        return new;
-    end if;
+        -- Self-interaction is never legitimate and would corrupt the deck.
+        if v_target = v_actor then
+            raise exception 'Cannot like your own profile';
+        end if;
 
-    if tg_table_name = 'passes' and exists (
-        select 1 from public.passes
-        where user_id = new.user_id and target_id = new.target_id
-    ) then
-        return new;
+        -- Already-interacted-with is not an error: the client relies on
+        -- duplicates being absorbed (MatchRepository swallows 23505).
+        if exists (select 1 from public.likes
+                    where liker_id = v_actor and liked_id = v_target) then
+            return new;
+        end if;
+    else
+        v_actor  := (v_row ->> 'user_id')::uuid;
+        v_target := (v_row ->> 'target_id')::uuid;
+
+        if v_target = v_actor then
+            raise exception 'Cannot pass on your own profile';
+        end if;
+
+        if exists (select 1 from public.passes
+                    where user_id = v_actor and target_id = v_target) then
+            return new;
+        end if;
     end if;
 
     select count(*) into v_recent

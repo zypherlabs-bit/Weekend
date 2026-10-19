@@ -261,6 +261,8 @@ class OpeningMoveRepository {
   Future<bool> upsertAll(List<OpeningMove> moves) async {
     final client = _client;
     if (client == null) return false;
+    final me = SupabaseConfig.currentUserId;
+    if (me.isEmpty || me == 'unauthenticated') return false;
     try {
       for (final move in moves) {
         if (move.prompt.trim().isEmpty) {
@@ -270,11 +272,14 @@ class OpeningMoveRepository {
                 .from('opening_moves')
                 .delete()
                 .eq('id', move.id)
-                .eq('user_id', SupabaseConfig.currentUserId);
+                .eq('user_id', me);
           }
           continue;
         }
+        // `user_id` is NOT NULL with no default and the insert policy requires
+        // `user_id = auth.uid()`, so the owner id has to travel with the row.
         await client.from('opening_moves').upsert({
+          'user_id': me,
           if (move.id.isNotEmpty) 'id': move.id,
           'sort_order': move.sortOrder,
           'prompt': move.prompt.trim(),

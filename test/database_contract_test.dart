@@ -627,4 +627,62 @@ void main() {
       }
     });
   });
+
+  group('Opening Moves owner row', () {
+    // The slot editor silently saved nothing. OpeningMoveRepository.upsertAll
+    // sent `sort_order`/`prompt` but not `user_id`; that column is NOT NULL
+    // with no default, so the insert policy's `user_id = auth.uid()` check
+    // rejected every write (SQLSTATE 42501) and the repository's `catch`
+    // reported it as a plain `false`. The two assertions below hold the schema
+    // and the payload together so the pair cannot drift apart again.
+    test('opening_moves.user_id is NOT NULL with no default', () {
+      final creates = RegExp(
+        r'create\s+table\s+(?:if\s+not\s+exists\s+)?public\.opening_moves\s*\(',
+        caseSensitive: false,
+      ).allMatches(migrations).toList();
+      expect(creates, isNotEmpty, reason: 'opening_moves is never created');
+
+      final start = creates.last.end;
+      var depth = 1;
+      var i = start;
+      for (; i < migrations.length; i++) {
+        final c = migrations[i];
+        if (c == '(') depth++;
+        if (c == ')') {
+          depth--;
+          if (depth == 0) break;
+        }
+      }
+      final body = migrations.substring(start, i);
+
+      final column =
+          RegExp(r'user_id\s+uuid', caseSensitive: false).firstMatch(body);
+      expect(column, isNotNull,
+          reason: 'opening_moves has no `user_id uuid` column');
+      final line = body.substring(column!.start).split(',').first.toLowerCase();
+      expect(line, contains('not null'),
+          reason: 'user_id must be NOT NULL so RLS can own the row');
+      expect(line, isNot(contains('default')),
+          reason: 'user_id has no default, so the client must send it');
+    });
+
+    test('the client upsert sends user_id with every opening_moves write', () {
+      final source =
+          File('lib/repositories/engagement_repository.dart').readAsStringSync();
+      final call = RegExp(r"from\('opening_moves'\)\s*\.\s*upsert\(")
+          .firstMatch(source);
+      expect(call, isNotNull, reason: 'no opening_moves upsert found');
+
+      final block = source.substring(call!.end);
+      final close = block.indexOf('}, onConflict');
+      expect(close, isNot(-1),
+          reason: 'could not find the end of the upsert payload map');
+      final payload = block.substring(0, close);
+
+      expect(payload, contains("'user_id'"),
+          reason: 'the upsert payload omits the NOT NULL owner column, so the '
+              'RLS insert policy rejects it with 42501 and the editor saves '
+              'nothing');
+    });
+  });
 }

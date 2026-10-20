@@ -12,10 +12,16 @@ handful of conventions that are worth stating once:
 
 ## [Unreleased]
 
-Working-tree changes not yet part of a tagged release. The version in
-`pubspec.yaml` is deliberately still `2.8.1+14`: the APK built from this tree is
-debug-signed (see [docs/security.md](docs/security.md) - release integrity), so it
-is a verification build and does not claim a release number.
+Nothing yet.
+
+## [2.8.2] - 2026-10-20
+
+Brand, security and design release. `pubspec.yaml` is `2.8.2+15`. The APK is
+built by `tool/build_release.py`, which injects `SUPABASE_URL` and
+`SUPABASE_ANON_KEY` from the git-ignored `.env`, and is signed with the dedicated
+`weekend-release-key` whose SHA-256 fingerprint is documented in
+[README.md](README.md) - release integrity. Because it uses the same key as
+`v2.8.1`, it upgrades an existing install in place.
 
 ### Added
 
@@ -71,6 +77,14 @@ is a verification build and does not claim a release number.
   channel is absent, so widget tests and non-Android hosts are not locked out.
 - `VpnSecurityChannel` compiled: the `BinaryMessenger` constructor argument was
   not a property, so `attach()` could not reach it.
+
+### Not verified
+
+- The `v2.8.2` APK has not been driven on physical Android hardware. The launcher
+  icon, splash screen, glass surfaces, `FLAG_SECURE` and the native VPN channel
+  were verified by resource inspection (`aapt2`), static analysis and unit tests,
+  not by an on-device run. Passkeys remain unverifiable here (no device with a
+  credential provider).
 
 ## [2.8.1] - 2026-10-19
 

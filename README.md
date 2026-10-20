@@ -1049,7 +1049,7 @@ certificate below:
 SHA-256: 15:B2:F9:1A:EB:C8:5B:B2:6B:64:7E:94:F9:B3:22:36:89:41:0B:8E:CF:29:DD:E7:98:F9:C5:B0:CC:8C:25:94
 ```
 
-**Versioning** lives in `pubspec.yaml` (`version: 2.8.1+14`). Pushing a `v*`
+**Versioning** lives in `pubspec.yaml` (`version: 2.8.2+15`). Pushing a `v*`
 tag triggers `.github/workflows/release.yml`, which builds the APK, generates
 `Weekend-v<version>-release.apk` plus a `.sha256` checksum, and publishes both
 to a GitHub Release.

@@ -692,8 +692,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                 children: [
                   const Text(
                     'This permanently deletes your profile, photos, matches '
-                    'and every message you have sent. This action cannot be '
-                    'undone.',
+                    'and every message you have sent. This action cannot be undone.',
                   ),
                   const SizedBox(height: 16),
                   // Deletion is irreversible, and a live session token is

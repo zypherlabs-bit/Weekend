@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide AsyncValue;
 import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_provider.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/weekend_design_system.dart';
 
 /// Tinder-style sign-up wizard: one question per screen across six steps,
 /// ending in account creation. Answers ride along in the signup metadata and
@@ -44,6 +46,7 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
   DateTime? _birthday;
   String? _gender;
   String? _goal;
+  String? _problem;
 
   @override
   void dispose() {
@@ -56,13 +59,13 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
   bool get _isLastStep => _step == _stepCount - 1;
 
   String get _question => switch (_step) {
-        0 => "What's your email?",
-        1 => 'Create a password',
-        2 => "What's your name?",
-        3 => "When's your birthday?",
-        4 => 'How do you identify?',
-        _ => 'What brings you here?',
-      };
+    0 => "What's your email?",
+    1 => 'Create a password',
+    2 => "What's your name?",
+    3 => "When's your birthday?",
+    4 => 'How do you identify?',
+    _ => 'What brings you here?',
+  };
 
   String? _validateStep() {
     switch (_step) {
@@ -99,9 +102,9 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
   }
 
   void _showProblem(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
+    // Inline, not a SnackBar: validation feedback must never cover the primary
+    // action at the bottom of the wizard.
+    setState(() => _problem = message);
   }
 
   void _advance() {
@@ -111,7 +114,10 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
       return;
     }
     ref.read(authStateProvider.notifier).dismissError();
-    setState(() => _step += 1);
+    setState(() {
+      _problem = null;
+      _step += 1;
+    });
   }
 
   void _back() {
@@ -120,7 +126,10 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
       context.go(widget.returnTo);
       return;
     }
-    setState(() => _step -= 1);
+    setState(() {
+      _problem = null;
+      _step -= 1;
+    });
   }
 
   Future<void> _pickBirthday() async {
@@ -144,7 +153,9 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
     }
     setState(() => _submitting = true);
     try {
-      await ref.read(authStateProvider.notifier).signUpWithEmail(
+      await ref
+          .read(authStateProvider.notifier)
+          .signUpWithEmail(
             _emailController.text.trim(),
             _passwordController.text,
             _nameController.text.trim(),
@@ -168,10 +179,7 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
         );
       }
     } finally {
@@ -182,98 +190,86 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    onPressed:
-                        (authState.isLoading || _submitting) ? null : _back,
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new,
-                      color: Colors.white70,
+      backgroundColor: Colors.transparent,
+      body: WeekendAtmosphere(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    WeekendGlassIconButton(
+                      icon: Icons.arrow_back_ios_new_rounded,
+                      semanticLabel: 'Back',
+                      onPressed: (authState.isLoading || _submitting)
+                          ? null
+                          : _back,
                     ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Step ${_step + 1} of $_stepCount',
+                      style: theme.textTheme.labelMedium,
+                    ),
+                    const Spacer(),
+                    const WeekendLogo(size: 32, glow: false),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: (_step + 1) / _stepCount,
+                    minHeight: 5,
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Step ${_step + 1} of $_stepCount',
-                    style: const TextStyle(color: Colors.white60, fontSize: 13),
+                ),
+                const SizedBox(height: 26),
+                Text(_question, style: theme.textTheme.headlineMedium),
+                const SizedBox(height: 6),
+                Text(
+                  'Your answers stay private and shape who you meet.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Expanded(child: _buildStepBody()),
+                if (authState.error != null || _problem != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(WeekendRadius.sm),
+                      border: Border.all(
+                        color: theme.colorScheme.error.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Text(
+                      authState.error ?? _problem!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onErrorContainer,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: (_step + 1) / _stepCount,
-                  minHeight: 6,
-                  backgroundColor: Colors.white12,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFFFF4B72),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                _question,
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Expanded(child: _buildStepBody()),
-              if (authState.error != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.red.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Text(
-                    authState.error!,
-                    style: const TextStyle(color: Colors.red),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
-              SizedBox(
-                height: 56,
-                child: ElevatedButton(
+                WeekendGlassButton(
+                  label: _isLastStep ? 'Create Account' : 'Next',
+                  icon: _isLastStep
+                      ? Icons.favorite_rounded
+                      : Icons.arrow_forward_rounded,
+                  loading: _submitting,
                   onPressed: (authState.isLoading || _submitting)
                       ? null
                       : (_isLastStep ? _submit : _advance),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF4B72),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: _submitting
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(
-                          _isLastStep ? 'Create Account' : 'Next',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -286,7 +282,6 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
         return TextFormField(
           controller: _emailController,
           autofocus: true,
-          style: const TextStyle(color: Colors.white),
           keyboardType: TextInputType.emailAddress,
           decoration: _inputDecoration('Email', Icons.email_outlined),
         );
@@ -295,14 +290,13 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
           controller: _passwordController,
           autofocus: true,
           obscureText: _obscurePassword,
-          style: const TextStyle(color: Colors.white),
           decoration: _inputDecoration(
             'Password',
             Icons.lock_outline,
             suffixIcon: IconButton(
+              tooltip: _obscurePassword ? 'Show password' : 'Hide password',
               icon: Icon(
                 _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                color: Colors.white60,
               ),
               onPressed: () =>
                   setState(() => _obscurePassword = !_obscurePassword),
@@ -313,7 +307,6 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
         return TextFormField(
           controller: _nameController,
           autofocus: true,
-          style: const TextStyle(color: Colors.white),
           decoration: _inputDecoration('Full name', Icons.person_outline),
         );
       case 3:
@@ -322,34 +315,30 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
           children: [
             InkWell(
               onTap: _pickBirthday,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(WeekendRadius.md),
               child: InputDecorator(
-                decoration: _inputDecoration(
-                  'Birthday',
-                  Icons.cake_outlined,
-                ).copyWith(
-                  suffixIcon: const Icon(
-                    Icons.calendar_today,
-                    color: Colors.white60,
-                  ),
-                ),
+                decoration: _inputDecoration('Birthday', Icons.cake_outlined)
+                    .copyWith(
+                      suffixIcon: const Icon(Icons.calendar_today_outlined),
+                    ),
                 child: Text(
                   _birthday == null
                       ? 'Tap to pick your date of birth'
                       : '${_birthday!.day.toString().padLeft(2, '0')}/'
-                          '${_birthday!.month.toString().padLeft(2, '0')}/'
-                          '${_birthday!.year}',
-                  style: TextStyle(
-                    color: _birthday == null ? Colors.white38 : Colors.white,
-                    fontSize: 16,
+                            '${_birthday!.month.toString().padLeft(2, '0')}/'
+                            '${_birthday!.year}',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: _birthday == null
+                        ? Theme.of(context).colorScheme.onSurfaceVariant
+                        : Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'You must be 18 or older to join.',
-              style: TextStyle(color: Colors.white54, fontSize: 13),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         );
@@ -375,23 +364,8 @@ class _SignupWizardScreenState extends ConsumerState<SignupWizardScreen> {
   }) {
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
-      prefixIcon: Icon(icon, color: Colors.white60),
+      prefixIcon: Icon(icon),
       suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: const Color(0xFF1C162E),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFFFF4B72)),
-      ),
     );
   }
 }
@@ -410,39 +384,63 @@ class _ChoiceList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final option in options)
             Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () => onSelected(option),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1C162E),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: selected == option
-                          ? const Color(0xFFFF4B72)
-                          : Colors.white.withValues(alpha: 0.1),
-                      width: selected == option ? 2 : 1,
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Semantics(
+                button: true,
+                selected: selected == option,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(WeekendRadius.md),
+                  onTap: () => onSelected(option),
+                  child: AnimatedContainer(
+                    duration: WeekendMotion.quick,
+                    curve: WeekendMotion.curve,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
                     ),
-                  ),
-                  child: Text(
-                    option,
-                    style: TextStyle(
-                      color: selected == option ? Colors.white : Colors.white70,
-                      fontSize: 16,
-                      fontWeight: selected == option
-                          ? FontWeight.w600
-                          : FontWeight.normal,
+                    decoration: BoxDecoration(
+                      color: selected == option
+                          ? theme.colorScheme.primary.withValues(alpha: 0.12)
+                          : theme.colorScheme.surface.withValues(alpha: 0.72),
+                      borderRadius: BorderRadius.circular(WeekendRadius.md),
+                      border: Border.all(
+                        color: selected == option
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.outlineVariant.withValues(
+                                alpha: 0.65,
+                              ),
+                        width: selected == option ? 1.6 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            option,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: selected == option
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurface,
+                              fontWeight: selected == option
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                        if (selected == option)
+                          Icon(
+                            Icons.check_circle_rounded,
+                            size: 20,
+                            color: theme.colorScheme.primary,
+                          ),
+                      ],
                     ),
                   ),
                 ),

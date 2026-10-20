@@ -43,20 +43,20 @@ class AdCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.info_outline_rounded,
-                    color: Colors.white70,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     size: 16,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'ADVERTISEMENT',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.0,
@@ -64,12 +64,12 @@ class AdCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   PopupMenuButton<String>(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.more_vert_rounded,
-                      color: Colors.white54,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       size: 18,
                     ),
-                    color: const Color(0xFF2E244A),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     onSelected: (value) {
                       switch (value) {
                         case 'report':
@@ -84,25 +84,25 @@ class AdCard extends StatelessWidget {
                       }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'report',
                         child: Text(
                           'Report advertisement',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'hide',
                         child: Text(
                           'Hide this advertisement',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'dismiss',
                         child: Text(
                           'Why am I seeing this?',
-                          style: TextStyle(color: Colors.white70),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                         ),
                       ),
                     ],
@@ -114,37 +114,37 @@ class AdCard extends StatelessWidget {
             Container(
               width: double.infinity,
               height: 200,
-              color: const Color(0xFF2E244A),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: ad.imageUrl.isNotEmpty
                   ? CachedNetworkImage(
                       imageUrl: ad.imageUrl,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
-                        color: const Color(0xFF2E244A),
-                        child: const Center(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        child: Center(
                           child: CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              Color(0xFFFF4B72),
+                              Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        color: const Color(0xFF2E244A),
-                        child: const Center(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        child: Center(
                           child: Icon(
                             Icons.broken_image_rounded,
                             size: 48,
-                            color: Colors.white38,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
                     )
-                  : const Center(
+                  : Center(
                       child: Icon(
                         Icons.image_rounded,
                         size: 48,
-                        color: Colors.white38,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
             ),
@@ -183,8 +183,8 @@ class AdCard extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () => _handleCta(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF4B72),
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onSurface,
 
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -208,7 +208,7 @@ class AdCard extends StatelessWidget {
                       Text(
                         'Sponsored',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                           fontSize: 11,
                         ),
                       ),
@@ -244,19 +244,19 @@ class AdPlaceholderCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(24),
       ),
-      child: const Column(
+      child: Column(
         children: [
           SizedBox(height: 40),
           CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF4B72)),
+            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
           ),
           SizedBox(height: 16),
           Text(
             'Loading advertisement',
-            style: TextStyle(color: Colors.white60, fontSize: 13),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
           ),
           SizedBox(height: 40),
         ],

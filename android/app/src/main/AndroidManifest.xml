@@ -82,6 +82,15 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- FCM uses these when the server payload has no explicit icon/color.
+             The small icon MUST be the monochrome drawable, not the launcher
+             icon, or Android renders a white square. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/weekend_notification_icon" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/weekend_primary" />
         <!-- WebAuthn / Passkey relying party ID.
 
              Must equal the Supabase `webauthn_rp_id`; see the comment on the

@@ -1,8 +1,10 @@
-﻿import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../models/profile_schema.dart';
+import '../theme/app_theme.dart';
+import 'weekend_design_system.dart';
 
 /// Weekend's profile card.
 ///
@@ -121,11 +123,20 @@ class _DiscoveryCardState extends State<DiscoveryCard> {
   }
 
   Widget _buildMedia(BuildContext context) {
+    // Photo placeholders follow the active palette: a light-mode user should
+    // not see a dark rectangle while a photo loads.
+    final placeholderColor = Theme.of(
+      context,
+    ).colorScheme.surfaceContainerHighest;
     if (widget.profile.photos.isEmpty) {
       return Container(
-        color: const Color(0xFF2E244A),
-        child: const Center(
-          child: Icon(Icons.person_rounded, size: 80, color: Colors.white24),
+        color: placeholderColor,
+        child: Center(
+          child: Icon(
+            Icons.person_rounded,
+            size: 80,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       );
     }
@@ -138,20 +149,20 @@ class _DiscoveryCardState extends State<DiscoveryCard> {
         imageUrl: widget.profile.photos[i],
         fit: BoxFit.cover,
         placeholder: (_, __) => Container(
-          color: const Color(0xFF2E244A),
+          color: placeholderColor,
           child: const Center(
             child: CircularProgressIndicator(
-              color: Color(0xFFFF4B72),
+              color: AppTheme.sunsetCoral,
               strokeWidth: 2,
             ),
           ),
         ),
         errorWidget: (_, __, ___) => Container(
-          color: const Color(0xFF2E244A),
-          child: const Icon(
+          color: placeholderColor,
+          child: Icon(
             Icons.broken_image_rounded,
             size: 60,
-            color: Colors.white24,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ),
@@ -356,11 +367,10 @@ class _ProfileDetailSheet extends StatelessWidget {
       maxChildSize: 0.94,
       expand: false,
       builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF1C162E),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-          ),
+        final theme = Theme.of(context);
+        return WeekendGlass(
+          padding: EdgeInsets.zero,
+          radius: WeekendRadius.xl,
           child: Column(
             children: [
               const SizedBox(height: 10),
@@ -368,7 +378,9 @@ class _ProfileDetailSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.32,
+                  ),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -384,8 +396,8 @@ class _ProfileDetailSheet extends StatelessWidget {
                         title: 'About',
                         child: Text(
                           profile.bio.trim(),
-                          style: const TextStyle(
-                            color: Colors.white70,
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurfaceVariant,
                             fontSize: 15,
                             height: 1.5,
                           ),
@@ -423,8 +435,8 @@ class _ProfileDetailSheet extends StatelessWidget {
                                   children: [
                                     Text(
                                       prompt.questionText,
-                                      style: const TextStyle(
-                                        color: Color(0xFFFF9966),
+                                      style: TextStyle(
+                                        color: theme.colorScheme.primary,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -432,8 +444,8 @@ class _ProfileDetailSheet extends StatelessWidget {
                                     const SizedBox(height: 6),
                                     Text(
                                       prompt.answer,
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: theme.colorScheme.onSurface,
                                         fontSize: 15,
                                         height: 1.45,
                                       ),
@@ -458,16 +470,16 @@ class _ProfileDetailSheet extends StatelessWidget {
                                   children: [
                                     Text(
                                       row.$1,
-                                      style: const TextStyle(
-                                        color: Colors.white54,
+                                      style: TextStyle(
+                                        color: theme.colorScheme.onSurfaceVariant,
                                         fontSize: 14,
                                       ),
                                     ),
                                     const Spacer(),
                                     Text(
                                       row.$2,
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: theme.colorScheme.onSurface,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -757,6 +769,7 @@ class _SheetHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final age = profile.age > 0 ? profile.age : null;
     final city = profile.city.trim();
     final distance = profile.distanceDisplay.trim();
@@ -772,9 +785,8 @@ class _SheetHeader extends StatelessWidget {
               Flexible(
                 child: Text(
                   profile.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: theme.colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -783,7 +795,10 @@ class _SheetHeader extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   '$age',
-                  style: const TextStyle(color: Colors.white70, fontSize: 20),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w300,
+                  ),
                 ),
               ],
             ],
@@ -823,12 +838,19 @@ class _MetaLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: Colors.white54),
+        Icon(icon, size: 14, color: theme.colorScheme.onSurfaceVariant),
         const SizedBox(width: 4),
-        Text(text, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        Text(
+          text,
+          style: TextStyle(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontSize: 13,
+          ),
+        ),
       ],
     );
   }
@@ -841,6 +863,7 @@ class _SheetSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 24),
       child: Column(
@@ -848,10 +871,9 @@ class _SheetSection extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
               fontWeight: FontWeight.bold,
-              fontSize: 16,
             ),
           ),
           const SizedBox(height: 12),
@@ -869,21 +891,24 @@ class _Tag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: highlighted
-            ? const Color(0xFFFF4B72).withValues(alpha: 0.9)
-            : Colors.white.withValues(alpha: 0.1),
+            ? AppTheme.sunsetCoral.withValues(alpha: 0.9)
+            : theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
         border: highlighted
             ? null
-            : Border.all(color: Colors.white.withValues(alpha: 0.18)),
+            : Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: highlighted ? Colors.white : Colors.white70,
+          color: highlighted
+              ? Colors.white
+              : theme.colorScheme.onSurfaceVariant,
           fontSize: 12,
           fontWeight: highlighted ? FontWeight.bold : FontWeight.normal,
         ),
@@ -899,17 +924,21 @@ class _Fact extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: Colors.white38),
+          Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontSize: 14,
+              ),
             ),
           ),
         ],

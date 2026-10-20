@@ -57,6 +57,9 @@ keeping location and personal data deliberately private.
   - [Weekend Plans](#weekend-plans)
   - [QR invitations](#qr-invitations)
   - [Biometric app lock](#biometric-app-lock)
+  - [Screenshot and screen-capture protection](#screenshot-and-screen-capture-protection)
+  - [VPN-aware access control](#vpn-aware-access-control)
+  - [Day / Night / Auto themes](#day--night--auto-themes)
   - [Safety, reporting and blocking](#safety-reporting-and-blocking)
   - [Profile verification and photo moderation](#profile-verification-and-photo-moderation)
   - [Advertisement-supported free experience](#advertisement-supported-free-experience)
@@ -365,6 +368,79 @@ inside Android's biometric stack.
 Implementation: `lib/services/biometric_auth_service.dart`,
 `lib/services/secure_storage_service.dart`,
 `lib/features/auth/biometric_lock_gate.dart`, `lib/main.dart`.
+
+---
+
+### Screenshot and screen-capture protection
+
+The Android activity that hosts the Flutter UI applies
+`WindowManager.LayoutParams.FLAG_SECURE` in `onCreate`, before the Flutter engine
+attaches. That covers every screen in the app - discovery, profiles, likes,
+chats, plans and settings - and the thumbnail Android keeps for the recent-apps
+switcher. On Android 13+ the activity additionally calls
+`setRecentsScreenshotEnabled(false)`.
+
+- **Applied on every activity recreation**, so rotation or process restore cannot
+  drop it.
+- **No root detection, no accessibility service, no device-admin permission** and
+  no attempt to detect or block other capture paths.
+- **Honest limits:** `FLAG_SECURE` is a supported Android defence, not a
+  guarantee. A camera pointed at the screen, a rooted device, or an OEM that
+  ignores the flag is outside the platform contract. Weekend does not claim to
+  prevent every screenshot.
+
+Implementation: `android/app/src/main/kotlin/com/weekend/app/MainActivity.kt`.
+
+---
+
+### VPN-aware access control
+
+Weekend blocks **protected content** while the device routes traffic through a
+VPN. The check is entirely local:
+
+- Android's `ConnectivityManager` / `NetworkCapabilities.TRANSPORT_VPN` is read
+  through a platform channel
+  (`com.weekend.app/vpn_security` + `com.weekend.app/vpn_security_events`).
+- The active network is checked first, then every network Android reports, so a
+  per-app VPN that is not the default still counts.
+- Only a boolean transport fact crosses the channel. **No IP lookup, no
+  third-party service, no VPN provider name, no network identifier** is
+  collected or sent anywhere, and no extra permission is requested
+  (`ACCESS_NETWORK_STATE` was already declared).
+- Checks run on launch, on resume and on the network callbacks Android already
+  delivers. There is **no polling loop**.
+
+States are kept distinct instead of collapsed into "blocked": *VPN detected*,
+*clear*, *no network*, *detection unavailable* and *unsupported* (non-Android)
+each get their own explanation and icon. The policy is **fail-closed for
+protected content only**: an undetermined state keeps private profiles, likes,
+matches and messages hidden, but sign-in, sign-up, password reset and support
+screens stay reachable. The blocker screen always offers a retry, never signs the
+user out, and restores the destination the user was heading for once a check
+comes back clear. Back navigation and deep links cannot bypass it, because the
+decision lives in the router's redirect rather than in a screen.
+
+Implementation: `android/.../VpnSecurityChannel.kt`,
+`lib/services/vpn_security_service.dart`,
+`lib/providers/vpn_security_provider.dart`, `lib/routing/vpn_route_guard.dart`,
+`lib/features/security/vpn_blocked_screen.dart`.
+
+---
+
+### Day / Night / Auto themes
+
+- **Day** is always light, **Night** is always dark, and **Auto** is a genuine
+  `ThemeMode.system` that follows the device setting.
+- The choice is persisted locally and read **before the first frame**, so the app
+  never paints once in the wrong brightness and then corrects itself. It is
+  mirrored to the account (`user_settings.theme_preference`) on change so it can
+  follow the user to another device; a mirror failure never blocks the toggle.
+- The selector in Settings offers sun / moon / device icons with labelled
+  semantics, and the whole app - glass surfaces, system bars and status icons -
+  reacts immediately.
+
+Implementation: `lib/providers/theme_provider.dart`, `lib/theme/app_theme.dart`,
+`lib/features/settings/settings_dialog.dart`, `lib/main.dart`.
 
 ---
 

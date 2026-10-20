@@ -67,7 +67,7 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: const Color(0xFF1C162E),
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       ),
     );
   }
@@ -79,11 +79,11 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
     final bodyStyle = TextStyle(
       fontSize: 15,
       height: 1.5,
-      color: Colors.white.withValues(alpha: 0.75),
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -96,27 +96,27 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
                   width: 96,
                   height: 96,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFF4B72), Color(0xFFFF9966)],
+                    gradient: LinearGradient(
+                      colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.tertiary],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.mark_email_unread_outlined,
                     size: 44,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
               const SizedBox(height: 28),
-              const Text(
+              Text(
                 'Confirm your email',
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -133,9 +133,9 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1C162E),
+                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
                 ),
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,19 +166,19 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
                 child: ElevatedButton(
                   onPressed: _isResending ? null : _resend,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF4B72),
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
                     ),
                     elevation: 0,
                   ),
                   child: _isResending
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                             strokeWidth: 2.4,
                           ),
                         )
@@ -191,7 +191,7 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
                         ),
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               SizedBox(
                 height: 56,
                 child: OutlinedButton(
@@ -199,18 +199,18 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
                       ? null
                       : _continueAfterConfirmation,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFFF9966),
-                    side: const BorderSide(color: Color(0xFFFF9966)),
+                    foregroundColor: Theme.of(context).colorScheme.tertiary,
+                    side: BorderSide(color: Theme.of(context).colorScheme.tertiary),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
                     ),
                   ),
                   child: _isContinuing
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
-                            color: Color(0xFFFF9966),
+                            color: Theme.of(context).colorScheme.tertiary,
                             strokeWidth: 2.4,
                           ),
                         )
@@ -226,9 +226,9 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () => context.go('/auth?mode=signup'),
-                child: const Text(
+                child: Text(
                   'Use a different email',
-                  style: TextStyle(color: Color(0xFFFF9966), fontSize: 14),
+                  style: TextStyle(color: Theme.of(context).colorScheme.tertiary, fontSize: 14),
                 ),
               ),
             ],
@@ -254,14 +254,14 @@ class _Step extends StatelessWidget {
           width: 24,
           height: 24,
           alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: Color(0xFFFF4B72),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
             shape: BoxShape.circle,
           ),
           child: Text(
             number,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 12,
               fontWeight: FontWeight.bold,
             ),
@@ -272,7 +272,7 @@ class _Step extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               fontSize: 13.5,
               height: 1.45,
             ),

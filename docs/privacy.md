@@ -144,9 +144,32 @@ on the roadmap (`show_me_to` and read receipts are not yet wired to the app).
 
 ---
 
-## 9. Related documents
+## 9. On-device security checks
 
-- [security.md](security.md) — how access is enforced
-- [location-discovery.md](location-discovery.md) — discovery and geohashing design
-- [qr-invitations.md](qr-invitations.md) — what an invitation payload contains
-- [../README.md](../README.md) — feature overview and FAQ
+Two protections run locally and add nothing to the list of collected data:
+
+- **VPN-aware access control.** Weekend asks Android whether the active network
+  (or any network Android reports) uses a VPN transport, and blocks private
+  profiles, likes, matches and messages while one does. The check is local: no IP
+  lookup, no third-party service, no VPN provider name and no network identifier
+  is collected, stored, logged or sent to Supabase. It uses
+  `ACCESS_NETWORK_STATE`, which the Supabase client already required, and adds no
+  permission. See
+  [vpn-and-screenshot-protection.md](vpn-and-screenshot-protection.md).
+- **Screen-capture protection.** The Android activity that hosts the UI sets
+  `FLAG_SECURE`, which keeps the app out of screenshots and the recent-apps
+  thumbnail. It is a platform flag applied to the app's own window: it collects
+  no data and does not inspect other apps.
+
+Neither feature reads the clipboard, contacts, installed apps or usage history.
+
+---
+
+## 10. Related documents
+
+- [security.md](security.md) - how access is enforced
+- [vpn-and-screenshot-protection.md](vpn-and-screenshot-protection.md) - the two
+  on-device protections, their states, their limits and their tests
+- [location-discovery.md](location-discovery.md) - discovery and geohashing design
+- [qr-invitations.md](qr-invitations.md) - what an invitation payload contains
+- [../README.md](../README.md) - feature overview and FAQ

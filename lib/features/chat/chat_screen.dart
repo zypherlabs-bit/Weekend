@@ -9,6 +9,7 @@ import '../../repositories/message_repository.dart';
 import '../../repositories/privacy_repository.dart';
 import '../../widgets/date_ideas_widget.dart';
 import '../../widgets/icebreaker_widget.dart';
+import '../../theme/app_theme.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final MatchItem match;
@@ -236,10 +237,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _awayBanner() {
+    final theme = Theme.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: const Color(0xFF241C2B),
+      color: AppTheme.warningAmber.withValues(alpha: 0.12),
       child: Row(
         children: [
           const Icon(Icons.do_not_disturb_on_rounded,
@@ -250,7 +252,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               '${widget.match.user.name} is away: “$_awayNote”',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFFFFB74D), fontSize: 12),
+              style: TextStyle(
+                color: theme.brightness == Brightness.dark
+                    ? const Color(0xFFFFB74D)
+                    : const Color(0xFF8A4B00),
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -259,27 +266,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _windowBar(String label, String suffix, {IconData? icon}) {
+    final theme = Theme.of(context);
+    final secondary = theme.colorScheme.onSurfaceVariant;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: const Color(0xFF23212B),
+      color: theme.colorScheme.surfaceContainerHigh,
       child: Row(
         children: [
-          Icon(icon ?? Icons.hourglass_top_rounded,
-              color: Colors.white54, size: 16),
+          Icon(icon ?? Icons.hourglass_top_rounded, color: secondary, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               label + suffix,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: secondary, fontSize: 12),
             ),
           ),
           TextButton(
             onPressed: _windowActionInFlight ? null : _extendWindow,
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFFF9966),
+              foregroundColor: theme.colorScheme.primary,
               padding: const EdgeInsets.symmetric(horizontal: 8),
             ),
             child: _windowActionInFlight
@@ -296,26 +304,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _expiredBar() {
+    final theme = Theme.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: const Color(0xFF2B2020),
+      color: theme.colorScheme.errorContainer.withValues(alpha: 0.55),
       child: Row(
         children: [
-          const Icon(Icons.timer_off_rounded, color: Colors.redAccent, size: 16),
+          Icon(Icons.timer_off_rounded, color: theme.colorScheme.error, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'The first-message window expired',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
             ),
           ),
           TextButton(
             onPressed: _windowActionInFlight ? null : _rematch,
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFFF9966),
+              foregroundColor: theme.colorScheme.primary,
               padding: const EdgeInsets.symmetric(horizontal: 8),
             ),
             child: _windowActionInFlight
@@ -334,6 +346,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(weekendProvider);
+    final theme = Theme.of(context);
 
     // Message ownership must come from the auth session. `state.currentUser.id`
     // is the 'me' placeholder until the profile load resolves, which would
@@ -347,25 +360,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         : state.currentUser.id;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF130E20),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_rounded),
         ),
         title: Row(
           children: [
             CircleAvatar(
               radius: 20,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
               backgroundImage: widget.match.user.photos.isEmpty
                   ? null
                   : CachedNetworkImageProvider(
                       widget.match.user.photos.first,
                     ),
               child: widget.match.user.photos.isEmpty
-                  ? const Icon(Icons.person_rounded, color: Colors.white38)
+                  ? Icon(
+                      Icons.person_rounded,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    )
                   : null,
             ),
             const SizedBox(width: 12),
@@ -375,9 +392,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 children: [
                   Text(
                     widget.match.user.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -387,9 +403,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   // message, so it is labelled as exactly that.
                   Text(
                     'Last message: ${_lastSeenLabel(widget.match)}',
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 12,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -411,11 +426,16 @@ DateIdeasButton(
            IconButton(
              tooltip: 'Voice calls are not available in this release',
              onPressed: null,
-             icon: const Icon(Icons.call_rounded, color: Colors.white38),
+             icon: Icon(
+               Icons.call_rounded,
+               color: theme.colorScheme.onSurfaceVariant.withValues(
+                 alpha: 0.5,
+               ),
+             ),
            ),
-              PopupMenuButton(
-            icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
-            color: const Color(0xFF2E244A),
+            PopupMenuButton(
+            icon: const Icon(Icons.more_vert_rounded),
+            color: theme.colorScheme.surfaceContainerHigh,
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'block',
@@ -515,21 +535,19 @@ DateIdeasButton(
                                     Color(0xFFFF4081),
                                   ],
                                 )
-                              : const LinearGradient(
-                                  colors: [
-                                    Color(0xFF23212B),
-                                    Color(0xFF282534),
-                                  ],
-                                ),
+                              : null,
+                          color: isMe
+                              ? null
+                              : theme.colorScheme.surfaceContainerHighest,
 
                           borderRadius: BorderRadius.circular(18).copyWith(
                             bottomLeft: isMe
-                                ? Radius.circular(18)
-                                : Radius.circular(4),
+                                ? const Radius.circular(18)
+                                : const Radius.circular(4),
 
                             bottomRight: isMe
-                                ? Radius.circular(4)
-                                : Radius.circular(18),
+                                ? const Radius.circular(4)
+                                : const Radius.circular(18),
                           ),
                         ),
 
@@ -540,8 +558,10 @@ DateIdeasButton(
                             Text(
                               message.text,
 
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: isMe
+                                    ? Colors.white
+                                    : theme.colorScheme.onSurface,
 
                                 fontSize: 14.5,
 
@@ -557,8 +577,10 @@ DateIdeasButton(
                               const SizedBox(height: 4),
                               Text(
                                 'Flagged: ${message.riskFlags.join(' · ')}',
-                                style: const TextStyle(
-                                  color: Color(0xFFFFB74D),
+                                style: TextStyle(
+                                  color: theme.brightness == Brightness.dark
+                                      ? const Color(0xFFFFB74D)
+                                      : const Color(0xFF8A4B00),
                                   fontSize: 11,
                                 ),
                               ),
@@ -570,7 +592,7 @@ DateIdeasButton(
                               Text(
                                 '${message.translatedText}',
                                 style: TextStyle(
-                                  color: const Color(0xFFFF9966),
+                                  color: theme.colorScheme.primary,
                                   fontSize: 12,
                                 ),
                               ),
@@ -589,7 +611,7 @@ DateIdeasButton(
                                 child: Text(
                                   'Translate',
                                   style: TextStyle(
-                                    color: const Color(0xFFFF9966),
+                                    color: theme.colorScheme.primary,
                                     fontSize: 12,
                                     decoration: TextDecoration.underline,
                                   ),
@@ -603,7 +625,9 @@ DateIdeasButton(
                               _formatTime(message.timestamp),
 
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.6),
+                                color: isMe
+                                    ? Colors.white.withValues(alpha: 0.7)
+                                    : theme.colorScheme.onSurfaceVariant,
 
                                 fontSize: 10,
                               ),
@@ -628,10 +652,10 @@ DateIdeasButton(
               bottom: MediaQuery.of(context).viewInsets.bottom + 8,
             ),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1C24),
+              color: theme.colorScheme.surface,
 
               border: Border(
-                top: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+                top: BorderSide(color: theme.colorScheme.outlineVariant),
               ),
             ),
             child: Row(
@@ -640,21 +664,23 @@ DateIdeasButton(
                   child: TextField(
                     controller: _messageController,
                     enabled: SupabaseConfig.isConfigured,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: theme.colorScheme.onSurface),
                     decoration: InputDecoration(
                       hintText: SupabaseConfig.isConfigured
                           ? 'Type a message...'
                           : 'Connect a backend to enable messaging',
 
                       hintStyle: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.45),
+                        color: theme.colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.75,
+                        ),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: const Color(0xFF2E244A),
+                      fillColor: theme.colorScheme.surfaceContainerHighest,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 10,
@@ -667,7 +693,7 @@ DateIdeasButton(
                 IconButton(
                   onPressed: _sendMessage,
                   style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF4B72),
+                    backgroundColor: theme.colorScheme.primary,
                   ),
                   icon: const Icon(Icons.send_rounded, color: Colors.white),
                 ),

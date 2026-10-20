@@ -60,7 +60,7 @@ class SelectChip extends StatelessWidget {
                     icon,
                     size: 16,
                     color: selected
-                        ? Colors.white
+                        ? Theme.of(context).colorScheme.onSurface
                         : theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   const SizedBox(width: 6),
@@ -68,7 +68,7 @@ class SelectChip extends StatelessWidget {
                 Text(
                   label,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: selected ? Colors.white : theme.colorScheme.onSurface,
+                    color: selected ? Theme.of(context).colorScheme.onSurface : theme.colorScheme.onSurface,
                     fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
@@ -274,7 +274,7 @@ class ResultPanel extends StatelessWidget {
                 onPressed: onPrimary,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.sunsetCoral,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
                     borderRadius:

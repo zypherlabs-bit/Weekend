@@ -33,8 +33,10 @@ class NotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
+    // A notification small icon must be a white silhouette on transparent;
+    // the full-colour launcher plate renders as a white blob on Android.
     const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
+      '@drawable/weekend_notification_icon',
     );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -278,7 +280,7 @@ class NotificationService {
       importance: Importance.high,
       playSound: true,
       enableVibration: true,
-      icon: '@mipmap/ic_launcher',
+      icon: '@drawable/weekend_notification_icon',
       color: const Color(0xFFFF4B72),
       colorized: true,
     );

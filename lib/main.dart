@@ -1,5 +1,6 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -10,9 +11,14 @@ import 'routing/app_router.dart';
 import 'providers/theme_provider.dart';
 import 'services/app_lock_service.dart';
 import 'features/auth/biometric_lock_gate.dart';
+import 'features/security/vpn_security_gate.dart';
+import 'widgets/weekend_design_system.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Let the glass atmosphere run under the system bars; each screen already
+  // uses SafeArea for tappable content.
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   // LIVE-ONLY: a release binary must never ship without live credentials.
   // Debug and test runs may start unconfigured - every backend call is
@@ -58,10 +64,7 @@ Future<void> main() async {
   await container.read(themeModeProvider.notifier).load();
 
   runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const WeekendApp(),
-    ),
+    UncontrolledProviderScope(container: container, child: const WeekendApp()),
   );
 }
 
@@ -76,9 +79,29 @@ class _WeekendAppState extends ConsumerState<WeekendApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
-    // Previously hardcoded to ThemeMode.system, which made the settings
-    // dialog's "Dark Mode" switch a control that changed nothing.
+    // Day / Night / Auto are persisted before the first frame; Auto is a
+    // genuine ThemeMode.system, not a hardcoded brightness.
     final themeMode = ref.watch(themeModeProvider);
+    final systemBrightness =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    final effectiveBrightness = switch (themeMode) {
+      ThemeMode.light => Brightness.light,
+      ThemeMode.dark => Brightness.dark,
+      ThemeMode.system => systemBrightness,
+    };
+    final overlayStyle = SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: effectiveBrightness == Brightness.dark
+          ? Brightness.light
+          : Brightness.dark,
+      statusBarBrightness: effectiveBrightness,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarIconBrightness: effectiveBrightness == Brightness.dark
+          ? Brightness.light
+          : Brightness.dark,
+    );
+    SystemChrome.setSystemUIOverlayStyle(overlayStyle);
 
     return MaterialApp.router(
       title: 'Weekend',
@@ -86,11 +109,16 @@ class _WeekendAppState extends ConsumerState<WeekendApp> {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
+      themeAnimationDuration: WeekendMotion.standard,
+      themeAnimationCurve: WeekendMotion.curve,
       routerConfig: router,
-      // The gate lives INSIDE the MaterialApp, so it is a real widget in the
-      // tree rather than an OverlayEntry inserted above the app - which is what
-      // silently failed before.
-      builder: (context, child) => BiometricLockGate(child: child),
+      // Both gates live INSIDE the MaterialApp, so they are real widgets in
+      // the tree rather than OverlayEntries inserted above the app.  The VPN
+      // gate wraps the biometric gate so a resume check covers whatever was
+      // last visible, including the lock screen.
+      builder: (context, child) => WeekendAtmosphere(
+        child: VpnSecurityGate(child: BiometricLockGate(child: child)),
+      ),
     );
   }
 }

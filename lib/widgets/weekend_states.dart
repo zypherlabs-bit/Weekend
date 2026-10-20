@@ -14,28 +14,32 @@ class WeekendErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(WeekendTokens.spacingXxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 40, color: Colors.red),
+            Icon(
+              Icons.error_outline_rounded,
+              size: 40,
+              color: theme.colorScheme.error,
+            ),
             const SizedBox(height: WeekendTokens.spacingMd),
             Text(
               message,
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: WeekendTokens.spacingLg),
             OutlinedButton(
               onPressed: onRetry,
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Color(0xFFFF4B72)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
+                foregroundColor: theme.colorScheme.primary,
+                side: BorderSide(color: theme.colorScheme.primary),
               ),
               child: const Text('Try again'),
             ),

@@ -20,50 +20,40 @@ class WeekendEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(WeekendTokens.spacingXxl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF4B72).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(WeekendTokens.radiusXl),
-              ),
-              child: Icon(icon, size: 36, color: const Color(0xFFFF4B72)),
+            WeekendGlass(
+              radius: WeekendTokens.radiusXl,
+              padding: const EdgeInsets.all(18),
+              child: Icon(icon, size: 36, color: theme.colorScheme.primary),
             ),
             const SizedBox(height: WeekendTokens.spacingLg),
             Text(
               title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: WeekendTokens.spacingSm),
             Text(
               subtitle,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
-                fontSize: 14,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: WeekendTokens.spacingLg),
-              ElevatedButton(
+              WeekendGlassButton(
+                label: actionLabel!,
                 onPressed: onAction,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF4B72),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                ),
-                child: Text(actionLabel!),
+                expanded: false,
               ),
             ],
           ],

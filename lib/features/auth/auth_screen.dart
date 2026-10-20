@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' hide AsyncValue;
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/intro_video_player.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/weekend_design_system.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -90,11 +92,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
+    final theme = Theme.of(context);
+    final errorColor = theme.colorScheme.error;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
+      backgroundColor: theme.scaffoldBackgroundColor,
       // The clips run full-bleed behind the whole form rather than sitting in a
-      // 180px panel above it. The form scrolls over the top, and the scrim
-      // keeps the inputs readable on any frame.
+      // 180px panel above it. The form is a glass card over the footage, and
+      // the scrim keeps it readable on any frame.
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -102,203 +107,212 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           const _FormScrim(),
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Welcome Back',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sign in with your email and password or a passkey',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.7),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    // Sign-in methods: email/password below, passkey at the bottom.
-                    TextFormField(
-                      controller: _emailController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _inputDecoration(
-                        'Email',
-                        Icons.email_outlined,
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _passwordController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: _inputDecoration(
-                        'Password',
-                        Icons.lock_outline,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: Colors.white60,
-                          ),
-                          onPressed: () {
-                            setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            );
-                          },
-                        ),
-                      ),
-                      obscureText: _obscurePassword,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    if (authState.error != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.red.withValues(alpha: 0.3),
+                    Row(
+                      children: [
+                        const WeekendLogo(size: 40, glow: false),
+                        const SizedBox(width: 9),
+                        Text(
+                          'Weekend',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                            shadows: const [
+                              Shadow(color: Color(0x66000000), blurRadius: 10),
+                            ],
                           ),
                         ),
-                        child: Text(
-                          authState.error!,
-                          style: const TextStyle(color: Colors.red),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: (authState.isLoading || _submitting)
-                            ? null
-                            : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF4B72),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+                    WeekendGlass.strong(
+                      radius: WeekendRadius.xl,
+                      padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Welcome Back',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.6,
+                            ),
                           ),
-                          elevation: 0,
-                        ),
-                        child: _submitting
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : const Text(
-                                'Sign In',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                          const SizedBox(height: 6),
+                          Text(
+                            'Sign in with your email and password or a passkey',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          TextFormField(
+                            controller: _emailController,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: Icon(Icons.email_outlined),
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your email';
+                              }
+                              if (!value.contains('@')) {
+                                return 'Please enter a valid email';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            controller: _passwordController,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: IconButton(
+                                tooltip: _obscurePassword
+                                    ? 'Show password'
+                                    : 'Hide password',
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                ),
+                                onPressed: () {
+                                  setState(
+                                    () =>
+                                        _obscurePassword = !_obscurePassword,
+                                  );
+                                },
+                              ),
+                            ),
+                            obscureText: _obscurePassword,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your password';
+                              }
+                              if (value.length < 6) {
+                                return 'Password must be at least 6 '
+                                    'characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 18),
+                          if (authState.error != null) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.errorContainer,
+                                borderRadius:
+                                    BorderRadius.circular(WeekendRadius.sm),
+                                border: Border.all(
+                                  color: errorColor.withValues(alpha: 0.35),
                                 ),
                               ),
+                              child: Text(
+                                authState.error!,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onErrorContainer,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                          ],
+                          WeekendGlassButton(
+                            label: 'Sign In',
+                            icon: Icons.login_rounded,
+                            loading: _submitting,
+                            onPressed:
+                                (authState.isLoading || _submitting)
+                                    ? null
+                                    : _submit,
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () {
+                              // A stale error must not follow the user across
+                              // screens.
+                              ref
+                                  .read(authStateProvider.notifier)
+                                  .dismissError();
+                              context.go('/signup?from=auth');
+                            },
+                            child: const Text(
+                              "Don't have an account? Sign up",
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Divider(
+                                  color: theme.colorScheme.outlineVariant
+                                      .withValues(alpha: 0.55),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                child: Text(
+                                  'or',
+                                  style: theme.textTheme.labelSmall,
+                                ),
+                              ),
+                              Expanded(
+                                child: Divider(
+                                  color: theme.colorScheme.outlineVariant
+                                      .withValues(alpha: 0.55),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed:
+                                (authState.isLoading || _submitting)
+                                    ? null
+                                    : _passkeySignIn,
+                            icon: const Icon(Icons.fingerprint, size: 21),
+                            label: const Text('Sign in with passkey'),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () {
-                        // A stale error must not follow the user across screens.
-                        ref.read(authStateProvider.notifier).dismissError();
-                        context.go('/signup?from=auth');
-                      },
-                      child: const Text(
-                        "Don't have an account? Sign up",
-                        style: TextStyle(
-                          color: Color(0xFFFF9966),
-                          fontSize: 14,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.lock_outline_rounded,
+                          size: 13,
+                          color: Colors.white.withValues(alpha: 0.72),
                         ),
-                      ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Private by design',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.72),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 24),
-                    TextButton.icon(
-                      onPressed: (authState.isLoading || _submitting)
-                          ? null
-                          : _passkeySignIn,
-                      icon: const Icon(
-                        Icons.fingerprint,
-                        color: Color(0xFFFF9966),
-                      ),
-                      label: const Text(
-                        'Sign in with Passkey',
-                        style: TextStyle(
-                          color: Color(0xFFFF9966),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: const BorderSide(color: Color(0xFFFF9966)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(
-    String label,
-    IconData icon, {
-    Widget? suffixIcon,
-  }) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
-      prefixIcon: Icon(icon, color: Colors.white60),
-      suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: const Color(0xFF1C162E),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFFFF4B72)),
       ),
     );
   }

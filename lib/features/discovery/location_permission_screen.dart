@@ -19,7 +19,7 @@ class _LocationPermissionScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -30,24 +30,24 @@ class _LocationPermissionScreenState
                 width: 120,
                 height: 120,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFF4B72), Color(0xFFFF9966)],
+                  gradient: LinearGradient(
+                    colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.tertiary],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFFF4B72).withValues(alpha: 0.3),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                       blurRadius: 30,
                       spreadRadius: 10,
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.location_on_rounded,
                   size: 60,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 32),
@@ -112,8 +112,8 @@ class _LocationPermissionScreenState
                 ),
               ],
               if (_isRequesting)
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF4B72)),
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                 )
               else
                 Column(
@@ -124,8 +124,8 @@ class _LocationPermissionScreenState
                       child: ElevatedButton(
                         onPressed: _requestLocation,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF4B72),
-                          foregroundColor: Colors.white,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Theme.of(context).colorScheme.onSurface,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(28),
                           ),
@@ -150,7 +150,7 @@ class _LocationPermissionScreenState
                       child: Text(
                         'Not Now',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           fontSize: 15,
                         ),
                       ),
@@ -163,7 +163,7 @@ class _LocationPermissionScreenState
                 child: Text(
                   'Enable location in app settings',
                   style: TextStyle(
-                    color: const Color(0xFFFF4B72).withValues(alpha: 0.9),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.9),
                     fontSize: 13,
                     decoration: TextDecoration.underline,
                   ),

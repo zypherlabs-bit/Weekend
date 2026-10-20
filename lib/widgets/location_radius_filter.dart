@@ -20,10 +20,10 @@ class LocationRadiusFilter extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (showLabel) ...[
-          const Text(
+          Text(
             'Discovery radius',
             style: TextStyle(
-              color: Colors.white70,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 12,
               fontWeight: FontWeight.w500,
               letterSpacing: 0.5,
@@ -45,8 +45,8 @@ class LocationRadiusFilter extends StatelessWidget {
                       : '${entry.value.toStringAsFixed(entry.value == 0.5 ? 1 : 0)} km',
                   style: TextStyle(
                     color: isSelected
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.4),
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                     fontSize: isSelected ? 13 : 11,
                     fontWeight: isSelected
                         ? FontWeight.bold
@@ -59,7 +59,7 @@ class LocationRadiusFilter extends StatelessWidget {
                   height: isSelected ? 6 : 0,
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? const Color(0xFFFF4B72)
+                        ? Theme.of(context).colorScheme.primary
                         : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
@@ -71,10 +71,10 @@ class LocationRadiusFilter extends StatelessWidget {
         const SizedBox(height: 8),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            thumbColor: const Color(0xFFFF4B72),
-            overlayColor: const Color(0xFFFF4B72).withValues(alpha: 0.2),
-            activeTrackColor: const Color(0xFFFF4B72),
-            inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
+            thumbColor: Theme.of(context).colorScheme.primary,
+            overlayColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+            activeTrackColor: Theme.of(context).colorScheme.primary,
+            inactiveTrackColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 14),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 24),
             trackHeight: 4,
@@ -93,8 +93,8 @@ class LocationRadiusFilter extends StatelessWidget {
         Center(
           child: Text(
             LocationService.formatDistance(currentRadiusKm.toDouble()),
-            style: const TextStyle(
-              color: Color(0xFFFF4B72),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),

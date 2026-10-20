@@ -203,7 +203,7 @@ class _LockSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       // Fully opaque: while locked, nothing of the app beneath is visible.
-      color: const Color(0xFF130E20),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -212,8 +212,8 @@ class _LockSurface extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Weekend's own identity - no third-party branding.
-              const Center(
-                child: Icon(Icons.weekend_rounded, size: 56, color: Color(0xFFFF4B72)),
+              Center(
+                child: Icon(Icons.weekend_rounded, size: 56, color: Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(height: 40),
               Center(
@@ -221,20 +221,20 @@ class _LockSurface extends StatelessWidget {
                   width: 96,
                   height: 96,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF4B72).withValues(alpha: 0.15),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, size: 48, color: const Color(0xFFFF4B72)),
+                  child: Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary),
                 ),
               ),
               const SizedBox(height: 28),
-              const Text(
+              Text(
                 'Weekend is locked',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 10),
@@ -244,7 +244,7 @@ class _LockSurface extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   height: 1.4,
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               if (error != null) ...[
@@ -272,9 +272,9 @@ class _LockSurface extends StatelessWidget {
               ],
               const SizedBox(height: 32),
               if (prompting)
-                const Center(
+                Center(
                   child: CircularProgressIndicator(
-                    color: Color(0xFFFF4B72),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 )
               else
@@ -288,8 +288,8 @@ class _LockSurface extends StatelessWidget {
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF4B72),
-                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
                       ),
@@ -302,7 +302,7 @@ class _LockSurface extends StatelessWidget {
                 child: Text(
                   'Turn off app lock',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.45),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
                     fontSize: 13,
                   ),
                 ),

@@ -100,10 +100,14 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/icons/weekend_logo.png"
-  adaptive_icon_background: "#FF6C5C"
+  # The supplied 3-D ribbon "W" is the product mark.  The legacy master is an
+  # opaque plate for launchers without adaptive-icon support; the adaptive
+  # foreground is transparent and sized inside Android's 66% safe zone.
+  image_path: "assets/icons/weekend_logo_legacy.png"
+  adaptive_icon_background: "#0D0818"
   adaptive_icon_foreground: "assets/icons/weekend_logo_fg.png"
-  adaptive_icon_round_background: "#FF6C5C"
+  adaptive_icon_monochrome: "assets/icons/weekend_logo_monochrome.png"
+  adaptive_icon_round_background: "#0D0818"
   adaptive_icon_round_foreground: "assets/icons/weekend_logo_fg.png"
   min_sdk_android: 24
 

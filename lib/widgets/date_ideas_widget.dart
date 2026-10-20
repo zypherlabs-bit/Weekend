@@ -59,7 +59,7 @@ class _DateIdeasButtonState extends ConsumerState<DateIdeasButton> {
   Widget build(BuildContext context) {
     return IconButton(
       tooltip: 'Suggest date ideas',
-      icon: const Icon(Icons.lightbulb_rounded, color: Colors.white),
+      icon: Icon(Icons.lightbulb_rounded, color: Theme.of(context).colorScheme.onSurface),
       onPressed: _toggle,
     );
   }
@@ -111,8 +111,8 @@ class _DateIdeasSheetState extends ConsumerState<_DateIdeasSheet> {
 
     return Container(
       height: widget.maxHeight,
-      decoration: const BoxDecoration(
-        color: Color(0xFF1C162E),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -138,7 +138,7 @@ class _DateIdeasSheetState extends ConsumerState<_DateIdeasSheet> {
         height: 4,
         margin: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(2),
         ),
       ),
@@ -151,10 +151,10 @@ class _DateIdeasSheetState extends ConsumerState<_DateIdeasSheet> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
+          Text(
             'Date Ideas',
             style: TextStyle(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -166,9 +166,9 @@ class _DateIdeasSheetState extends ConsumerState<_DateIdeasSheet> {
                     city: widget.city,
                   );
             },
-            child: const Text(
+            child: Text(
               'Refresh',
-              style: TextStyle(color: Color(0xFFFF9966)),
+              style: TextStyle(color: Theme.of(context).colorScheme.tertiary),
             ),
           ),
         ],
@@ -182,17 +182,17 @@ class _LoadingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF4B72)),
+            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
           ),
           SizedBox(height: 16),
           Text(
             'Crafting date ideas...',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
           ),
         ],
       ),
@@ -211,16 +211,16 @@ class _EmptyContent extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.lightbulb_outline_rounded,
               size: 48,
-              color: Colors.white38,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'No date ideas right now',
               style: TextStyle(
-                color: Colors.white70,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 16,
               ),
               textAlign: TextAlign.center,
@@ -259,12 +259,12 @@ class _DateIdeaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF23212B), Color(0xFF282534)],
+        gradient: LinearGradient(
+          colors: [Theme.of(context).colorScheme.surfaceContainerHigh, Color(0xFF282534)],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
         ),
       ),
       child: Column(
@@ -277,8 +277,8 @@ class _DateIdeaCard extends StatelessWidget {
               children: [
                 Text(
                   idea.title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -286,8 +286,8 @@ class _DateIdeaCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   idea.venueType,
-                  style: const TextStyle(
-                    color: Color(0xFFFF9966),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.tertiary,
                     fontSize: 13,
                   ),
                 ),
@@ -295,7 +295,7 @@ class _DateIdeaCard extends StatelessWidget {
                 Text(
                   idea.description,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                     fontSize: 14,
                     height: 1.4,
                   ),
@@ -307,22 +307,22 @@ class _DateIdeaCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
                 borderRadius:
                     const BorderRadius.vertical(bottom: Radius.circular(16)),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.attach_money_rounded,
-                    color: Color(0xFFFF9966),
+                    color: Theme.of(context).colorScheme.tertiary,
                     size: 16,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     idea.estimatedBudget,
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 13,
                     ),
                   ),

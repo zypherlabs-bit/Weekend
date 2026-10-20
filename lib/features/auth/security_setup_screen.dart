@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../services/biometric_auth_service.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/weekend_design_system.dart';
 
 /// Post-signup security setup: the single place a new account is offered a
 /// passkey and an app-lock.
@@ -25,10 +27,6 @@ class SecuritySetupScreen extends ConsumerStatefulWidget {
 }
 
 class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
-  static const Color _background = Color(0xFF130E20);
-  static const Color _primary = Color(0xFFFF4B72);
-  static const Color _accent = Color(0xFFFF9966);
-
   bool _loading = true;
   bool _biometricEnabled = false;
   bool _biometricAvailable = false;
@@ -96,115 +94,100 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
   }
 
   @override
-
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final name = authState.user?.name ?? 'there';
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: _background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 32),
-              Center(
-                child: Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [_primary, _accent],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+      backgroundColor: Colors.transparent,
+      body: WeekendAtmosphere(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 24),
+                Center(
+                  child: Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [scheme.primary, scheme.tertiary],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(WeekendRadius.lg),
                     ),
-                    borderRadius: BorderRadius.circular(24),
+                    child: Icon(
+                      Icons.shield_outlined,
+                      size: 44,
+                      color: Colors.white,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.shield_outlined,
-                    size: 44,
-                    color: Colors.white,
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  'You\'re all set',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              const SizedBox(height: 28),
-              const Text(
-                'You\'re all set',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Nice to meet you, $name. Set up a quick way to sign in '
-                'before you start exploring.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  height: 1.5,
-                  color: Colors.white.withValues(alpha: 0.75),
-                ),
-              ),
-              const SizedBox(height: 32),
-              if (_loading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: CircularProgressIndicator(color: _primary),
+                const SizedBox(height: 12),
+                Text(
+                  'Nice to meet you, $name. Set up a quick way to sign in '
+                  'before you start exploring.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    height: 1.5,
+                    color: scheme.onSurfaceVariant,
                   ),
-                )
-              else ...[
-                _PasskeyCard(
-                  busy: _busy,
-                  message: _passkeyMessage,
-                  isError: _passkeyIsError,
-                  onAdd: _addPasskey,
                 ),
-                const SizedBox(height: 16),
-                _BiometricCard(
-                  available: _biometricAvailable,
-                  enabled: _biometricEnabled,
-                  busy: _busy,
-                  onChanged: _toggleBiometric,
+                const SizedBox(height: 28),
+                if (_loading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else ...[
+                  _PasskeyCard(
+                    busy: _busy,
+                    message: _passkeyMessage,
+                    isError: _passkeyIsError,
+                    onAdd: _addPasskey,
+                  ),
+                  const SizedBox(height: 14),
+                  _BiometricCard(
+                    available: _biometricAvailable,
+                    enabled: _biometricEnabled,
+                    busy: _busy,
+                    onChanged: _toggleBiometric,
+                  ),
+                ],
+                const SizedBox(height: 28),
+                WeekendGlassButton(
+                  label: 'Continue',
+                  icon: Icons.arrow_forward_rounded,
+                  onPressed: _busy ? null : _continue,
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _busy ? null : _continue,
+                  child: Text(
+                    'I\'ll do this later',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
               ],
-              const SizedBox(height: 32),
-              SizedBox(
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _busy ? null : _continue,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _primary,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: _primary.withValues(alpha: 0.4),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'Continue',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: _busy ? null : _continue,
-                child: const Text(
-                  'I\'ll do this later',
-                  style: TextStyle(color: _accent, fontSize: 14),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -212,6 +195,7 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
   }
 }
 
+/// One glass row on the security-setup screen.
 class _SetupCard extends StatelessWidget {
   const _SetupCard({required this.child});
 
@@ -219,13 +203,8 @@ class _SetupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-      ),
+    return WeekendGlassCard(
+      padding: const EdgeInsets.all(WeekendSpacing.md),
       child: child,
     );
   }
@@ -246,21 +225,21 @@ class _PasskeyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return _SetupCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.fingerprint, color: Color(0xFFFF9966)),
+              Icon(Icons.fingerprint, color: scheme.tertiary),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Passkey',
-                  style: TextStyle(
-                    fontSize: 16,
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
                   ),
                 ),
               ),
@@ -269,14 +248,14 @@ class _PasskeyCard extends StatelessWidget {
                 child: FilledButton(
                   onPressed: busy ? null : onAdd,
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF4B72),
+                    backgroundColor: scheme.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(WeekendRadius.xl),
                     ),
                   ),
                   child: busy
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
@@ -293,22 +272,18 @@ class _PasskeyCard extends StatelessWidget {
           Text(
             'Sign in with your fingerprint, face or device PIN. '
             'No password needed.',
-            style: TextStyle(
-              fontSize: 13.5,
+            style: theme.textTheme.bodySmall?.copyWith(
               height: 1.45,
-              color: Colors.white.withValues(alpha: 0.7),
+              color: scheme.onSurfaceVariant,
             ),
           ),
           if (message != null) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             Text(
               message!,
-              style: TextStyle(
-                fontSize: 13,
+              style: theme.textTheme.bodySmall?.copyWith(
                 height: 1.4,
-                color: isError
-                    ? const Color(0xFFFF6B6B)
-                    : const Color(0xFF7BD88F),
+                color: isError ? scheme.error : AppTheme.successGreen,
               ),
             ),
           ],
@@ -333,21 +308,21 @@ class _BiometricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return _SetupCard(
       child: Row(
         children: [
-          const Icon(Icons.face_retouching_natural, color: Color(0xFFFF9966)),
+          Icon(Icons.face_retouching_natural, color: scheme.tertiary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'App lock',
-                  style: TextStyle(
-                    fontSize: 16,
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -355,10 +330,9 @@ class _BiometricCard extends StatelessWidget {
                   available
                       ? 'Ask for biometrics when Weekend opens.'
                       : 'No biometrics are enrolled on this device.',
-                  style: TextStyle(
-                    fontSize: 13.5,
+                  style: theme.textTheme.bodySmall?.copyWith(
                     height: 1.4,
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -367,7 +341,7 @@ class _BiometricCard extends StatelessWidget {
           Switch(
             value: enabled,
             onChanged: (available && !busy) ? onChanged : null,
-            activeThumbColor: const Color(0xFFFF4B72),
+            activeThumbColor: scheme.primary,
           ),
         ],
       ),

@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Weekend App Launch Screen -->
+<!-- Weekend launch screen (pre-Android 12). -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Background color matching app theme -->
-    <item android:drawable="@color/weekend_background"/>
+    <item android:drawable="@color/weekend_background" />
 
-    <!-- Weekend Logo centered -->
+    <!-- The transparent ribbon-W artwork, not a masked launcher icon. -->
     <item
-        android:width="200dp"
-        android:height="200dp"
+        android:width="184dp"
+        android:height="184dp"
         android:gravity="center"
-        android:drawable="@mipmap/ic_launcher"/>
+        android:drawable="@drawable/weekend_splash_logo" />
 </layer-list>

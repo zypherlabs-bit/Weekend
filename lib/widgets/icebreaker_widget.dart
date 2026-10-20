@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/models.dart';
 import '../../repositories/icebreaker_repository.dart';
+import '../theme/app_theme.dart';
 
 /// A button that generates an icebreaker (AI conversation starter) for the
 /// current match and shows it in a bottom sheet.
@@ -53,7 +54,7 @@ class _IcebreakerButtonState extends ConsumerState<IcebreakerButton> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1E1C24),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -66,29 +67,29 @@ class _IcebreakerButtonState extends ConsumerState<IcebreakerButton> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.lightbulb_outline_rounded,
-                      color: Color(0xFFFF9966), size: 24),
+                  Icon(Icons.lightbulb_outline_rounded,
+                      color: Theme.of(context).colorScheme.tertiary, size: 24),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'Icebreaker',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Text(
                 suggestion,
-                style: const TextStyle(color: Colors.white70, fontSize: 16, height: 1.5),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 16, height: 1.5),
               ),
               if (_sharedInterestText().isNotEmpty) ...[
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Text(
                   'Shared interests: ${_sharedInterestText()}',
-                  style: const TextStyle(color: Colors.white38, fontSize: 13),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                 ),
               ],
               const SizedBox(height: 24),
@@ -98,30 +99,30 @@ class _IcebreakerButtonState extends ConsumerState<IcebreakerButton> {
                   onPressed: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text('Tip copied to clipboard — paste it into the chat!'),
-                        backgroundColor: Color(0xFF4CAF50),
+                        backgroundColor: AppTheme.onlineGreen,
                       ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF4B72),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  icon: const Icon(Icons.copy_rounded, color: Colors.white),
-                  label: const Text(
+                  icon: Icon(Icons.copy_rounded, color: Theme.of(context).colorScheme.onSurface),
+                  label: Text(
                     'Copy to paste',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Close', style: TextStyle(color: Colors.white38)),
+                child: Text('Close', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ),
             ],
           ),
@@ -136,15 +137,15 @@ class _IcebreakerButtonState extends ConsumerState<IcebreakerButton> {
       tooltip: _isLoading ? 'Generating icebreaker...' : 'Icebreaker',
       onPressed: _isLoading ? null : _generateAndShow,
       icon: _isLoading
-          ? const SizedBox(
+          ? SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.white70,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             )
-          : const Icon(Icons.lightbulb_outline_rounded, color: Colors.white70),
+          : Icon(Icons.lightbulb_outline_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
     );
   }
 }

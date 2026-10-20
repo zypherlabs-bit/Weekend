@@ -90,10 +90,14 @@ Rules enforced in this repository:
 | No OS cloud backup | `android:allowBackup="false"` in the manifest |
 | TLS only | `usesCleartextTraffic="false"` + network security config |
 | Minimal permissions | Manifest declares internet, network state, camera, location and notifications only |
-| Safe navigation | GoRouter redirect rules based on auth state |
+| Safe navigation | GoRouter redirect rules based on auth state and the VPN guard |
+| Screen-capture protection | `FLAG_SECURE` on the single hosting activity, before the engine attaches, plus `setRecentsScreenshotEnabled(false)` on Android 13+ |
+| VPN-aware access control | Local `ConnectivityManager` / `TRANSPORT_VPN` read over a platform channel; protected content is fail-closed, no IP lookup and no new permission |
 
 Weekend never stores biometric templates; matching happens inside Android's
-biometric stack.
+biometric stack. Neither the VPN check nor `FLAG_SECURE` collects or transmits
+data: see [vpn-and-screenshot-protection.md](vpn-and-screenshot-protection.md)
+for the states, the behaviour while blocked and the honest limitations.
 
 ---
 
@@ -142,6 +146,16 @@ Documented so users and reviewers are not misled:
   leaked — but also no notifications when the app is closed.
 - Weekend cannot promise to be immune to denial of service, device compromise or
   every class of attack; it implements defense in depth, not invulnerability.
+- **VPN detection has gaps.** Split tunnelling, per-app proxies, private DNS and
+  some OEM or always-on VPN implementations may not surface the VPN transport to
+  Android, so the guard can miss a tunnel. It is a strong supported signal, not a
+  guarantee.
+- **`FLAG_SECURE` is not absolute.** A camera pointed at the screen, a rooted or
+  modified device, or an OEM that ignores the flag is outside the platform
+  contract.
+- **Non-Android platforms are not VPN-gated.** The policy is an Android product
+  rule; on other platforms the detector reports `unsupported` and protected
+  content is allowed, which is stated in the UI rather than silently ignored.
 
 ---
 

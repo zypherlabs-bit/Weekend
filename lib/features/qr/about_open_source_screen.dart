@@ -42,7 +42,7 @@ class AboutOpenSourceScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     // Always white regardless of theme: a QR code needs a
                     // high-contrast light quiet zone to scan reliably.
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
@@ -60,14 +60,14 @@ class AboutOpenSourceScreen extends StatelessWidget {
                     // logo overlay or a slightly dirty camera lens.
                     errorCorrectionLevel: QrErrorCorrectLevel.H,
                     size: 220,
-                    backgroundColor: Colors.white,
-                    eyeStyle: const QrEyeStyle(
+                    backgroundColor: Theme.of(context).colorScheme.onSurface,
+                    eyeStyle: QrEyeStyle(
                       eyeShape: QrEyeShape.square,
-                      color: Color(0xFF130E20),
+                      color: Theme.of(context).scaffoldBackgroundColor,
                     ),
-                    dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleStyle: QrDataModuleStyle(
                       dataModuleShape: QrDataModuleShape.square,
-                      color: Color(0xFF130E20),
+                      color: Theme.of(context).scaffoldBackgroundColor,
                     ),
                   ),
                 ),
@@ -196,7 +196,7 @@ class _ActionButton extends StatelessWidget {
               label: Text(label),
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.sunsetCoral,
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),

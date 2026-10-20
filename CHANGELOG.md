@@ -10,6 +10,68 @@ handful of conventions that are worth stating once:
 - **Server-side enforcement.** Search filters, distance computation and access
   control live in PostgreSQL, not in the client.
 
+## [Unreleased]
+
+Working-tree changes not yet part of a tagged release. The version in
+`pubspec.yaml` is deliberately still `2.8.1+14`: the APK built from this tree is
+debug-signed (see [docs/security.md](docs/security.md) - release integrity), so it
+is a verification build and does not claim a release number.
+
+### Added
+
+- **Real brand artwork.** The supplied logo is now the single source of truth for
+  the app icon, the Android 12+ splash screen, the legacy splash drawable, the
+  notification icon and the in-app wordmark. Black matte was converted to alpha by
+  `tool/prepare_brand_assets.py`, which emits the adaptive foreground, a legacy
+  plate, an Android 13 monochrome (themed-icon) layer and five notification
+  densities.
+- **VPN-aware access control.** Android `ConnectivityManager` /
+  `NetworkCapabilities.TRANSPORT_VPN` is read over a platform channel and exposed
+  as a reactive security state with a router-level guard. Protected content is
+  fail-closed in the `vpn`, `no_network`, `error`, `unknown` and `checking`
+  states; `clear` (and `unsupported` on non-Android) restores access. Launch,
+  resume and Android network callbacks drive the check; there is no polling. The
+  blocker explains each state, always offers a retry, never signs the user out and
+  restores the interrupted destination. Full notes:
+  [docs/vpn-and-screenshot-protection.md](docs/vpn-and-screenshot-protection.md).
+- **Screen-capture protection.** `FLAG_SECURE` is applied to the hosting activity
+  before the Flutter engine attaches, plus `setRecentsScreenshotEnabled(false)` on
+  Android 13+, so the app and its recent-apps thumbnail stay out of screenshots.
+- **Day / Night / Auto themes.** The old "Dark Mode" switch is replaced by a
+  three-way selector backed by `ThemeModeController`: Day is always light, Night
+  is always dark, Auto is a genuine `ThemeMode.system`. The value is persisted
+  before the first frame and mirrored to `user_settings.theme_preference`.
+- **Glassmorphism design system.** `lib/widgets/weekend_design_system.dart` adds
+  `WeekendGlassCard`, `WeekendGlassPanel`, `WeekendGlassButton`,
+  `WeekendGlassNavigationBar`, `WeekendGlassBottomSheet`, `WeekendGlassDialog`,
+  `WeekendGlassTextField`, `WeekendGlassChip`, `WeekendGlassIconButton`,
+  `WeekendLogo` and the shared `WeekendAtmosphere` backdrop, on top of spacing,
+  radius and motion tokens in `lib/theme/app_theme.dart`. Blur is applied only
+  where it earns its cost, and it is dropped entirely when
+  `MediaQuery.disableAnimations` is set.
+- **Tests** for the new behaviour: `test/theme_mode_controller_test.dart`,
+  `test/theme_mode_widget_test.dart`, `test/vpn_route_guard_test.dart`,
+  `test/vpn_security_provider_test.dart`, `test/vpn_blocked_screen_test.dart`.
+
+### Changed
+
+- Every screen was redesigned on the shared atmosphere and glass surfaces, in both
+  brightnesses, without removing functionality: the previous hardcoded dark
+  palette (including the light-on-light and dark-on-dark contrast bugs) is gone.
+  Screens with secondary surfaces were migrated with `tool/theme_sweep.py` and
+  `tool/fix_const_v2.py`, which use the analyzer as their oracle.
+- Primary buttons use an explicit white foreground so they stay readable in light
+  mode as well as dark.
+
+### Fixed
+
+- Sign-up wizard validation no longer uses a `SnackBar`, which could cover the
+  primary action; the message is inline above the button.
+- VPN detection returned `unsupported` (instead of throwing) when the native
+  channel is absent, so widget tests and non-Android hosts are not locked out.
+- `VpnSecurityChannel` compiled: the `BinaryMessenger` constructor argument was
+  not a property, so `attach()` could not reach it.
+
 ## [2.8.1] - 2026-10-19
 
 Patch release. Nothing here is a new feature: it is the result of running the

@@ -83,7 +83,7 @@ void main() {
   testWidgets('wizard back arrow on step 1 returns to onboarding',
       (WidgetTester tester) async {
     await openWizard(tester);
-    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+    await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
     await tester.pumpAndSettle();
     expect(find.text('Welcome to Weekend'), findsOneWidget);
   });
@@ -99,7 +99,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Welcome Back'), findsOneWidget);
-    expect(find.text('Sign in with Passkey'), findsOneWidget);
+    expect(find.text('Sign in with passkey'), findsOneWidget);
     expect(find.text("Don't have an account? Sign up"), findsOneWidget);
     // Guest browsing moved to onboarding; sign-in is exactly two methods.
     expect(find.text('Explore as Guest'), findsNothing);

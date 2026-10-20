@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../providers/weekend_provider.dart';
 import '../../config/supabase_config.dart';
 import '../settings/settings_dialog.dart';
+import '../../theme/app_theme.dart';
 
 /// The privacy flags stored on the user's live `user_settings` row.
 class _PrivacySettings {
@@ -32,17 +33,17 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF130E20),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
         ),
-        title: const Text(
+        title: Text(
           'Safety Center',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -57,8 +58,8 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFF4B72), Color(0xFFFF6B45)],
+                  gradient: LinearGradient(
+                    colors: [Theme.of(context).colorScheme.primary, Color(0xFFFF6B45)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -66,9 +67,9 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.emergency_rounded,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       size: 28,
                     ),
                     const SizedBox(width: 12),
@@ -76,10 +77,10 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Emergency Assistance',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -88,7 +89,7 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                           Text(
                             'If you\'re in immediate danger, contact emergency services.',
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
                               fontSize: 13,
                             ),
                           ),
@@ -98,8 +99,8 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                     ElevatedButton(
                       onPressed: () => _launchPhone('112'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFFFF4B72),
+                        backgroundColor: Theme.of(context).colorScheme.onSurface,
+                        foregroundColor: Theme.of(context).colorScheme.primary,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
@@ -125,7 +126,7 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                 icon: Icons.block_rounded,
                 title: 'Blocked Users',
                 subtitle: 'Manage users you\'ve blocked',
-                color: const Color(0xFFFF4B72),
+                color: Theme.of(context).colorScheme.primary,
                 onTap: () => _showBlockedUsers(context),
               ),
               _SafetyToolCard(
@@ -139,14 +140,14 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                 icon: Icons.share_rounded,
                 title: 'Share My Date',
                 subtitle: 'Share plans with trusted contacts',
-                color: const Color(0xFFFF9966),
+                color: Theme.of(context).colorScheme.tertiary,
                 onTap: () => _showShareDateDialog(context),
               ),
               _SafetyToolCard(
                 icon: Icons.verified_user_rounded,
                 title: 'Photo Verification',
                 subtitle: 'Verify your profile photo',
-                color: const Color(0xFF4CAF50),
+                color: AppTheme.onlineGreen,
                 onTap: () => _showVerificationDialog(context),
               ),
               _SafetyToolCard(
@@ -240,14 +241,14 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                 description:
                     'Verified profiles show a green badge. Request verification from matches.',
                 icon: Icons.verified_rounded,
-                color: const Color(0xFF4CAF50),
+                color: AppTheme.onlineGreen,
               ),
               _FeatureCard(
                 title: 'Trust Score',
                 description:
                     'Each profile has a trust score based on activity and community feedback.',
                 icon: Icons.shield_rounded,
-                color: const Color(0xFFFF9966),
+                color: Theme.of(context).colorScheme.tertiary,
               ),
               _FeatureCard(
                 title: 'Crossed Paths Privacy',
@@ -274,8 +275,8 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurface,
         fontSize: 18,
         fontWeight: FontWeight.bold,
         letterSpacing: 0.3,
@@ -291,15 +292,15 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
         builder: (context, snapshot) {
           final blocked = snapshot.data ?? const <String>[];
           return AlertDialog(
-            backgroundColor: const Color(0xFF1C162E),
-            title: const Text(
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+            title: Text(
               'Blocked Users',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             content: snapshot.connectionState == ConnectionState.waiting
-                ? const Center(
+                ? Center(
                     child: CircularProgressIndicator(
-                      color: Color(0xFFFF4B72),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   )
                 : snapshot.hasError
@@ -308,12 +309,12 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                     ? Text(
                         'Could not load your blocked users.\n'
                         '${snapshot.error}',
-                        style: const TextStyle(color: Colors.redAccent),
+                        style: TextStyle(color: Colors.redAccent),
                       )
                     : blocked.isEmpty
-                        ? const Text(
+                        ? Text(
                             'No blocked users yet. Use the block button on any profile or in chat.',
-                            style: TextStyle(color: Colors.white70),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                           )
                         : Column(
                             mainAxisSize: MainAxisSize.min,
@@ -321,18 +322,18 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                             children: [
                               Text(
                                 '${blocked.length} blocked',
-                                style: const TextStyle(color: Colors.white70),
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                               ),
-                              const SizedBox(height: 8),
+                              SizedBox(height: 8),
                               ...blocked.map((id) => ListTile(
                                     title: Text(
                                       id,
-                                      style: const TextStyle(color: Colors.white),
+                                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                                     ),
                                     trailing: IconButton(
-                                      icon: const Icon(
+                                      icon: Icon(
                                         Icons.lock_open_rounded,
-                                        color: Colors.white70,
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                                       ),
                                       onPressed: () async {
                                         try {
@@ -346,7 +347,7 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                                                 content:
                                                     Text('Unblocked: $id'),
                                                 backgroundColor:
-                                                    const Color(0xFF4CAF50),
+                                                    AppTheme.onlineGreen,
                                               ),
                                             );
                                           }
@@ -372,9 +373,9 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
+                child: Text(
                   'Close',
-                  style: TextStyle(color: Color(0xFFFF4B72)),
+                  style: TextStyle(color: Theme.of(context).colorScheme.primary),
                 ),
               ),
             ],
@@ -390,7 +391,7 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
     final blocked = await ref
         .read(weekendProvider.notifier)
         .loadBlockedUserIds();
-    if (blocked.isEmpty) return const [];
+    if (blocked.isEmpty) return [];
     return blocked;
   }
 
@@ -401,45 +402,45 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF1C162E),
-          title: const Text(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+          title: Text(
             'Report a User',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Target user ID:',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               TextField(
                 controller: targetCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 decoration: InputDecoration(
                   hintText: 'Enter user ID to report',
-                  hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                   filled: true,
-                  fillColor: const Color(0xFF2E244A),
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
+              SizedBox(height: 16),
+              Text(
                 'Select a reason for reporting:',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               ..._reportReasons.map(
                 (reason) => ListTile(
                   title: Text(
                     reason,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   onTap: () {
                     setDialogState(() => selectedReason = reason);
@@ -451,9 +452,9 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text(
+              child: Text(
                 'Cancel',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ),
             ElevatedButton(
@@ -470,7 +471,7 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Report submitted: $reason'),
-                              backgroundColor: const Color(0xFF4CAF50),
+                              backgroundColor: AppTheme.onlineGreen,
                             ),
                           );
                         }
@@ -492,11 +493,11 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                     }
                   : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF4B72),
+                backgroundColor: Theme.of(context).colorScheme.primary,
               ),
-              child: const Text(
+              child: Text(
                 'Submit',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               ),
             ),
           ],
@@ -519,10 +520,10 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        title: Text(
           'Share My Date',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -530,48 +531,48 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
             TextField(
               decoration: InputDecoration(
                 labelText: 'Contact Name',
-                labelStyle: TextStyle(color: Colors.white70),
+                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 hintText: 'Who are you meeting?',
-                hintStyle: TextStyle(color: Colors.white38),
+                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             const SizedBox(height: 16),
             TextField(
               decoration: InputDecoration(
                 labelText: 'Venue',
-                labelStyle: TextStyle(color: Colors.white70),
+                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 hintText: 'Where are you meeting?',
-                hintStyle: TextStyle(color: Colors.white38),
+                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             const SizedBox(height: 16),
             TextField(
               decoration: InputDecoration(
                 labelText: 'Time',
-                labelStyle: TextStyle(color: Colors.white70),
+                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 hintText: 'When?',
-                hintStyle: TextStyle(color: Colors.white38),
+                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF4B72),
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
-            child: const Text('Share', style: TextStyle(color: Colors.white)),
+            child: Text('Share', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           ),
         ],
       ),
@@ -582,31 +583,31 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        title: Text(
           'Photo Verification',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
-        content: const Text(
+        content: Text(
           'Upload a selfie to verify your profile. This helps ensure a safe community.',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF4B72),
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
-            child: const Text(
+            child: Text(
               'Upload Photo',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
           ),
         ],
@@ -674,10 +675,10 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
-            backgroundColor: const Color(0xFF1C162E),
-            title: const Text(
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+            title: Text(
               'Privacy Controls',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             content: SingleChildScrollView(
               child: Column(
@@ -713,9 +714,9 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
+                child: Text(
                   'Close',
-                  style: TextStyle(color: Color(0xFFFF4B72)),
+                  style: TextStyle(color: Theme.of(context).colorScheme.primary),
                 ),
               ),
               ElevatedButton(
@@ -758,11 +759,11 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF4B72),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                 ),
-                child: const Text(
+                child: Text(
                   'Save',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 ),
               ),
             ],
@@ -779,17 +780,17 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
     ValueChanged<bool> onChanged,
   ) {
     return SwitchListTile(
-      title: Text(title, style: const TextStyle(color: Colors.white)),
+      title: Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
       subtitle: Text(
         subtitle,
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.6),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           fontSize: 12,
         ),
       ),
       value: value,
       onChanged: onChanged,
-      activeThumbColor: const Color(0xFFFF4B72),
+      activeThumbColor: Theme.of(context).colorScheme.primary,
     );
   }
 
@@ -798,7 +799,7 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : const Color(0xFF4CAF50),
+        backgroundColor: isError ? Colors.red : AppTheme.onlineGreen,
         duration: Duration(seconds: isError ? 5 : 3),
       ),
     );
@@ -835,7 +836,7 @@ class _SafetyToolCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: const Color(0xFF1C162E),
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
@@ -851,18 +852,18 @@ class _SafetyToolCard extends StatelessWidget {
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
-        trailing: const Icon(
+        trailing: Icon(
           Icons.chevron_right_rounded,
-          color: Colors.white38,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
     );
@@ -881,7 +882,7 @@ class _SafetyTipCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: const Color(0xFF1C162E),
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -892,10 +893,10 @@ class _SafetyTipCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF4B72).withValues(alpha: 0.15),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: const Color(0xFFFF4B72), size: 22),
+              child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 22),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -904,8 +905,8 @@ class _SafetyTipCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -913,7 +914,7 @@ class _SafetyTipCard extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontSize: 13,
                     ),
                   ),
@@ -941,7 +942,7 @@ class _ResourceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: const Color(0xFF1C162E),
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
@@ -950,23 +951,23 @@ class _ResourceCard extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: const Color(0xFFFF9966).withValues(alpha: 0.15),
+            color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: const Color(0xFFFF9966), size: 22),
+          child: Icon(icon, color: Theme.of(context).colorScheme.tertiary, size: 22),
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Text(
           description,
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
-        trailing: const Icon(Icons.open_in_new_rounded, color: Colors.white38),
+        trailing: Icon(Icons.open_in_new_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
     );
   }
@@ -986,7 +987,7 @@ class _FeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: const Color(0xFF1C162E),
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
@@ -1009,8 +1010,8 @@ class _FeatureCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1018,7 +1019,7 @@ class _FeatureCard extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontSize: 13,
                     ),
                   ),

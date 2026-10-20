@@ -8,6 +8,8 @@ import '../../providers/weekend_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/image_optimizer.dart';
 import '../../repositories/profile_repository.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/weekend_design_system.dart';
 
 import '../settings/settings_dialog.dart';
 import 'opening_moves_dialog.dart';
@@ -28,9 +30,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(weekendProvider);
     final user = state.currentUser;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -45,22 +49,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     height: 120,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFFFF4B72),
-                        width: 3,
-                      ),
+                      border: Border.all(color: scheme.primary, width: 3),
                     ),
                     child: CircleAvatar(
                       radius: 58,
                       backgroundImage: user.photos.isNotEmpty
                           ? NetworkImage(user.photos.first)
                           : null,
-                      backgroundColor: const Color(0xFF2E244A),
+                      backgroundColor: scheme.surfaceContainerHighest,
                       child: user.photos.isEmpty
-                          ? const Icon(
+                          ? Icon(
                               Icons.person_rounded,
                               size: 60,
-                              color: Colors.white38,
+                              color: scheme.onSurfaceVariant,
                             )
                           : null,
                     ),
@@ -73,8 +74,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: Container(
                         width: 36,
                         height: 36,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFF4B72),
+                        decoration: BoxDecoration(
+                          color: scheme.primary,
                           shape: BoxShape.circle,
                         ),
                         child: _isUploadingPhoto
@@ -106,17 +107,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     user.age > 0
                         ? '${user.name}, ${user.age}'
                         : user.name,
-                    style: const TextStyle(
-                      fontSize: 24,
+                    style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: scheme.onSurface,
                     ),
                   ),
                   if (user.isPhotoVerified) ...[
                     const SizedBox(width: 8),
-                    const Icon(
+                    Icon(
                       Icons.verified_rounded,
-                      color: Color(0xFF4CAF50),
+                      color: AppTheme.onlineGreen,
                       size: 24,
                     ),
                   ],
@@ -129,17 +129,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.location_on_outlined,
                       size: 16,
-                      color: Colors.white54,
+                      color: scheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       user.city,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 15,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -153,14 +152,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF4B72).withValues(alpha: 0.15),
+                    color: scheme.primary.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     user.relationshipIntent,
-                    style: const TextStyle(
-                      color: Color(0xFFFF9966),
-                      fontSize: 14,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.primary,
                     ),
                   ),
                 ),
@@ -170,14 +168,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 icon: Icons.verified_user_rounded,
                 label: 'Trust Score',
                 value: '${user.trustScore}%',
-                color: const Color(0xFF4CAF50),
+                color: AppTheme.onlineGreen,
               ),
               const SizedBox(height: 12),
               _StatCard(
                 icon: Icons.people_rounded,
                 label: 'Crossed Paths',
                 value: '${user.crossedPathsCount}',
-                color: const Color(0xFFFF4B72),
+                color: scheme.primary,
               ),
               const SizedBox(height: 24),
               // Server-backed profile tools: Spotlight + Photo Insights,
@@ -189,13 +187,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       dense: true,
-                      leading: const Icon(Icons.visibility_rounded,
-                          color: Color(0xFFFF9966)),
-                      title: const Text('Spotlight & Photo Insights',
-                          style: TextStyle(color: Colors.white, fontSize: 15)),
+                      leading: Icon(
+                        Icons.visibility_rounded,
+                        color: theme.colorScheme.tertiary,
+                      ),
+                      title: const Text('Spotlight & Photo Insights'),
                       subtitle: const Text(
                         'Boost your profile and see how your photos perform',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
                       ),
                       onTap: () => showDialog(
                         context: context,
@@ -205,13 +203,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       dense: true,
-                      leading: const Icon(Icons.verified_rounded,
-                          color: Color(0xFF4CAF50)),
-                      title: const Text('Photo Verification',
-                          style: TextStyle(color: Colors.white, fontSize: 15)),
+                      leading: const Icon(
+                        Icons.verified_rounded,
+                        color: AppTheme.onlineGreen,
+                      ),
+                      title: const Text('Photo Verification'),
                       subtitle: const Text(
                         'Verify your profile with a live selfie',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
                       ),
                       onTap: () => showDialog(
                         context: context,
@@ -221,13 +219,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       dense: true,
-                      leading: const Icon(Icons.waving_hand_rounded,
-                          color: Color(0xFFFF9966)),
-                      title: const Text('Opening Moves',
-                          style: TextStyle(color: Colors.white, fontSize: 15)),
+                      leading: Icon(
+                        Icons.waving_hand_rounded,
+                        color: theme.colorScheme.tertiary,
+                      ),
+                      title: const Text('Opening Moves'),
                       subtitle: const Text(
                         'Lines the server may use when you match',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
                       ),
                       onTap: () => showDialog(
                         context: context,
@@ -242,9 +240,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 title: 'About',
                 child: Text(
                   user.bio.isNotEmpty ? user.bio : 'No bio yet',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 14,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
                     height: 1.5,
                   ),
                 ),
@@ -262,18 +259,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF4B72).withValues(alpha: 0.15),
+                        color: scheme.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(16),
 
                         border: Border.all(
-                          color: const Color(0xFFFF4B72).withValues(alpha: 0.3),
+                          color: scheme.primary.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Text(
                         interest,
-                        style: const TextStyle(
-                          color: Color(0xFFFF9966),
-                          fontSize: 13,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: scheme.primary,
                         ),
                       ),
                     );
@@ -286,11 +282,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF4B72).withValues(alpha: 0.1),
+                    color: scheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
 
                     border: Border.all(
-                      color: const Color(0xFFFF4B72).withValues(alpha: 0.3),
+                      color: scheme.primary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -298,9 +294,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       Expanded(
                         child: Text(
                           user.referralCode,
-                          style: const TextStyle(
-                            color: Color(0xFFFF9966),
-                            fontSize: 16,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: scheme.primary,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.5,
                           ),
@@ -316,17 +311,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           await Clipboard.setData(ClipboardData(text: code));
                           if (!ctx.mounted) return;
                           ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text('Referral code copied: $code'), backgroundColor: const Color(0xFF4CAF50)),
+                            SnackBar(
+                              content: Text('Referral code copied: $code'),
+                              backgroundColor: AppTheme.successGreen,
+                            ),
                           );
                         },
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.copy_rounded,
                           size: 18,
-                          color: Color(0xFFFF9966),
+                          color: scheme.primary,
                         ),
-                        label: const Text(
+                        label: Text(
                           'Copy',
-                          style: TextStyle(color: Color(0xFFFF9966)),
+                          style: TextStyle(color: scheme.primary),
                         ),
                       ),
                     ],
@@ -342,7 +340,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       icon: const Icon(Icons.edit_rounded, size: 20),
                       label: const Text('Edit Profile'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF4B72),
+                        backgroundColor: scheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -357,8 +355,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     icon: const Icon(Icons.settings_rounded, size: 20),
                     label: const Text('Settings'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E244A),
-                      foregroundColor: Colors.white,
+                      backgroundColor: scheme.surfaceContainerHigh,
+                      foregroundColor: scheme.onSurface,
                       padding: const EdgeInsets.symmetric(
                         vertical: 14,
                         horizontal: 20,
@@ -382,12 +380,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                   icon: Icon(
                     Icons.logout_rounded,
-                    color: Colors.red.withValues(alpha: 0.8),
+                    color: scheme.error,
                   ),
                   label: Text(
                     'Sign Out',
 
-                    style: TextStyle(color: Colors.red.withValues(alpha: 0.8)),
+                    style: TextStyle(color: scheme.error),
                   ),
                 ),
               ),
@@ -396,17 +394,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () => context.push('/qr-invite'),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.qr_code_rounded,
                     size: 20,
-                    color: Color(0xFFFF4B72),
+                    color: scheme.primary,
                   ),
-                  label: const Text(
+                  label: Text(
                     'My Weekend QR',
-                    style: TextStyle(color: Color(0xFFFF4B72)),
+                    style: TextStyle(color: scheme.primary),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFFF4B72)),
+                    side: BorderSide(color: scheme.primary),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -419,17 +417,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () => context.push('/qr-scanner'),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.qr_code_scanner_rounded,
                     size: 20,
-                    color: Color(0xFFFF9966),
+                    color: theme.colorScheme.tertiary,
                   ),
-                  label: const Text(
+                  label: Text(
                     'Scan Weekend QR',
-                    style: TextStyle(color: Color(0xFFFF9966)),
+                    style: TextStyle(color: theme.colorScheme.tertiary),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFFF9966)),
+                    side: BorderSide(color: theme.colorScheme.tertiary),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -538,12 +536,10 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final theme = Theme.of(context);
+    return WeekendGlassCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C162E),
-        borderRadius: BorderRadius.circular(16),
-      ),
+      radius: 16,
       child: Row(
         children: [
           Container(
@@ -562,17 +558,15 @@ class _StatCard extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 12,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -593,27 +587,23 @@ class _ProfileSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
           ),
         ),
         const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
+        WeekendGlassCard(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1C162E),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: child,
+          radius: 16,
+          child: SizedBox(width: double.infinity, child: child),
         ),
       ],
     );

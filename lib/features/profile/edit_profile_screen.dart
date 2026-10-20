@@ -11,6 +11,7 @@ import '../../providers/weekend_provider.dart';
 import '../../repositories/profile_repository.dart';
 import '../../repositories/profile_save_error.dart';
 import '../../services/image_optimizer.dart';
+import '../../theme/app_theme.dart';
 
 /// Edit Profile — Weekend's full profile builder.
 ///
@@ -343,7 +344,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 : 'Profile saved, but ${warnings.join(' ')}',
           ),
           backgroundColor: warnings.isEmpty
-              ? const Color(0xFF4CAF50)
+              ? AppTheme.onlineGreen
               : Colors.orange,
           duration: Duration(seconds: warnings.isEmpty ? 3 : 6),
         ),
@@ -411,9 +412,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       setState(() => _photos = fresh);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Photo added.'),
-          backgroundColor: Color(0xFF4CAF50),
+          backgroundColor: AppTheme.onlineGreen,
         ),
       );
     } catch (e) {
@@ -484,9 +485,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       setState(() => _photos = refreshed);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Photo replaced.'),
-            backgroundColor: Color(0xFF4CAF50),
+            backgroundColor: AppTheme.onlineGreen,
           ),
         );
       }
@@ -576,14 +577,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        title: Text(
           'Remove photo?',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
-        content: const Text(
+        content: Text(
           'This deletes the photo from your profile. You cannot undo it.',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
@@ -626,17 +627,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Widget build(BuildContext context) {
     final completeness = _completeness();
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF130E20),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: _isSaving ? null : () => context.pop(),
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
         ),
-        title: const Text(
+        title: Text(
           'Edit Profile',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -680,16 +681,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           // succeed: in-flight, and the photo minimum not met.
           onPressed: (_isSaving || !photosOk) ? null : _saveProfile,
           backgroundColor: photosOk
-              ? const Color(0xFFFF4B72)
-              : Colors.white.withValues(alpha: 0.12),
-          foregroundColor: photosOk ? Colors.white : Colors.white38,
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12),
+          foregroundColor: photosOk ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
           icon: _isSaving
-              ? const SizedBox(
+              ? SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 )
               : const Icon(Icons.check_rounded),
@@ -729,11 +730,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: (complete ? const Color(0xFF4CAF50) : const Color(0xFFFF9966))
+        color: (complete ? AppTheme.onlineGreen : Theme.of(context).colorScheme.tertiary)
             .withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: (complete ? const Color(0xFF4CAF50) : const Color(0xFFFF9966))
+          color: (complete ? AppTheme.onlineGreen : Theme.of(context).colorScheme.tertiary)
               .withValues(alpha: 0.35),
         ),
       ),
@@ -745,8 +746,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               Icon(
                 complete ? Icons.verified_rounded : Icons.radar_rounded,
                 color: complete
-                    ? const Color(0xFF4CAF50)
-                    : const Color(0xFFFF9966),
+                    ? AppTheme.onlineGreen
+                    : Theme.of(context).colorScheme.tertiary,
                 size: 20,
               ),
               const SizedBox(width: 10),
@@ -755,8 +756,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   complete
                       ? 'Your profile is ready'
                       : '${c.done} of ${c.total} complete',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                   ),
@@ -770,19 +771,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             child: LinearProgressIndicator(
               value: fraction,
               minHeight: 6,
-              backgroundColor: Colors.white.withValues(alpha: 0.1),
+              backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation<Color>(
                 complete
-                    ? const Color(0xFF4CAF50)
-                    : const Color(0xFFFF9966),
+                    ? AppTheme.onlineGreen
+                    : Theme.of(context).colorScheme.tertiary,
               ),
             ),
           ),
           if (c.missing.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             Text(
               'Still needed: ${c.missing.join(', ')}',
-              style: const TextStyle(color: Colors.white60, fontSize: 12),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
             ),
           ],
           if (_saveError != null) ...[
@@ -839,7 +840,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -847,16 +848,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
               fontSize: 17,
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
             subtitle,
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
           ),
           const SizedBox(height: 16),
           ...children,
@@ -870,8 +871,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       padding: const EdgeInsets.only(bottom: 6, top: 4),
       child: Text(
         required ? '$text *' : text,
-        style: const TextStyle(
-          color: Colors.white70,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
@@ -890,10 +891,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           : 'Tap a photo for options. The first one leads your profile.',
       children: [
         if (_loadingPhotos)
-          const Center(
+          Center(
             child: Padding(
               padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(color: Color(0xFFFF4B72)),
+              child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
             ),
           )
         else
@@ -948,29 +949,29 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               borderRadius: BorderRadius.circular(12),
               child: photo.url == null
                   ? Container(
-                      color: const Color(0xFF2E244A),
-                      child: const Icon(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: Icon(
                         Icons.image_not_supported_rounded,
-                        color: Colors.white38,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     )
                   : CachedNetworkImage(
                       imageUrl: photo.url!,
                       fit: BoxFit.cover,
                       placeholder: (_, __) => Container(
-                        color: const Color(0xFF2E244A),
-                        child: const Center(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        child: Center(
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Color(0xFFFF4B72),
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
                       errorWidget: (_, __, ___) => Container(
-                        color: const Color(0xFF2E244A),
-                        child: const Icon(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        child: Icon(
                           Icons.broken_image_rounded,
-                          color: Colors.white38,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -990,8 +991,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
                 child: Text(
                   '${index + 1}',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1008,13 +1009,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF4B72),
+                    color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text(
+                  child: Text(
                     'MAIN',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1035,25 +1036,25 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         height: 140,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.06),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
             ),
           ),
-          child: const Column(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.add_a_photo_rounded,
-                color: Color(0xFFFF4B72),
+                color: Theme.of(context).colorScheme.primary,
                 size: 28,
               ),
               SizedBox(height: 8),
               Text(
                 'Add',
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -1069,7 +1070,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _showPhotoActions(int index, bool canDelete) async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF1C162E),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1082,7 +1083,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1108,9 +1109,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.star_rounded,
-                color: Color(0xFFFF4B72),
+                color: Theme.of(context).colorScheme.primary,
               ),
               title: const Text('Make this my main photo'),
               enabled: index != 0,
@@ -1141,7 +1142,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   : Text(
                       'You need at least $_minPhotos photos',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.35),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
                       ),
                     ),
               enabled: canDelete,
@@ -1167,7 +1168,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         _fieldLabel('First name', required: true),
         TextFormField(
           controller: _nameController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: _inputDecoration('What should people call you?'),
           textCapitalization: TextCapitalization.words,
           validator: (v) => (v ?? '').trim().isEmpty
@@ -1175,21 +1176,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               : null,
           onChanged: (_) => setState(() {}),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _fieldLabel('Age', required: true),
         _birthdayPicker(),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _fieldLabel('Gender'),
         _choiceChips(
           options: ProfileSchema.genders,
           selected: _selectedGender,
           onSelect: (v) => setState(() => _selectedGender = v),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _fieldLabel('City', required: true),
         TextFormField(
           controller: _cityController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: _inputDecoration('Where are you based?'),
           textCapitalization: TextCapitalization.words,
           validator: (v) => (v ?? '').trim().isEmpty
@@ -1222,17 +1223,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ? 'Select your date of birth'
               : 'Showing as ${age ?? 0}',
         ).copyWith(
-          suffixIcon: const Icon(
+          suffixIcon: Icon(
             Icons.calendar_today_rounded,
             size: 18,
-            color: Colors.white38,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         child: Text(
           dob == null
               ? 'Select your date of birth'
               : '${dob.day}/${dob.month}/${dob.year}',
-          style: const TextStyle(color: Colors.white, fontSize: 15),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15),
         ),
       ),
     );
@@ -1263,41 +1264,41 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           controller: _bioController,
           maxLines: 5,
           maxLength: 500,
-          style: const TextStyle(color: Colors.white, height: 1.4),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, height: 1.4),
           decoration: _inputDecoration('Tell people what makes you, you.'),
           onChanged: (_) => setState(() {}),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _fieldLabel('Work'),
         TextFormField(
           controller: _occupationController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: _inputDecoration('What do you do?'),
           textCapitalization: TextCapitalization.sentences,
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _fieldLabel('Education'),
         TextFormField(
           controller: _educationController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: _inputDecoration('Where did you study?'),
           textCapitalization: TextCapitalization.sentences,
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _fieldLabel('Music you are into'),
         TextFormField(
           controller: _favoriteMusicController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: _inputDecoration('Artists, genres, live shows'),
           textCapitalization: TextCapitalization.sentences,
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _fieldLabel('Your ideal weekend'),
         TextFormField(
           controller: _idealWeekendController,
           maxLines: 3,
           maxLength: 300,
-          style: const TextStyle(color: Colors.white, height: 1.4),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, height: 1.4),
           decoration: _inputDecoration('How do you actually spend it?'),
           textCapitalization: TextCapitalization.sentences,
         ),
@@ -1323,8 +1324,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               children: [
                 Text(
                   section.title,
-                  style: const TextStyle(
-                    color: Color(0xFFFF9966),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.tertiary,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -1333,8 +1334,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 Expanded(
                   child: Text(
                     section.subtitle,
-                    style: const TextStyle(
-                      color: Colors.white38,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 11,
                     ),
                   ),
@@ -1364,8 +1365,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             Expanded(
               child: Text(
                 question,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                   fontSize: 14,
                 ),
@@ -1374,7 +1375,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             IconButton(
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.close_rounded, size: 16),
-              color: Colors.white38,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               // Present so an answer can be cleared from anywhere in the form.
               onPressed: controller.text.trim().isEmpty
                   ? null
@@ -1382,13 +1383,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
           ],
         ),
-        Text(hint, style: const TextStyle(color: Colors.white38, fontSize: 11)),
-        const SizedBox(height: 8),
+        Text(hint, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
+        SizedBox(height: 8),
         TextField(
           controller: controller,
           maxLines: 3,
           maxLength: 300,
-          style: const TextStyle(color: Colors.white, height: 1.4),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, height: 1.4),
           textCapitalization: TextCapitalization.sentences,
           decoration: _inputDecoration('Your answer'),
           onChanged: (_) => setState(() {}),
@@ -1435,8 +1436,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             padding: const EdgeInsets.only(top: 10, bottom: 8),
             child: Text(
               entry.key,
-              style: const TextStyle(
-                color: Colors.white54,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.4,
@@ -1471,30 +1472,30 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: selected
-              ? const Color(0xFFFF4B72).withValues(alpha: 0.25)
-              : Colors.white.withValues(alpha: 0.07),
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)
+              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected
-                ? const Color(0xFFFF4B72)
-                : Colors.white.withValues(alpha: 0.15),
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (selected) ...[
-              const Icon(
+              Icon(
                 Icons.check_rounded,
                 size: 14,
-                color: Color(0xFFFF4B72),
+                color: Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(width: 4),
             ],
             Text(
               interest,
               style: TextStyle(
-                color: selected ? Colors.white : Colors.white70,
+                color: selected ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               ),
@@ -1526,12 +1527,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             for (final lang in ProfileSchema.suggestedLanguages)
               _languageChip(lang),
             ActionChip(
-              label: const Text(
+              label: Text(
                 '+ Other',
-                style: TextStyle(color: Color(0xFFFF9966), fontSize: 13),
+                style: TextStyle(color: Theme.of(context).colorScheme.tertiary, fontSize: 13),
               ),
-              backgroundColor: Colors.white.withValues(alpha: 0.07),
-              side: const BorderSide(color: Color(0xFFFF9966)),
+              backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.07),
+              side: BorderSide(color: Theme.of(context).colorScheme.tertiary),
               onPressed: _addCustomLanguage,
             ),
           ],
@@ -1562,21 +1563,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
               decoration: BoxDecoration(
                 color: current == option.value
-                    ? const Color(0xFFFF9966).withValues(alpha: 0.25)
-                    : Colors.white.withValues(alpha: 0.07),
+                    ? Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.25)
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: current == option.value
-                      ? const Color(0xFFFF9966)
-                      : Colors.white.withValues(alpha: 0.15),
+                      ? Theme.of(context).colorScheme.tertiary
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
                 ),
               ),
               child: Text(
                 option.label,
                 style: TextStyle(
                   color: current == option.value
-                      ? Colors.white
-                      : Colors.white70,
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 13,
                 ),
               ),
@@ -1602,19 +1603,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: selected
-              ? const Color(0xFF4CAF50).withValues(alpha: 0.22)
-              : Colors.white.withValues(alpha: 0.07),
+              ? AppTheme.onlineGreen.withValues(alpha: 0.22)
+              : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: selected
-                ? const Color(0xFF4CAF50)
-                : Colors.white.withValues(alpha: 0.15),
+                ? AppTheme.onlineGreen
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
           ),
         ),
         child: Text(
           language,
           style: TextStyle(
-            color: selected ? Colors.white : Colors.white70,
+            color: selected ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 13,
           ),
         ),
@@ -1627,18 +1628,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final value = await showDialog<String>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        title: Text(
           'Add a language',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          decoration: InputDecoration(
             hintText: 'e.g. Konkani',
-            hintStyle: TextStyle(color: Colors.white38),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ),
         actions: [
@@ -1678,13 +1679,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               FilterChip(
                 label: Text(day),
                 selected: _weekendAvailability[day] ?? false,
-                selectedColor: const Color(0xFFFF4B72),
-                checkmarkColor: Colors.white,
-                backgroundColor: Colors.white.withValues(alpha: 0.07),
+                selectedColor: Theme.of(context).colorScheme.primary,
+                checkmarkColor: Theme.of(context).colorScheme.onSurface,
+                backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.07),
                 labelStyle: TextStyle(
                   color: (_weekendAvailability[day] ?? false)
-                      ? Colors.white
-                      : Colors.white70,
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 onSelected: (v) => setState(() {
                   _weekendAvailability[day] = v;
@@ -1701,23 +1702,23 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   InputDecoration _inputDecoration(String hint, {String? errorText}) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: Colors.white30, fontSize: 14),
+      hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.06),
-      errorStyle: const TextStyle(color: Colors.redAccent, fontSize: 12),
+      fillColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+      errorStyle: TextStyle(color: Colors.redAccent, fontSize: 12),
       errorText: errorText,
-      counterStyle: const TextStyle(color: Colors.white30, fontSize: 10),
+      counterStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 10),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFFF4B72), width: 1.5),
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5),
       ),
     );
   }
@@ -1741,19 +1742,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
               decoration: BoxDecoration(
                 color: selected == option
-                    ? const Color(0xFFFF4B72).withValues(alpha: 0.25)
-                    : Colors.white.withValues(alpha: 0.07),
+                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: selected == option
-                      ? const Color(0xFFFF4B72)
-                      : Colors.white.withValues(alpha: 0.15),
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
                 ),
               ),
               child: Text(
                 option,
                 style: TextStyle(
-                  color: selected == option ? Colors.white : Colors.white70,
+                  color: selected == option ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 13,
                 ),
               ),

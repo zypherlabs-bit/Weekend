@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../widgets/intro_video_player.dart';
+import '../../widgets/weekend_design_system.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -68,6 +69,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           // Without a scrim the white copy sits directly on moving footage and
           // becomes unreadable on the brighter frames.
           const _SlideScrim(),
+          Positioned(
+            top: 0,
+            left: 20,
+            right: 20,
+            child: SafeArea(
+              bottom: false,
+              child: Row(
+                children: [
+                  const WeekendLogo(size: 38, glow: false),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Weekend',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
+                      shadows: const [
+                        Shadow(color: Color(0x66000000), blurRadius: 10),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           SafeArea(
             child: Column(
               children: [
@@ -91,41 +117,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 _PageDots(count: _pages.length, current: _currentPage),
                 Padding(
                   padding: const EdgeInsets.all(24),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (_currentPage < _pages.length - 1) {
-                          _pageController.nextPage(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                          );
-                        } else {
-                          // "Get Started" means "create an account": open the
-                          // Tinder-style sign-up wizard directly.
-                          context.go('/signup');
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF4B72),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        _currentPage < _pages.length - 1
-                            ? 'Next'
-                            : 'Get Started',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
+                  child: WeekendGlassButton(
+                    label: _currentPage < _pages.length - 1
+                        ? 'Next'
+                        : 'Get Started',
+                    icon: _currentPage < _pages.length - 1
+                        ? Icons.arrow_forward_rounded
+                        : Icons.favorite_rounded,
+                    onPressed: () {
+                      if (_currentPage < _pages.length - 1) {
+                        _pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      } else {
+                        // "Get Started" means "create an account": open the
+                        // Tinder-style sign-up wizard directly.
+                        context.go('/signup');
+                      }
+                    },
                   ),
                 ),
                 _OnboardingFooter(

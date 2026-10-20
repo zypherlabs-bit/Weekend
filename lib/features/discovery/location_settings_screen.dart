@@ -5,6 +5,7 @@ import '../../config/supabase_config.dart';
 
 import '../../models/models.dart';
 import '../../providers/weekend_provider.dart';
+import '../../theme/app_theme.dart';
 
 class LocationSettingsScreen extends ConsumerStatefulWidget {
   const LocationSettingsScreen({super.key});
@@ -165,7 +166,7 @@ class _LocationSettingsScreenState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : const Color(0xFF4CAF50),
+        backgroundColor: isError ? Colors.red : AppTheme.onlineGreen,
         duration: Duration(seconds: isError ? 5 : 3),
       ),
     );
@@ -195,8 +196,8 @@ class _LocationSettingsScreenState
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFFFF4B72)),
+            ? Center(
+                child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
               )
             : Column(
                 children: [
@@ -295,18 +296,18 @@ class _LocationSettingsScreenState
                       child: ElevatedButton(
                         onPressed: _isSaving ? null : _saveSettings,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF4B72),
-                          foregroundColor: Colors.white,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Theme.of(context).colorScheme.onSurface,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(28),
                           ),
                         ),
                         child: _isSaving
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   strokeWidth: 2,
                                 ),
                               )
@@ -352,11 +353,11 @@ class _RadiusSlider extends StatelessWidget {
         const SizedBox(height: 12),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            thumbColor: const Color(0xFFFF4B72),
+            thumbColor: Theme.of(context).colorScheme.primary,
 
-            overlayColor: const Color(0xFFFF4B72).withValues(alpha: 0.2),
-            activeTrackColor: const Color(0xFFFF4B72),
-            inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
+            overlayColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+            activeTrackColor: Theme.of(context).colorScheme.primary,
+            inactiveTrackColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 24),
             trackHeight: 4,
@@ -377,14 +378,14 @@ class _RadiusSlider extends StatelessWidget {
             Text(
               '1 km',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.4),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 fontSize: 11,
               ),
             ),
             Text(
               '100 km',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.4),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 fontSize: 11,
               ),
             ),
@@ -409,7 +410,7 @@ class _SettingGroup extends StatelessWidget {
         Text(
           title,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.5),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
@@ -418,10 +419,10 @@ class _SettingGroup extends StatelessWidget {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.03),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.03),
             borderRadius: BorderRadius.circular(16),
 
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
           ),
           child: Column(
             children: children.asMap().entries.map((entry) {
@@ -431,7 +432,7 @@ class _SettingGroup extends StatelessWidget {
                   entry.value,
                   if (!isLast)
                     Divider(
-                      color: Colors.white.withValues(alpha: 0.05),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
                       height: 1,
                     ),
                 ],
@@ -472,18 +473,18 @@ class _LocationToggle extends StatelessWidget {
       subtitle: Text(
         subtitle,
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.5),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           fontSize: 12,
         ),
       ),
       trailing: Switch(
         value: value,
         onChanged: onChanged,
-        activeThumbColor: const Color(0xFFFF4B72),
+        activeThumbColor: Theme.of(context).colorScheme.primary,
 
-        inactiveThumbColor: Colors.white.withValues(alpha: 0.3),
+        inactiveThumbColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
 
-        inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
+        inactiveTrackColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
       ),
     );
   }

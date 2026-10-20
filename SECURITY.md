@@ -131,6 +131,22 @@ function, and email confirmation depends on the operator's Supabase Auth
 settings. The [Known limitations](README.md#known-limitations) section lists the
 current gaps in the product itself.
 
+Two protections deserve the same honesty:
+
+- **VPN-aware access control** reads Android's `NetworkCapabilities.TRANSPORT_VPN`
+  locally and blocks protected content while a VPN is active. Split tunnelling,
+  per-app proxies, private DNS and some OEM or always-on VPN implementations may
+  not surface the transport to Android, so the guard can miss a tunnel. It is a
+  supported platform signal, not a guarantee. See
+  [docs/vpn-and-screenshot-protection.md](docs/vpn-and-screenshot-protection.md).
+- **Screen-capture protection** uses `FLAG_SECURE` on the hosting activity, which
+  keeps the app out of screenshots and the recent-apps thumbnail. A camera pointed
+  at the screen, a rooted device or an OEM that ignores the flag is outside the
+  platform contract, and Weekend does not claim otherwise.
+
+Neither feature adds a permission, performs an IP lookup or sends anything off the
+device.
+
 ---
 
 ## Responsible disclosure

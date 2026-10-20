@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/weekend_provider.dart';
 import '../../models/models.dart';
+import '../../theme/app_theme.dart';
 import '../../widgets/weekend_design_system.dart';
 import '../../widgets/weekend_empty_state.dart';
 import '../../services/location_service.dart';
@@ -25,28 +26,25 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
   bool _showLocationBanner = false;
+
   /// Reads the notification badge.
   int get _unreadNotifications => ref.watch(unreadCountProvider);
 
-/// The tab stack.
-///
-/// Both new surfaces are embedded rather than pushed so switching tabs
-/// preserves their scroll position and loaded pages, which is the point of an
-/// IndexedStack. `onNavigate` routes notification taps back through the tab
-/// index instead of trying to push onto a navigation stack that does not exist
-/// at this depth.
-List<Widget> get _screens => [
+  /// The tab stack.
+  ///
+  /// Both new surfaces are embedded rather than pushed so switching tabs
+  /// preserves their scroll position and loaded pages, which is the point of an
+  /// IndexedStack. `onNavigate` routes notification taps back through the tab
+  /// index instead of trying to push onto a navigation stack that does not exist
+  /// at this depth.
+  List<Widget> get _screens => [
     const DiscoverScreen(),
     const ExploreScreen(),
-    MatchesScreen(
-      onDiscoverTap: () => setState(() => _currentIndex = 0),
-    ),
+    MatchesScreen(onDiscoverTap: () => setState(() => _currentIndex = 0)),
     const ProfileTabScreen(),
     // Embedded rather than pushed so switching tabs preserves their scroll
     // position and loaded pages.
-    LikesScreen(
-      onOpenDiscover: () => setState(() => _currentIndex = 0),
-    ),
+    LikesScreen(onOpenDiscover: () => setState(() => _currentIndex = 0)),
     NotificationCentreScreen(
       onNavigate: (type) => setState(() {
         _currentIndex = switch (type) {
@@ -109,68 +107,70 @@ List<Widget> get _screens => [
   }
 
   Widget _buildLocationBanner() {
+    final theme = Theme.of(context);
     return Align(
       alignment: Alignment.topCenter,
       child: Material(
         color: Colors.transparent,
         child: Container(
-          width: double.infinity,
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF2E244A),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFFFF4B72).withValues(alpha: 0.5),
+          child: WeekendGlass(
+            radius: WeekendRadius.md,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.colorScheme.primary.withValues(alpha: 0.14),
+                  ),
+                  child: Icon(
+                    Icons.location_on_rounded,
+                    color: theme.colorScheme.primary,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Enable location to discover people nearby',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final granted = await LocationService.requestPermission();
+                    if (granted) {
+                      setState(() => _showLocationBanner = false);
+                      ref
+                          .read(weekendProvider.notifier)
+                          .updateLocationIfNeeded();
+                    }
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    minimumSize: const Size(0, 34),
+                  ),
+                  child: const Text('Allow'),
+                ),
+                IconButton(
+                  tooltip: 'Location settings',
+                  onPressed: () => context.go('/location-settings'),
+                  icon: Icon(
+                    Icons.chevron_right_rounded,
+                    color: theme.colorScheme.onSurfaceVariant,
+                    size: 20,
+                  ),
+                ),
+              ],
             ),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.location_on_rounded,
-                color: Color(0xFFFF9966),
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Enable location to discover people nearby',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () async {
-                  final granted = await LocationService.requestPermission();
-                  if (granted) {
-                    setState(() => _showLocationBanner = false);
-                    ref.read(weekendProvider.notifier).updateLocationIfNeeded();
-                  }
-                },
-                style: TextButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF4B72),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                ),
-                child: const Text(
-                  'Allow',
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ),
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: () => context.go('/location-settings'),
-                child: const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.white54,
-                  size: 20,
-                ),
-              ),
-            ],
           ),
         ),
       ),
@@ -178,166 +178,173 @@ List<Widget> get _screens => [
   }
 
   Widget _buildBottomNav(WeekendState state) {
-    return BottomNavigationBar(
-      currentIndex: _currentIndex,
-      onTap: (index) {
-        setState(() => _currentIndex = index);
-      },
-      backgroundColor: const Color(0xFF2E244A),
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFFFF4B72),
-      unselectedItemColor: Colors.white.withValues(alpha: 0.55),
-      selectedLabelStyle: const TextStyle(fontSize: 12),
-      unselectedLabelStyle: const TextStyle(fontSize: 12),
-      items: [
-        BottomNavigationBarItem(
-          icon: Semantics(
-            label: 'Discover tab',
-            child: Icon(
-              _currentIndex == 0
-                  ? Icons.weekend_rounded
-                  : Icons.weekend_outlined,
-            ),
-          ),
-          label: 'Discover',
-          tooltip: 'Discover',
+    final theme = Theme.of(context);
+    return WeekendGlassNavigationBar(
+      child: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() => _currentIndex = index);
+        },
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: theme.colorScheme.primary,
+        unselectedItemColor: theme.colorScheme.onSurfaceVariant.withValues(
+          alpha: 0.72,
         ),
-        BottomNavigationBarItem(
-          icon: Semantics(
-            label: 'Explore tab',
-            child: Icon(
-              _currentIndex == 1
-                  ? Icons.explore_rounded
-                  : Icons.explore_outlined,
-            ),
-          ),
-          label: 'Explore',
-          tooltip: 'Explore',
+        selectedLabelStyle: theme.textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w700,
         ),
-        BottomNavigationBarItem(
-          icon: Semantics(
-            label: 'Chat tab',
-            child: Stack(
-              children: [
-                Icon(
-                  _currentIndex == 2
-                      ? Icons.chat_bubble_rounded
-                      : Icons.chat_bubble_outline_rounded,
-                ),
-                if (state.matches.any((m) => m.unreadCount > 0))
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Semantics(
-                      label:
-                          '${state.matches.fold(0, (sum, m) => sum + m.unreadCount)} unread messages',
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFF4B72),
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          '${state.matches.fold(0, (sum, m) => sum + m.unreadCount)}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+        unselectedLabelStyle: theme.textTheme.labelSmall,
+        items: [
+          BottomNavigationBarItem(
+            icon: Semantics(
+              label: 'Discover tab',
+              child: Icon(
+                _currentIndex == 0
+                    ? Icons.weekend_rounded
+                    : Icons.weekend_outlined,
+              ),
+            ),
+            label: 'Discover',
+            tooltip: 'Discover',
+          ),
+          BottomNavigationBarItem(
+            icon: Semantics(
+              label: 'Explore tab',
+              child: Icon(
+                _currentIndex == 1
+                    ? Icons.explore_rounded
+                    : Icons.explore_outlined,
+              ),
+            ),
+            label: 'Explore',
+            tooltip: 'Explore',
+          ),
+          BottomNavigationBarItem(
+            icon: Semantics(
+              label: 'Chat tab',
+              child: Stack(
+                children: [
+                  Icon(
+                    _currentIndex == 2
+                        ? Icons.chat_bubble_rounded
+                        : Icons.chat_bubble_outline_rounded,
+                  ),
+                  if (state.matches.any((m) => m.unreadCount > 0))
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Semantics(
+                        label:
+                            '${state.matches.fold(0, (sum, m) => sum + m.unreadCount)} unread messages',
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            shape: BoxShape.circle,
                           ),
-                          textAlign: TextAlign.center,
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            '${state.matches.fold(0, (sum, m) => sum + m.unreadCount)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
                     ),
+                ],
+              ),
+            ),
+            label: 'Chat',
+            tooltip: 'Chat',
+          ),
+          BottomNavigationBarItem(
+            icon: Semantics(
+              label: 'Profile tab',
+              child: Icon(
+                _currentIndex == 3
+                    ? Icons.person_rounded
+                    : Icons.person_outline_rounded,
+              ),
+            ),
+            label: 'Profile',
+            tooltip: 'Profile',
+          ),
+          // Reached by tap-through from the Chat tab rather than by a tab of
+          // its own: six bottom tabs is past what a phone tab bar carries well,
+          // and matches + conversations are the same surface, so the two entry
+          // points belong together. Both are real routes (/likes, /notifications)
+          // so they are also deep-linkable.
+          BottomNavigationBarItem(
+            icon: Semantics(
+              label: 'Likes you tab',
+              child: Icon(
+                _currentIndex == 4
+                    ? Icons.star_rounded
+                    : Icons.star_outline_rounded,
+              ),
+            ),
+            label: 'Likes',
+            tooltip: 'People who liked you',
+          ),
+          BottomNavigationBarItem(
+            icon: Semantics(
+              label: 'Notifications tab',
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    _currentIndex == 5
+                        ? Icons.notifications_rounded
+                        : Icons.notifications_none_rounded,
                   ),
-              ],
-            ),
-          ),
-          label: 'Chat',
-          tooltip: 'Chat',
-        ),
-        BottomNavigationBarItem(
-          icon: Semantics(
-            label: 'Profile tab',
-            child: Icon(
-              _currentIndex == 3
-                  ? Icons.person_rounded
-                  : Icons.person_outline_rounded,
-            ),
-          ),
-          label: 'Profile',
-          tooltip: 'Profile',
-        ),
-        // Reached by tap-through from the Chat tab rather than by a tab of
-        // its own: six bottom tabs is past what a phone tab bar carries well,
-        // and matches + conversations are the same surface, so the two entry
-        // points belong together. Both are real routes (/likes, /notifications)
-        // so they are also deep-linkable.
-        BottomNavigationBarItem(
-          icon: Semantics(
-            label: 'Likes you tab',
-            child: Icon(
-              _currentIndex == 4
-                  ? Icons.star_rounded
-                  : Icons.star_outline_rounded,
-            ),
-          ),
-          label: 'Likes',
-          tooltip: 'People who liked you',
-        ),
-        BottomNavigationBarItem(
-          icon: Semantics(
-            label: 'Notifications tab',
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  _currentIndex == 5
-                      ? Icons.notifications_rounded
-                      : Icons.notifications_none_rounded,
-                ),
-                if (_unreadNotifications > 0)
-                  Positioned(
-                    right: -6,
-                    top: -4,
-                    child: Semantics(
-                      label: '$_unreadNotifications unread notifications',
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF4B72),
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          '$_unreadNotifications',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                  if (_unreadNotifications > 0)
+                    Positioned(
+                      right: -6,
+                      top: -4,
+                      child: Semantics(
+                        label: '$_unreadNotifications unread notifications',
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            shape: BoxShape.circle,
                           ),
-                          textAlign: TextAlign.center,
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            '$_unreadNotifications',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
+            label: 'Alerts',
+            tooltip: 'Notifications',
           ),
-          label: 'Alerts',
-          tooltip: 'Notifications',
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
-
 
 class MatchesScreen extends ConsumerWidget {
   final VoidCallback? onDiscoverTap;
@@ -385,14 +392,15 @@ class _MatchAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final photo = photos.isNotEmpty ? photos.first : null;
     if (photo == null || photo.isEmpty) {
       return CircleAvatar(
         radius: 28,
-        backgroundColor: const Color(0xFF2E244A),
+        backgroundColor: theme.colorScheme.surfaceContainerHighest,
         child: Icon(
           Icons.person_rounded,
-          color: Colors.white.withValues(alpha: 0.6),
+          color: theme.colorScheme.onSurfaceVariant,
           size: 28,
         ),
       );
@@ -411,21 +419,25 @@ class MatchCard extends StatelessWidget {
   /// One honest status chip while a match has never been opened: whose turn
   /// it is, or that the window passed. Derived only from `get_matches_for_user`
   /// data; nothing is shown for started conversations or legacy matches.
-  Widget? _windowChip() {
+  Widget? _windowChip(BuildContext context) {
     if (match.lastMessage.isNotEmpty &&
         match.lastMessage != 'No messages yet') {
       return null;
     }
+    final theme = Theme.of(context);
     final (String label, Color color) chipInfo;
     switch (match.initiationStatus) {
       case 'awaiting_you':
-        chipInfo = ('Your turn to open', const Color(0xFFFF9966));
+        chipInfo = ('Your turn to open', theme.colorScheme.tertiary);
         break;
       case 'awaiting_them':
-        chipInfo = ('Their opening message', Colors.white38);
+        chipInfo = (
+          'Their opening message',
+          theme.colorScheme.onSurfaceVariant,
+        );
         break;
       case 'expired':
-        chipInfo = ('Window expired — rematch?', Colors.redAccent);
+        chipInfo = ('Window expired · rematch?', theme.colorScheme.error);
         break;
       default:
         return null;
@@ -438,20 +450,19 @@ class MatchCard extends StatelessWidget {
       ),
       child: Text(
         chipInfo.$1,
-        style: TextStyle(
-          color: chipInfo.$2,
-          fontSize: 11,
-        ),
+        style: TextStyle(color: chipInfo.$2, fontSize: 11),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final chip = _windowChip();
+    final theme = Theme.of(context);
+    final chip = _windowChip(context);
     return Semantics(
       button: true,
-      label: 'Conversation with ${match.user.name}'
+      label:
+          'Conversation with ${match.user.name}'
           '${match.unreadCount > 0 ? ', ${match.unreadCount} unread' : ''}',
       child: GestureDetector(
         // Routed through GoRouter rather than a bare `Navigator.push` so a
@@ -459,63 +470,68 @@ class MatchCard extends StatelessWidget {
         // deep link lands on exactly the same screen.
         onTap: () => context.push('/chat/${match.id}'),
         child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1C162E),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            _MatchAvatar(photos: match.user.photos),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    match.user.name,
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface.withValues(
+              alpha: theme.brightness == Brightness.dark ? 0.66 : 0.78,
+            ),
+            borderRadius: BorderRadius.circular(WeekendRadius.md),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+            ),
+          ),
+          child: Row(
+            children: [
+              _MatchAvatar(photos: match.user.photos),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      match.user.name,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      match.lastMessage.isEmpty
+                          ? 'Start chatting!'
+                          : match.lastMessage,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (match.unreadCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                  ),
+                  child: Text(
+                    '${match.unreadCount}',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    match.lastMessage.isEmpty
-                        ? 'Start chatting!'
-                        : match.lastMessage,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      fontSize: 14,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            if (match.unreadCount > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFF4B72),
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-                child: Text(
-                  '${match.unreadCount}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              )
-            else
-              chip ?? const SizedBox.shrink(),
-          ],
-        ),
+                )
+              else
+                chip ?? const SizedBox.shrink(),
+            ],
+          ),
         ),
       ),
     );

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
@@ -13,6 +13,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../repositories/auth_repository.dart';
 import '../../config/supabase_config.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/weekend_design_system.dart';
 
 /// Weekend account settings: privacy toggles, biometric app lock,
 /// account security (2FA / change password / sessions / delete).
@@ -216,7 +218,11 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
     // while the passkey list was being refetched.
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result.message.isEmpty ? 'Passkey removed' : result.message)),
+      SnackBar(
+        content: Text(
+          result.message.isEmpty ? 'Passkey removed' : result.message,
+        ),
+      ),
     );
   }
 
@@ -285,15 +291,14 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
     } catch (e) {
       await _loadBiometricSetting();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     } finally {
       if (mounted) setState(() => _togglingBiometric = false);
     }
   }
-
 
   Future<void> _changePassword() async {
     final email = SupabaseConfig.client?.auth.currentUser?.email;
@@ -334,248 +339,296 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFF1C162E),
-      title: const Text('Settings', style: TextStyle(color: Colors.white)),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-          // Replaced a switch that only flipped a local bool and had no effect on
-          // anything. Theme now reads and writes the persisted selection.
-          _ThemeModeSelector(enabled: !_isLoadingBiometric),
-          const SizedBox(height: 4),
-          SwitchListTile(
-            title: const Text(
-              'Push Notifications',
-              style: TextStyle(color: Colors.white),
-            ),
-            subtitle: Text(
-              _pushNotifications
-                  ? 'Match and message alerts are on'
-                  : 'You will only be alerted while the app is open',
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-            value: _pushNotifications,
-            onChanged: (value) => _setPushNotifications(value),
-            activeThumbColor: const Color(0xFFFF4B72),
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+
+    Widget tile({
+      required IconData icon,
+      required String title,
+      String? subtitle,
+      Widget? trailing,
+      VoidCallback? onTap,
+      Color? titleColor,
+      Color? iconColor,
+    }) {
+      return ListTile(
+        leading: Icon(
+          icon,
+          color: iconColor ?? theme.colorScheme.onSurfaceVariant,
+        ),
+        title: Text(
+          title,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: titleColor ?? theme.colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
           ),
-          _isLoadingBiometric
-              ? const ListTile(
-                  title: Text(
-                    'Biometric App Lock',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  trailing: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFFFF4B72),
-                    ),
-                  ),
-                )
-              : SwitchListTile(
-                  title: const Text(
-                    'Biometric App Lock',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  subtitle: Text(
-                    'Use fingerprint/face to unlock the app',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 12,
-                    ),
-                  ),
-                  value: _biometricLock,
-                  onChanged: _toggleBiometricLock,
-                  activeThumbColor: const Color(0xFFFF4B72),
-                ),
-          ListTile(
-            title: const Text(
-              'Security & 2FA',
-              style: TextStyle(color: Colors.white),
-            ),
-            subtitle: _isLoadingMfa
-                ? const Text(
-                    'Checkingâ€¦',
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
-                  )
-                : Text(
-                    _isMfaEnabled
-                        ? 'Two-factor authentication is ON'
-                        : 'Two-factor authentication is OFF',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 12,
-                    ),
-                  ),
-            trailing: const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white60,
-            ),
-            onTap: _openSecurity,
-          ),
-          ListTile(
-            title: const Text(
-              'Passkeys',
-              style: TextStyle(color: Colors.white),
-            ),
-            subtitle: Text(
-              _isLoadingPasskeys
-                  ? 'Checkingâ€¦'
-                  : (_passkeyCount == 0
-                        ? 'Sign in without a password using your fingerprint, '
-                              'face or device PIN'
-                        : '$_passkeyCount passkey${_passkeyCount == 1 ? '' : 's'} '
-                              'on this account'),
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 12,
+        ),
+        subtitle: subtitle == null
+            ? null
+            : Text(
+                subtitle,
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
               ),
-            ),
-            trailing: const Icon(
-              Icons.key_rounded,
-              color: Colors.white60,
-            ),
-            onTap: _isLoadingPasskeys ? null : _openPasskeys,
-          ),
-          ListTile(
-            title: const Text(
-              'Change password',
-              style: TextStyle(color: Colors.white),
-            ),
-            subtitle: const Text(
-              'Email a reset link',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-            trailing: const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white60,
-            ),
-            onTap: _changePassword,
-          ),
-          ListTile(
-            title: const Text(
-              'Language',
-              style: TextStyle(color: Colors.white),
-            ),
-            subtitle: const Text(
-              'English (more languages planned)',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-            trailing: const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white60,
-            ),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('English is the supported language in this release.'),
+        trailing: trailing,
+        onTap: onTap,
+      );
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 520,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+        ),
+        child: WeekendGlass.strong(
+          padding: EdgeInsets.zero,
+          radius: WeekendRadius.xl,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 20, 12, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Settings',
+                        style: theme.textTheme.headlineSmall,
+                      ),
+                    ),
+                    WeekendGlassIconButton(
+                      icon: Icons.close_rounded,
+                      semanticLabel: 'Close settings',
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
                 ),
-              );
-            },
+              ),
+              Divider(
+                height: 1,
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const _AppearanceSelector(),
+                      const SizedBox(height: 6),
+                      SwitchListTile(
+                        secondary: Icon(
+                          Icons.notifications_active_outlined,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        title: Text(
+                          'Push Notifications',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          _pushNotifications
+                              ? 'Match and message alerts are on'
+                              : 'You will only be alerted while the app is open',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: muted,
+                          ),
+                        ),
+                        value: _pushNotifications,
+                        onChanged: (value) => _setPushNotifications(value),
+                      ),
+                      if (_isLoadingBiometric)
+                        tile(
+                          icon: Icons.fingerprint_rounded,
+                          title: 'Biometric App Lock',
+                          subtitle: 'Checking this device…',
+                          trailing: const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      else
+                        SwitchListTile(
+                          secondary: Icon(
+                            Icons.fingerprint_rounded,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          title: Text(
+                            'Biometric App Lock',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Use fingerprint or face to unlock the app',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: muted,
+                            ),
+                          ),
+                          value: _biometricLock,
+                          onChanged: _toggleBiometricLock,
+                        ),
+                      tile(
+                        icon: Icons.shield_outlined,
+                        title: 'Security & 2FA',
+                        subtitle: _isLoadingMfa
+                            ? 'Checking…'
+                            : (_isMfaEnabled
+                                  ? 'Two-factor authentication is ON'
+                                  : 'Two-factor authentication is OFF'),
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: muted,
+                        ),
+                        onTap: _openSecurity,
+                      ),
+                      tile(
+                        icon: Icons.key_rounded,
+                        title: 'Passkeys',
+                        subtitle: _isLoadingPasskeys
+                            ? 'Checking…'
+                            : (_passkeyCount == 0
+                                  ? 'Sign in without a password using your '
+                                        'fingerprint, face or device PIN'
+                                  : '$_passkeyCount passkey'
+                                        '${_passkeyCount == 1 ? '' : 's'} on this '
+                                        'account'),
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: muted,
+                        ),
+                        onTap: _isLoadingPasskeys ? null : _openPasskeys,
+                      ),
+                      tile(
+                        icon: Icons.password_rounded,
+                        title: 'Change password',
+                        subtitle: 'Email a reset link',
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: muted,
+                        ),
+                        onTap: _changePassword,
+                      ),
+                      tile(
+                        icon: Icons.language_rounded,
+                        title: 'Language',
+                        subtitle: 'English (more languages planned)',
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: muted,
+                        ),
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'English is the supported language in this '
+                                'release.',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      tile(
+                        icon: Icons.visibility_off_outlined,
+                        title: 'Privacy',
+                        subtitle:
+                            'Incognito, snooze, away note, travel mode '
+                            'and online status',
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: muted,
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          showDialog(
+                            context: context,
+                            builder: (dialogContext) =>
+                                const PrivacyModesDialog(),
+                          );
+                        },
+                      ),
+                      tile(
+                        icon: Icons.support_agent_rounded,
+                        title: 'Support',
+                        subtitle: 'Questions, safety concerns and scam reports',
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: muted,
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          showDialog(
+                            context: context,
+                            builder: (dialogContext) => const SupportDialog(),
+                          );
+                        },
+                      ),
+                      tile(
+                        icon: Icons.location_on_outlined,
+                        title: 'Location settings',
+                        subtitle: 'Discovery radius and location sharing',
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: muted,
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          if (context.mounted) {
+                            context.push('/location-settings');
+                          }
+                        },
+                      ),
+                      tile(
+                        icon: Icons.health_and_safety_outlined,
+                        title: 'Safety Center',
+                        subtitle: 'Blocking, reporting and safety tools',
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: muted,
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          showDialog(
+                            context: context,
+                            builder: (context) => const SafetyCenterDialog(),
+                          );
+                        },
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                        child: Divider(
+                          color: theme.colorScheme.error.withValues(
+                            alpha: 0.22,
+                          ),
+                        ),
+                      ),
+                      tile(
+                        icon: Icons.delete_outline_rounded,
+                        title: 'Delete Account',
+                        titleColor: theme.colorScheme.error,
+                        iconColor: theme.colorScheme.error,
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: theme.colorScheme.error,
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _showDeleteAccountDialog(context);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-          ListTile(
-            title: const Text('Privacy', style: TextStyle(color: Colors.white)),
-            subtitle: const Text(
-              'Incognito, snooze, away note, travel mode and online status',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-            trailing: const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white60,
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              showDialog(
-                context: context,
-                builder: (dialogContext) => const PrivacyModesDialog(),
-              );
-            },
-          ),
-          ListTile(
-            title: const Text(
-              'Support',
-              style: TextStyle(color: Colors.white),
-            ),
-            subtitle: const Text(
-              'Questions, safety concerns and scam reports',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-            trailing: const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white60,
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              showDialog(
-                context: context,
-                builder: (dialogContext) => const SupportDialog(),
-              );
-            },
-          ),
-          ListTile(
-            title: const Text(
-              'Location settings',
-              style: TextStyle(color: Colors.white),
-            ),
-            subtitle: const Text(
-              'Discovery radius and location sharing',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-            trailing: const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white60,
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              if (context.mounted) context.push('/location-settings');
-            },
-          ),
-          ListTile(
-            title: const Text(
-              'Safety Center',
-              style: TextStyle(color: Colors.white),
-            ),
-            trailing: const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white60,
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              showDialog(
-                context: context,
-                builder: (context) => const SafetyCenterDialog(),
-              );
-            },
-          ),
-          ListTile(
-            title: const Text(
-              'Delete Account',
-              style: TextStyle(color: Colors.red),
-            ),
-            trailing: const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.red,
-            ),
-             onTap: () {
-              Navigator.pop(context);
-              _showDeleteAccountDialog(context);
-            },
-          ),
-          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text(
-            'Close',
-            style: TextStyle(color: Color(0xFFFF4B72)),
-          ),
-        ),
-      ],
     );
   }
 
@@ -627,12 +680,10 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
         }
 
         return StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            backgroundColor: const Color(0xFF1C162E),
-            title: const Text(
-              'Delete Account',
-              style: TextStyle(color: Colors.red),
-            ),
+          builder: (context, setState) => WeekendGlassDialog(
+            title: 'Delete Account',
+            destructive: true,
+            icon: Icons.delete_forever_outlined,
             content: Form(
               key: formKey,
               child: Column(
@@ -641,8 +692,8 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                 children: [
                   const Text(
                     'This permanently deletes your profile, photos, matches '
-                    'and every message you have sent. This action cannot be undone.',
-                    style: TextStyle(color: Colors.white70),
+                    'and every message you have sent. This action cannot be '
+                    'undone.',
                   ),
                   const SizedBox(height: 16),
                   // Deletion is irreversible, and a live session token is
@@ -658,7 +709,6 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                       labelText: 'Confirm your password',
                       helperText: 'Required to delete your account',
                     ),
-                    style: const TextStyle(color: Colors.white),
                     validator: (value) => (value == null || value.isEmpty)
                         ? 'Enter your password to confirm.'
                         : null,
@@ -670,7 +720,7 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
             actions: [
               TextButton(
                 onPressed: deleting ? null : () => Navigator.pop(context),
-                child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+                child: const Text('Cancel'),
               ),
               TextButton(
                 onPressed: deleting ? null : () => confirmDelete(setState),
@@ -680,7 +730,12 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Delete', style: TextStyle(color: Colors.red)),
+                    : Text(
+                        'Delete',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
               ),
             ],
           ),
@@ -690,61 +745,183 @@ class _SettingsDialogState extends ConsumerState<SettingsDialog> {
   }
 }
 
-/// Light / Dark / System selector.
+/// Day / Night / Auto appearance selector.
 ///
-/// Replaces a two-state switch that had no effect on the app's theme: the
-/// choice is now persisted (see `ThemeModeController`) and applied by
-/// `MaterialApp.router`, and it survives a restart.
-///
-/// Exposed as three segments rather than a boolean because "follow the system"
-/// is a genuine third state - it is the default, and collapsing it into an
-/// off/on switch makes it impossible to return to.
-class _ThemeModeSelector extends ConsumerWidget {
-  final bool enabled;
+/// The three cards are real controls over [themeModeProvider]; the selected
+/// value is persisted before the next frame.  `Auto` maps to
+/// `ThemeMode.system`, so it follows the device without resetting the choice.
+class _AppearanceSelector extends ConsumerWidget {
+  const _AppearanceSelector();
 
-  const _ThemeModeSelector({required this.enabled});
-
-  static const _options = <(ThemeMode, String, IconData)>[
-    (ThemeMode.system, 'System', Icons.brightness_auto_rounded),
-    (ThemeMode.light, 'Light', Icons.light_mode_rounded),
-    (ThemeMode.dark, 'Dark', Icons.dark_mode_rounded),
+  static const _options = <(ThemeMode, String, String, IconData)>[
+    (ThemeMode.light, 'Day', 'Always light', Icons.wb_sunny_rounded),
+    (ThemeMode.dark, 'Night', 'Always dark', Icons.nightlight_round),
+    (ThemeMode.system, 'Auto', 'Follows device', Icons.phone_android_rounded),
   ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final current = ref.watch(themeModeProvider);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Appearance',
-            style: TextStyle(color: Colors.white, fontSize: 16),
+          Text('Appearance', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 3),
+          Text(
+            'Choose how Weekend looks. Auto follows your device.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
-          const SizedBox(height: 8),
-          // A segmented control has one button per option, so it is operable
-          // with a screen reader and with a keyboard alone. The old switch
-          // offered neither an announced selected value nor a target.
-          SegmentedButton<ThemeMode>(
-            segments: [
-              for (final (mode, label, icon) in _options)
-                ButtonSegment<ThemeMode>(
-                  value: mode,
-                  label: Text(label),
-                  icon: Icon(icon, size: 18),
-                  tooltip: '$label appearance',
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              for (var index = 0; index < _options.length; index++) ...[
+                if (index > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: _AppearanceCard(
+                    mode: _options[index].$1,
+                    label: _options[index].$2,
+                    description: _options[index].$3,
+                    icon: _options[index].$4,
+                    selected: current == _options[index].$1,
+                    onTap: () => ref
+                        .read(themeModeProvider.notifier)
+                        .set(_options[index].$1),
+                  ),
                 ),
+              ],
             ],
-            selected: {current},
-            showSelectedIcon: false,
-            onSelectionChanged: enabled
-                ? (selection) =>
-                      ref.read(themeModeProvider.notifier).set(selection.first)
-                : null,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AppearanceCard extends StatelessWidget {
+  final ThemeMode mode;
+  final String label;
+  final String description;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _AppearanceCard({
+    required this.mode,
+    required this.label,
+    required this.description,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$label appearance, $description',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(WeekendRadius.md),
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: WeekendMotion.standard,
+            curve: WeekendMotion.curve,
+            padding: const EdgeInsets.fromLTRB(10, 12, 10, 11),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(WeekendRadius.md),
+              gradient: selected
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        theme.colorScheme.primary.withValues(alpha: 0.22),
+                        AppTheme.violet.withValues(alpha: 0.16),
+                      ],
+                    )
+                  : null,
+              color: selected
+                  ? null
+                  : (isDark
+                        ? Colors.white.withValues(alpha: 0.045)
+                        : Colors.black.withValues(alpha: 0.025)),
+              border: Border.all(
+                color: selected
+                    ? theme.colorScheme.primary.withValues(alpha: 0.72)
+                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                width: selected ? 1.4 : 1,
+              ),
+            ),
+            child: Column(
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: selected
+                            ? theme.colorScheme.primary.withValues(alpha: 0.18)
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.055,
+                              ),
+                      ),
+                      child: Icon(
+                        icon,
+                        size: 22,
+                        color: selected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (selected)
+                      Positioned(
+                        right: -6,
+                        top: -6,
+                        child: Icon(
+                          Icons.check_circle_rounded,
+                          size: 17,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: selected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontSize: 9.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

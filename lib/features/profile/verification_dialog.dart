@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../config/supabase_config.dart';
 import '../../repositories/engagement_repository.dart';
 import '../../services/image_optimizer.dart';
+import '../../theme/app_theme.dart';
 
 /// Manual photo verification against the deployed `photo-verification` Edge
 /// Function: the user picks a selfie, it is uploaded into the private
@@ -86,7 +87,7 @@ class _VerificationDialogState extends State<VerificationDialog> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : const Color(0xFF4CAF50),
+        backgroundColor: isError ? Colors.red : AppTheme.onlineGreen,
       ),
     );
   }
@@ -108,7 +109,7 @@ class _VerificationDialogState extends State<VerificationDialog> {
   Widget build(BuildContext context) {
     final verified = _serverStatus == 'verified';
     return Dialog(
-      backgroundColor: const Color(0xFF1C162E),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
@@ -116,23 +117,23 @@ class _VerificationDialogState extends State<VerificationDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Photo Verification',
-                style: TextStyle(color: Colors.white, fontSize: 18)),
+            Text('Photo Verification',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18)),
             const SizedBox(height: 8),
             Text(
               _statusLabel(),
               style: TextStyle(
-                color: verified ? const Color(0xFF4CAF50) : Colors.white70,
+                color: verified ? AppTheme.onlineGreen : Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
               ),
             ),
             if (!verified) ...[
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Take (or pick) a clear selfie of your face. It is compared '
                 'with your profile photos on the server and is not shown to '
                 'anyone.',
-                style: TextStyle(color: Colors.white54, fontSize: 12),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
               ),
             ],
             const SizedBox(height: 4),
@@ -153,8 +154,8 @@ class _VerificationDialogState extends State<VerificationDialog> {
                         verified ? 'Verified' : 'Submit verification selfie',
                         style: TextStyle(
                           color: verified
-                              ? Colors.white38
-                              : const Color(0xFFFF9966),
+                              ? Theme.of(context).colorScheme.onSurfaceVariant
+                              : Theme.of(context).colorScheme.tertiary,
                         ),
                       ),
                     ),
@@ -164,7 +165,7 @@ class _VerificationDialogState extends State<VerificationDialog> {
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
                 child:
-                    const Text('Close', style: TextStyle(color: Colors.white54)),
+                    Text('Close', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ),
             ),
           ],

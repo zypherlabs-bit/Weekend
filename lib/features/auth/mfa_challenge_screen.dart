@@ -51,12 +51,12 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () {
             ref.read(authStateProvider.notifier).cancelMfaChallenge();
             context.go('/auth');
@@ -75,42 +75,42 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF4B72).withValues(alpha: 0.15),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.shield_rounded,
                     size: 36,
-                    color: Color(0xFFFF4B72),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                const SizedBox(height: 24),
-                const Text(
+                SizedBox(height: 24),
+                Text(
                   'Two-factor verification',
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   'Enter the 6-digit code from your authenticator app.',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: 32),
                 TextFormField(
                   controller: _codeController,
                   keyboardType: TextInputType.number,
                   maxLength: 6,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 24,
                     letterSpacing: 8,
                     fontWeight: FontWeight.bold,
@@ -119,14 +119,14 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
                     hintText: '......',
                     counterText: '',
                     filled: true,
-                    fillColor: const Color(0xFF1C162E),
+                    fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(color: Color(0xFFFF4B72)),
+                      borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
                     ),
                   ),
                   validator: (v) {
@@ -153,15 +153,15 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
                         ? null
                         : _verify,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF4B72),
-                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
                       ),
                       elevation: 0,
                     ),
                     child: (authState.isLoading || _submitting)
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? CircularProgressIndicator(color: Theme.of(context).colorScheme.onSurface)
                         : const Text(
                             'Verify',
                             style: TextStyle(
@@ -177,9 +177,9 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
                     ref.read(authStateProvider.notifier).cancelMfaChallenge();
                     context.go('/auth');
                   },
-                  child: const Text(
+                  child: Text(
                     'Use a different account',
-                    style: TextStyle(color: Color(0xFFFF9966), fontSize: 14),
+                    style: TextStyle(color: Theme.of(context).colorScheme.tertiary, fontSize: 14),
                   ),
                 ),
               ],

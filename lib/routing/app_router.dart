@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/vpn_security_provider.dart';
 import '../models/models.dart';
 
 import '../features/onboarding/onboarding_screen.dart';
@@ -28,8 +29,13 @@ import '../features/notifications/notifications_screen.dart';
 import '../features/chat/match_conversation_screen.dart';
 import '../features/qr/qr.dart';
 import '../features/safety/safety_center_screen.dart';
+import '../features/security/vpn_blocked_screen.dart';
+import '../widgets/weekend_design_system.dart';
+import '../theme/app_theme.dart';
+import 'vpn_route_guard.dart';
 
-/// Bridges the Riverpod auth state into GoRouter's refresh hook.
+/// Bridges the Riverpod auth and VPN security state into GoRouter's refresh
+/// hook.
 ///
 /// Only routing-relevant transitions notify; the redirect itself always reads
 /// the current state with `ref.read`.
@@ -44,6 +50,10 @@ class _AuthRefreshNotifier extends ChangeNotifier {
               next.awaitingEmailConfirmation) {
         return;
       }
+      notifyListeners();
+    });
+    ref.listen<VpnSecurityState>(vpnSecurityProvider, (previous, next) {
+      if (previous?.routingFingerprint == next.routingFingerprint) return;
       notifyListeners();
     });
   }
@@ -110,6 +120,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         if (isGuestScreen || isMfa) return null;
         return '/onboarding';
       }
+
+      // Central security guard.  Every authenticated non-public destination
+      // is protected by default; only this redirect decides whether it can be
+      // shown.  `onBlocked` remembers the last protected location so a
+      // successful re-check can restore it.
+      final vpnState = ref.read(vpnSecurityProvider);
+      final accessConfirmed = vpnState.accessConfirmed;
+      final vpnTarget = vpnRedirectTarget(
+        location: state.uri.toString(),
+        blocksProtectedContent: vpnState.blocksProtectedContent,
+        accessConfirmed: accessConfirmed,
+        isAuthenticated: isAuthenticated,
+        restoreLocation: vpnState.restoreLocation,
+        onBlocked: (location) {
+          ref
+              .read(vpnSecurityProvider.notifier)
+              .rememberProtectedLocation(location);
+        },
+      );
+      if (vpnTarget != null) return vpnTarget;
 
       // Authenticated users with an incomplete profile finish Personal
       // Details first (except anonymous guests, who skip onboarding).
@@ -178,6 +208,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const MfaEnrollmentScreen(),
       ),
 
+      // Security blocker. Deliberately a route rather than an overlay: a
+      // restored deep link, a notification tap and an in-app push all go
+      // through the same guard and cannot skip it.
+      GoRoute(
+        path: '/vpn-blocked',
+        builder: (context, state) => const VpnBlockedScreen(),
+      ),
+
       GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
 
       GoRoute(
@@ -239,10 +277,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const NotificationCentreScreen(),
       ),
 
-      GoRoute(
-        path: '/likes',
-        builder: (context, state) => const LikesScreen(),
-      ),
+      GoRoute(path: '/likes', builder: (context, state) => const LikesScreen()),
 
       // Deep-linkable conversation. `ChatScreen` needs a populated MatchItem;
       // this route resolves the id and hands off, so a notification tap, a
@@ -279,67 +314,58 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _WeekendLogo(),
-            const SizedBox(height: 24),
-
-            const Text(
-              'Weekend',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 1.5,
+      backgroundColor: Colors.transparent,
+      body: WeekendAtmosphere(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(28),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: WeekendMotion.gentle,
+                curve: WeekendMotion.curve,
+                builder: (context, value, child) => Opacity(
+                  opacity: value,
+                  child: Transform.scale(
+                    scale: 0.96 + (0.04 * value),
+                    child: child,
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const WeekendLogo(
+                      size: 126,
+                      showWordmark: true,
+                      tagline: 'Make every weekend brighter.',
+                      glow: true,
+                    ),
+                    const SizedBox(height: 42),
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Preparing your weekend…',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Make every weekend brighter.',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white60,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 48),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF4B72)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _WeekendLogo extends StatelessWidget {
-  const _WeekendLogo();
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 120,
-      height: 120,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFF4B72), Color(0xFFFF9966)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFF4B72).withValues(alpha: 0.35),
-            blurRadius: 30,
-            spreadRadius: 10,
           ),
-        ],
+        ),
       ),
-      child: const Icon(Icons.weekend_rounded, size: 60, color: Colors.white),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
 import '../../repositories/engagement_repository.dart';
+import '../../theme/app_theme.dart';
 
 /// In-app support backed by real `support_tickets` rows (migration 033).
 ///
@@ -95,7 +96,7 @@ class _SupportDialogState extends State<SupportDialog> {
           'Ticket received — status: ${ticket.status}'
           '${ticket.priority == 'high' ? ' (marked high priority)' : ''}.',
         ),
-        backgroundColor: const Color(0xFF4CAF50),
+        backgroundColor: AppTheme.onlineGreen,
       ),
     );
   }
@@ -103,20 +104,20 @@ class _SupportDialogState extends State<SupportDialog> {
   Color _statusColor(String status) {
     switch (status) {
       case 'resolved':
-        return const Color(0xFF4CAF50);
+        return AppTheme.onlineGreen;
       case 'in_progress':
-        return const Color(0xFFFF9966);
+        return Theme.of(context).colorScheme.tertiary;
       case 'high':
         return Colors.redAccent;
       default:
-        return Colors.white54;
+        return Theme.of(context).colorScheme.onSurfaceVariant;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF1C162E),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
@@ -124,29 +125,29 @@ class _SupportDialogState extends State<SupportDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Support',
-              style: TextStyle(color: Colors.white, fontSize: 18),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18),
             ),
             const SizedBox(height: 4),
             Text(
               'Reports reach the Weekend moderations team; safety and scam '
               'reports are handled first.',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 12,
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              dropdownColor: const Color(0xFF2E244A),
+              dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               initialValue: _category,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              decoration: InputDecoration(
                 labelText: 'Category',
                 filled: true,
-                fillColor: Color(0xFF2E244A),
-                labelStyle: TextStyle(color: Colors.white54),
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                   borderSide: BorderSide.none,
@@ -161,35 +162,35 @@ class _SupportDialogState extends State<SupportDialog> {
                 setState(() => _category = value);
               },
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             TextField(
               controller: _subjectController,
               maxLength: 80,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              decoration: InputDecoration(
                 labelText: 'Subject',
-                counterStyle: TextStyle(color: Colors.white38),
+                counterStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 filled: true,
-                fillColor: Color(0xFF2E244A),
-                labelStyle: TextStyle(color: Colors.white54),
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                   borderSide: BorderSide.none,
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             TextField(
               controller: _detailsController,
               maxLength: 1000,
               maxLines: 4,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              decoration: InputDecoration(
                 labelText: 'What happened?',
-                counterStyle: TextStyle(color: Colors.white38),
+                counterStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 filled: true,
-                fillColor: Color(0xFF2E244A),
-                labelStyle: TextStyle(color: Colors.white54),
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                   borderSide: BorderSide.none,
@@ -222,20 +223,20 @@ class _SupportDialogState extends State<SupportDialog> {
                         }
                         _submit();
                       },
-                      child: const Text('Send report',
-                          style: TextStyle(color: Color(0xFFFF9966))),
+                      child: Text('Send report',
+                          style: TextStyle(color: Theme.of(context).colorScheme.tertiary)),
                     ),
             ),
-            const Divider(color: Colors.white10),
+            Divider(color: Theme.of(context).colorScheme.outlineVariant),
             Text(
               _loadingTickets
                   ? 'Checking your previous reports…'
                   : _tickets.isEmpty
                       ? 'No support tickets yet.'
                       : 'Your tickets (${_tickets.length})',
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             for (final ticket in _tickets.take(5))
               ListTile(
                 dense: true,
@@ -244,12 +245,12 @@ class _SupportDialogState extends State<SupportDialog> {
                   ticket.subject,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
                 ),
                 subtitle: Text(
                   '${ticket.category} · '
                   '${DateTime.fromMillisecondsSinceEpoch(ticket.createdAtMs).toLocal().toString().split(' ').first}',
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
                 ),
                 trailing: Text(
                   ticket.status,
@@ -261,8 +262,8 @@ class _SupportDialogState extends State<SupportDialog> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Close',
-                    style: TextStyle(color: Colors.white54)),
+                child: Text('Close',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ),
             ),
           ],

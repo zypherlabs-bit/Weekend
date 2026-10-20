@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../providers/weekend_provider.dart';
+import '../theme/app_theme.dart';
 
 /// Quick-access Safety Center.
 ///
@@ -18,7 +19,7 @@ class SafetyCenterDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Dialog(
-      backgroundColor: const Color(0xFF1C162E),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -29,17 +30,17 @@ class SafetyCenterDialog extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Safety Center',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                    icon: Icon(Icons.close_rounded, color: Theme.of(context).colorScheme.onSurface),
                   ),
                 ],
               ),
@@ -85,7 +86,7 @@ class SafetyCenterDialog extends ConsumerWidget {
                   _showVerificationDialog(context, ref);
                 },
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               _SafetyOption(
                 icon: Icons.help_outline_rounded,
                 title: 'Safety Tips',
@@ -111,22 +112,22 @@ class SafetyCenterDialog extends ConsumerWidget {
         builder: (context, snapshot) {
           final blocked = snapshot.data ?? const <String>[];
           return AlertDialog(
-            backgroundColor: const Color(0xFF1C162E),
-            title: const Text(
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+            title: Text(
               'Blocked Users',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             content: switch (snapshot.connectionState) {
-              ConnectionState.waiting => const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFFF4B72)),
+              ConnectionState.waiting => Center(
+                  child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
                 ),
-              _ when snapshot.hasError => const Text(
+              _ when snapshot.hasError => Text(
                   'Could not load your blocked users. Please try again.',
                   style: TextStyle(color: Colors.redAccent),
                 ),
-              _ when blocked.isEmpty => const Text(
+              _ when blocked.isEmpty => Text(
                   'You have not blocked anyone yet.',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               _ => Column(
                   mainAxisSize: MainAxisSize.min,
@@ -134,20 +135,20 @@ class SafetyCenterDialog extends ConsumerWidget {
                   children: [
                     Text(
                       '${blocked.length} blocked',
-                      style: const TextStyle(color: Colors.white70),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     ...blocked.map(
                       (id) => ListTile(
                         title: Text(
                           id,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                         ),
                         trailing: IconButton(
                           tooltip: 'Unblock',
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.lock_open_rounded,
-                            color: Colors.white70,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           onPressed: () async {
                             final messenger =
@@ -159,7 +160,7 @@ class SafetyCenterDialog extends ConsumerWidget {
                               messenger.showSnackBar(
                                 SnackBar(
                                   content: Text('Unblocked: $id'),
-                                  backgroundColor: const Color(0xFF4CAF50),
+                                  backgroundColor: AppTheme.onlineGreen,
                                 ),
                               );
                               if (dialogContext.mounted) {
@@ -186,9 +187,9 @@ class SafetyCenterDialog extends ConsumerWidget {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text(
+                child: Text(
                   'Close',
-                  style: TextStyle(color: Color(0xFFFF4B72)),
+                  style: TextStyle(color: Theme.of(context).colorScheme.primary),
                 ),
               ),
             ],
@@ -212,48 +213,48 @@ class SafetyCenterDialog extends ConsumerWidget {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF1C162E),
-          title: const Text(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+          title: Text(
             'Share My Date',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: contactCtrl,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Contact Name',
-                  labelStyle: TextStyle(color: Colors.white70),
+                  labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: venueCtrl,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Venue',
-                  labelStyle: TextStyle(color: Colors.white70),
+                  labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: timeCtrl,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Time',
-                  labelStyle: TextStyle(color: Colors.white70),
+                  labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: isSharing ? null : () => Navigator.pop(dialogContext),
-              child: const Text(
+              child: Text(
                 'Cancel',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ),
             ElevatedButton(
@@ -294,9 +295,9 @@ class SafetyCenterDialog extends ConsumerWidget {
                         }
                         if (dialogContext.mounted) Navigator.pop(dialogContext);
                         messenger.showSnackBar(
-                          const SnackBar(
+                          SnackBar(
                             content: Text('Plan shared.'),
-                            backgroundColor: Color(0xFF4CAF50),
+                            backgroundColor: AppTheme.onlineGreen,
                           ),
                         );
                       } catch (e) {
@@ -314,11 +315,11 @@ class SafetyCenterDialog extends ConsumerWidget {
                       }
                     },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF4B72),
+                backgroundColor: Theme.of(context).colorScheme.primary,
               ),
-              child: const Text(
+              child: Text(
                 'Share',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               ),
             ),
           ],
@@ -348,23 +349,23 @@ class SafetyCenterDialog extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF1C162E),
-        title: const Text(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        title: Text(
           'Photo Verification',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
-        content: const Text(
+        content: Text(
           'Open the Safety Center to submit a selfie for photo verification. '
           'Your selfie is uploaded to your private profile-photos bucket and '
           'reviewed by the moderation service.',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
           ElevatedButton(
@@ -373,11 +374,11 @@ class SafetyCenterDialog extends ConsumerWidget {
               context.push('/safety-center');
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF4B72),
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
-            child: const Text(
+            child: Text(
               'Open Safety Center',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
           ),
         ],
@@ -404,7 +405,7 @@ class _SafetyOption extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF2E244A),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -413,10 +414,10 @@ class _SafetyOption extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFFFF4B72).withValues(alpha: 0.15),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: const Color(0xFFFF4B72), size: 22),
+              child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 22),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -425,8 +426,8 @@ class _SafetyOption extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -435,14 +436,14 @@ class _SafetyOption extends StatelessWidget {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+            Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ],
         ),
       ),

@@ -1,15 +1,17 @@
-"""Generate Google Play store assets from the committed brand sources.
+"""Generate Google Play store assets from the real brand artwork.
 
 Play requires:
   * App icon          512 x 512, 32-bit PNG
   * Feature graphic   1024 x 500, PNG/JPEG, no transparency
 
-Both are produced from `assets/icons/weekend_logo.svg`, the same artwork the
-in-app launcher icon is built from, so the listing cannot drift from the app.
+Both are produced from `assets/icons/weekend_logo.png`, which
+`tool/prepare_brand_assets.py` derives from the supplied artwork
+(`assets/logo/weekend-logo.jpg`). The script does not draw, approximate or
+re-invent the mark: it only scales the real pixels and composites them onto the
+brand colour.
 
-Nothing here invents brand content: no invented statistics, no stock people, no
-competitor branding. The feature graphic is the real logo plus the real
-tagline on the brand gradient.
+The feature graphic is the real logo plus the real tagline - no invented
+statistics, no stock people, no competitor branding.
 
 Usage:
     python tool/make_store_assets.py
@@ -23,12 +25,14 @@ import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SVG = ROOT / "assets" / "icons" / "weekend_logo.svg"
 
-# Brand gradient, identical to the <linearGradient id="bgGrad"> in the SVG and
-# to the adaptive-icon background in pubspec.yaml (#FF6C5C).
-BRAND_A = (255, 75, 114)  # #FF4B72
-BRAND_B = (255, 153, 102)  # #FF9966
+# The delivered artwork, matted to alpha at 1024x1024.
+LOGO = ROOT / "assets" / "icons" / "weekend_logo.png"
+# The untouched supplied file, used only if the derived master is missing.
+LOGO_SOURCE = ROOT / "assets" / "logo" / "weekend-logo.jpg"
+
+# The launcher background the adaptive icon uses (`ic_launcher_background`).
+BRAND_BACKGROUND = (13, 8, 24)  # #0D0818
 TAGLINE = "Make Every Weekend Brighter."
 
 
@@ -43,99 +47,35 @@ def _require_pillow() -> None:
 
 
 def render_logo_png(size: int):
-    """Rasterise the brand SVG to a square RGBA image.
+    """Scale the real brand artwork to a square RGBA image."""
+    from PIL import Image
 
-    cairosvg is preferred because it reproduces the gradients and the glow
-    filter faithfully. When it is unavailable we fall back to drawing the mark
-    directly with Pillow, which keeps the pipeline usable offline.
-    """
-    try:
-        import io
-
-        import cairosvg
-        from PIL import Image
-
-        png = cairosvg.svg2png(url=str(SVG), output_width=size, output_height=size)
-        return Image.open(io.BytesIO(png)).convert("RGBA")
-    except Exception:
-        return _draw_mark_fallback(size)
-
-
-def _draw_mark_fallback(size: int):
-    """Draw the Weekend mark with Pillow only (no SVG rasteriser needed).
-
-    Mirrors the geometry of the SVG: a filled gradient circle, a soft inner
-    ring, and the four-stroke "W".
-    """
-    from PIL import Image, ImageDraw
-
-    ss = 4  # supersample, then downscale for clean edges
-    s = size * ss
-    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-
-    # Diagonal gradient background circle.
-    grad = Image.new("RGB", (s, s))
-    gdraw = ImageDraw.Draw(grad)
-    for i in range(s):
-        t = i / max(s - 1, 1)
-        gdraw.line(
-            [(i, 0), (i, s)],
-            fill=tuple(round(a + (b - a) * t) for a, b in zip(BRAND_A, BRAND_B)),
+    source = LOGO if LOGO.exists() else LOGO_SOURCE
+    if not source.exists():
+        raise SystemExit(
+            f"Brand artwork missing: looked for {LOGO} and {LOGO_SOURCE}.\n"
+            "Run:  python tool/prepare_brand_assets.py"
         )
-    mask = Image.new("L", (s, s), 0)
-    ImageDraw.Draw(mask).ellipse([0, 0, s - 1, s - 1], fill=255)
-    img.paste(grad, (0, 0), mask)
+    with Image.open(source) as raw:
+        image = raw.convert("RGBA")
+    if image.size != (size, size):
+        image = image.resize((size, size), Image.LANCZOS)
+    return image
 
-    # Inner ring.
-    draw.ellipse(
-        [s * 0.055, s * 0.055, s * 0.945, s * 0.945],
-        outline=(255, 255, 255, 77),
-        width=max(int(s * 0.008), 1),
-    )
 
-    # The "W": two outer verticals joined by two peaks, exactly as the SVG
-    # draws it - down the left, up to the centre peak, down to the right, and
-    # up the right-hand side. Drawn as one polyline so the joins stay round.
-    w = max(int(s * 0.047), 2)
-    left, right = s * 0.324, s * 0.676
-    top, bottom = s * 0.383, s * 0.617
-    mid_x = s * 0.5
-    cream = (255, 255, 255, 230)
+def _flatten(mark, size: int):
+    """Composite the mark onto the brand colour (Play icon: no transparency)."""
+    from PIL import Image
 
-    points = [
-        (left, top),
-        (left, bottom),
-        (mid_x, top),
-        (right, bottom),
-        (right, top),
-    ]
-    draw.line(points, fill=cream, width=w, joint="curve")
-    r = w // 2
-    for px, py in points:
-        draw.ellipse([px - r, py - r, px + r, py + r], fill=cream)
-
-    # Connection dots, as in the SVG.
-    for cx, cy, rad, col in (
-        (0.324, 0.383, 0.016, (255, 75, 114, 255)),
-        (0.5, 0.383, 0.02, (255, 153, 102, 255)),
-        (0.676, 0.383, 0.016, (255, 75, 114, 255)),
-        (0.324, 0.617, 0.012, (255, 153, 102, 153)),
-        (0.676, 0.617, 0.012, (255, 153, 102, 153)),
-    ):
-        rr = s * rad
-        draw.ellipse([s * cx - rr, s * cy - rr, s * cx + rr, s * cy + rr], fill=col)
-
-    return img.resize((size, size), Image.LANCZOS)
+    flat = Image.new("RGB", (size, size), BRAND_BACKGROUND)
+    flat.paste(mark, (0, 0), mark)
+    return flat
 
 
 def make_icon(out_dir: pathlib.Path, size: int = 512) -> pathlib.Path:
-    """512x512 Play icon. Play accepts alpha, but a solid mark is safer."""
-    from PIL import Image
-
+    """512x512 Play icon, composited on the launcher background colour."""
     mark = render_logo_png(size)
-    flat = Image.new("RGB", (size, size), BRAND_A)
-    flat.paste(mark, (0, 0), mark)
+    flat = _flatten(mark, size)
     path = out_dir / "play-icon-512.png"
     flat.save(path, "PNG", optimize=True)
     return path
@@ -144,21 +84,11 @@ def make_icon(out_dir: pathlib.Path, size: int = 512) -> pathlib.Path:
 def make_feature_graphic(
     out_dir: pathlib.Path, width: int = 1024, height: int = 500
 ) -> pathlib.Path:
-    """1024x500 feature graphic: brand gradient, real logo, real tagline.
-
-    Play requires no transparency here, so the artwork is composited onto the
-    gradient rather than saved with an alpha channel.
-    """
+    """1024x500 feature graphic: real logo and tagline on the brand background."""
     from PIL import Image, ImageDraw
 
-    base = Image.new("RGB", (width, height), BRAND_A)
+    base = Image.new("RGB", (width, height), BRAND_BACKGROUND)
     draw = ImageDraw.Draw(base)
-    for y in range(height):
-        t = y / max(height - 1, 1)
-        draw.line(
-            [(0, y), (width, y)],
-            fill=tuple(round(a + (b - a) * t) for a, b in zip(BRAND_A, BRAND_B)),
-        )
 
     logo_px = int(height * 0.66)
     mark = render_logo_png(logo_px)

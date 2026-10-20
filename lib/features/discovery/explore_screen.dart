@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +8,7 @@ import '../../models/models.dart';
 import '../../services/ad_service.dart';
 import '../../repositories/ad_repository.dart';
 import '../../widgets/location_radius_filter.dart';
+import '../../widgets/weekend_design_system.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
@@ -46,12 +47,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF130E20)
-          : const Color(0xFFFCF8F7),
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -85,14 +82,20 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 onPressed: () {
                   _showFilters(context);
                 },
-                icon: const Icon(Icons.tune_rounded, color: Colors.white70),
+                icon: Icon(
+                  Icons.tune_rounded,
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(width: 8),
               IconButton(
                 onPressed: () {
                   _showLocationSettings(context);
                 },
-                icon: const Icon(Icons.settings_rounded, color: Colors.white70),
+                icon: Icon(
+                  Icons.settings_rounded,
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -102,6 +105,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   }
 
   Widget _buildModeChips(BuildContext context) {
+    final theme = Theme.of(context);
     final state = ref.watch(weekendProvider);
     final modes = DiscoveryMode.values;
     return SingleChildScrollView(
@@ -119,16 +123,22 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
                 ref.read(weekendProvider.notifier).selectDiscoveryMode(mode);
                 _loadProfilesForMode(mode);
               },
-              selectedColor: const Color(0xFFFF4B72),
-              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              selectedColor: theme.colorScheme.primary,
+              backgroundColor: theme.colorScheme.surfaceContainerHigh,
+              labelStyle: TextStyle(
+                color: isSelected
+                    ? Colors.white
+                    : theme.colorScheme.onSurfaceVariant,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
               side: BorderSide(
                 color: isSelected
-                    ? const Color(0xFFFF4B72)
-                    : Colors.white.withValues(alpha: 0.2),
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.outlineVariant,
               ),
             ),
           );
@@ -243,11 +253,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
         itemCount: crossed.length,
         itemBuilder: (context, index) {
           final cp = crossed[index];
+          final theme = Theme.of(context);
           return Container(
             width: 160,
             margin: const EdgeInsets.only(right: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFF2E244A),
+              color: theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(16),
               image: const DecorationImage(
                 image: AssetImage('assets/images/placeholder_avatar.png'),
@@ -327,7 +338,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -373,7 +386,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               child: ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF4B72),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -400,6 +413,7 @@ class _ProfileHorizontalList extends StatelessWidget {
   const _ProfileHorizontalList({required this.profiles});
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return SizedBox(
       height: 220,
       child: ListView.builder(
@@ -419,7 +433,7 @@ class _ProfileHorizontalList extends StatelessWidget {
                       fit: BoxFit.cover,
                     )
                   : null,
-              color: const Color(0xFF2E244A),
+              color: theme.colorScheme.surfaceContainerHighest,
             ),
             child: Stack(
               children: [
@@ -479,30 +493,29 @@ class _EmptyPreview extends StatelessWidget {
   const _EmptyPreview({required this.icon, required this.message});
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        height: 120,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 32, color: Colors.white54),
-              const SizedBox(height: 12),
-              Text(
-                message,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
-                  fontSize: 13,
+      child: WeekendGlassPanel(
+        padding: EdgeInsets.zero,
+        radius: 16,
+        child: SizedBox(
+          height: 120,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 32, color: theme.colorScheme.onSurfaceVariant),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -1,3 +1,10 @@
+// DEPRECATED - DO NOT RUN.
+//
+// This script draws the old placeholder "W" glyph. The shipped assets now come
+// from the real artwork via `tool/prepare_brand_assets.py` (which writes
+// `assets/icons/weekend_logo_fg.png`, the legacy plate and the monochrome
+// layer). Running this would overwrite the adaptive foreground with a fake
+// logo; it is kept only for history.
 import 'dart:io';
 import 'package:image/image.dart' as img;
 

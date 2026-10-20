@@ -1,3 +1,12 @@
+// DEPRECATED - DO NOT RUN.
+//
+// This script *draws* a placeholder "W" mark with the `image` package. It was
+// how the old app icon was produced and it no longer represents the brand: the
+// real artwork is `assets/logo/weekend-logo.jpg`, turned into the shipped icon
+// and splash assets by `tool/prepare_brand_assets.py` (run
+// `dart run flutter_launcher_icons` afterwards). Running this script would
+// overwrite `assets/icons/weekend_logo.png` with a fake logo, so it is kept only
+// for history.
 import 'dart:io';
 import 'package:image/image.dart';
 

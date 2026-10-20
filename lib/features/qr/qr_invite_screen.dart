@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../services/qr_invitation_service.dart';
 import '../../services/secure_storage_service.dart';
 import '../../providers/weekend_provider.dart';
+import '../../theme/app_theme.dart';
 
 class QRInviteScreen extends ConsumerStatefulWidget {
   const QRInviteScreen({super.key});
@@ -97,17 +98,17 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
         final size = 512.0;
         canvas.drawRect(
           Rect.fromLTWH(0, 0, size, size),
-          Paint()..color = Colors.white,
+          Paint()..color = Theme.of(context).colorScheme.onSurface,
         );
         QrPainter.withQr(
           qr: qrCode,
-          eyeStyle: const QrEyeStyle(
+          eyeStyle: QrEyeStyle(
             eyeShape: QrEyeShape.square,
-            color: Color(0xFF130E20),
+            color: Theme.of(context).scaffoldBackgroundColor,
           ),
-          dataModuleStyle: const QrDataModuleStyle(
+          dataModuleStyle: QrDataModuleStyle(
             dataModuleShape: QrDataModuleShape.square,
-            color: Color(0xFF130E20),
+            color: Theme.of(context).scaffoldBackgroundColor,
           ),
           gapless: false,
         ).paint(canvas, Size(size, size));
@@ -119,9 +120,9 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
           // For now, we'll just show a success message
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
+              SnackBar(
                 content: Text('QR code image generated. Use share to save.'),
-                backgroundColor: Color(0xFF4CAF50),
+                backgroundColor: AppTheme.onlineGreen,
               ),
             );
           }
@@ -139,18 +140,18 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF130E20),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF130E20),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
         ),
-        title: const Text(
+        title: Text(
           'My Weekend QR',
           style: TextStyle(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -160,7 +161,7 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
           if (_qrPayload != null)
             IconButton(
               onPressed: _shareQRCode,
-              icon: const Icon(Icons.share_rounded, color: Colors.white),
+              icon: Icon(Icons.share_rounded, color: Theme.of(context).colorScheme.onSurface),
               tooltip: 'Share Invitation',
             ),
         ],
@@ -175,33 +176,33 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFF4B72), Color(0xFFFF9966)],
+                  gradient: LinearGradient(
+                    colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.tertiary],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFFF4B72).withValues(alpha: 0.3),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                       blurRadius: 30,
                       spreadRadius: 10,
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.qr_code_rounded,
                   size: 50,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 24),
               Text(
                 'Your Weekend Invitation',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -210,15 +211,15 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                 'Share this QR code to invite friends to Weekend. When they scan it, you\'ll both get referral rewards!',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
               if (_isGenerating)
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF4B72)),
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                 )
               else if (_error != null)
                 Container(
@@ -247,7 +248,7 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                       ElevatedButton(
                         onPressed: _generateQRCode,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF4B72),
+                          backgroundColor: Theme.of(context).colorScheme.primary,
                         ),
                         child: const Text('Retry'),
                       ),
@@ -258,7 +259,7 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
@@ -274,15 +275,15 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                         data: _qrPayload!,
                         version: QrVersions.auto,
                         size: 240,
-                        eyeStyle: const QrEyeStyle(
+                        eyeStyle: QrEyeStyle(
                           eyeShape: QrEyeShape.square,
-                          color: Color(0xFF130E20),
+                          color: Theme.of(context).scaffoldBackgroundColor,
                         ),
-                        dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleStyle: QrDataModuleStyle(
                           dataModuleShape: QrDataModuleShape.square,
-                          color: Color(0xFF130E20),
+                          color: Theme.of(context).scaffoldBackgroundColor,
                         ),
-                        backgroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.onSurface,
                         errorCorrectionLevel: QrErrorCorrectLevel.H,
                         gapless: false,
                       ),
@@ -293,7 +294,7 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF4B72).withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: const Color(
@@ -304,16 +305,16 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.info_outline_rounded,
                               size: 16,
-                              color: Color(0xFFFF4B72),
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'WEEKEND_INVITE',
-                              style: const TextStyle(
-                                color: Color(0xFFFF4B72),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.0,
@@ -331,8 +332,8 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                               icon: const Icon(Icons.share_rounded, size: 20),
                               label: const Text('Share'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF4B72),
-                                foregroundColor: Colors.white,
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                foregroundColor: Theme.of(context).colorScheme.onSurface,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 14,
                                 ),
@@ -352,9 +353,9 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                               ),
                               label: const Text('Save Image'),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFFFF4B72),
-                                side: const BorderSide(
-                                  color: Color(0xFFFF4B72),
+                                foregroundColor: Theme.of(context).colorScheme.primary,
+                                side: BorderSide(
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 14,
@@ -374,10 +375,10 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1C162E),
+                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                   ),
                 ),
                 child: Column(
@@ -394,17 +395,17 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                             ).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.security_rounded,
-                            color: Color(0xFFFF4B72),
+                            color: Theme.of(context).colorScheme.primary,
                             size: 18,
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Text(
+                        Text(
                           'Security & Privacy',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
@@ -448,9 +449,9 @@ class _SecurityPoint extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.check_circle_rounded,
-            color: Color(0xFF4CAF50),
+            color: AppTheme.onlineGreen,
             size: 16,
           ),
           const SizedBox(width: 8),
@@ -458,7 +459,7 @@ class _SecurityPoint extends StatelessWidget {
             child: Text(
               text,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontSize: 12,
                 height: 1.4,
               ),

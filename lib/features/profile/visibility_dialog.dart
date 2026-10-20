@@ -99,7 +99,7 @@ class _VisibilityDialogState extends State<VisibilityDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF1C162E),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
@@ -107,8 +107,8 @@ class _VisibilityDialogState extends State<VisibilityDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Visibility',
-                style: TextStyle(color: Colors.white, fontSize: 18)),
+            Text('Visibility',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18)),
             const SizedBox(height: 12),
             Text(
               _spotlight.active
@@ -116,8 +116,8 @@ class _VisibilityDialogState extends State<VisibilityDialog> {
                   : 'Boost your profile to the top of nearby decks for 4 hours.',
               style: TextStyle(
                 color: _spotlight.active
-                    ? const Color(0xFFFF9966)
-                    : Colors.white70,
+                    ? Theme.of(context).colorScheme.tertiary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
               ),
             ),
@@ -140,16 +140,16 @@ class _VisibilityDialogState extends State<VisibilityDialog> {
                             : 'Spotlight my profile',
                         style: TextStyle(
                           color: _spotlight.active
-                              ? Colors.white38
-                              : const Color(0xFFFF9966),
+                              ? Theme.of(context).colorScheme.onSurfaceVariant
+                              : Theme.of(context).colorScheme.tertiary,
                         ),
                       ),
                     ),
             ),
-            const Divider(color: Colors.white10),
-            const Text(
+            Divider(color: Theme.of(context).colorScheme.outlineVariant),
+            Text(
               'Photo Insights',
-              style: TextStyle(color: Colors.white, fontSize: 15),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15),
             ),
             Text(
               _insights == null
@@ -157,7 +157,7 @@ class _VisibilityDialogState extends State<VisibilityDialog> {
                   : 'Impressions over the last ${_insights!.windowDays} days '
                       '(a photo needs ${_insights!.minimumRequiredImpressions} '
                       'for a meaningful sample).',
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
             ),
             const SizedBox(height: 8),
             if (_loadingInsights)
@@ -172,11 +172,11 @@ class _VisibilityDialogState extends State<VisibilityDialog> {
                 ),
               )
             else if (_insights == null || _insights!.photos.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'No approved photos with impressions yet.',
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
                 ),
               )
             else
@@ -187,7 +187,7 @@ class _VisibilityDialogState extends State<VisibilityDialog> {
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
                 child:
-                    const Text('Close', style: TextStyle(color: Colors.white54)),
+                    Text('Close', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ),
             ),
           ],
@@ -213,10 +213,10 @@ class _InsightTile extends StatelessWidget {
         height: 44,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
-          color: const Color(0xFF2E244A),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         child: photoUrl == null
-            ? const Icon(Icons.image_rounded, color: Colors.white38, size: 20)
+            ? Icon(Icons.image_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20)
             : ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(photoUrl!, fit: BoxFit.cover),
@@ -224,7 +224,7 @@ class _InsightTile extends StatelessWidget {
       ),
       title: Text(
         entry.isPrimary ? 'Primary photo' : 'Photo',
-        style: const TextStyle(color: Colors.white, fontSize: 14),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
       ),
       subtitle: Text(
         entry.hasSufficientData
@@ -232,8 +232,8 @@ class _InsightTile extends StatelessWidget {
             : 'Not enough data yet — keep it up',
         style: TextStyle(
           color: entry.hasSufficientData
-              ? const Color(0xFFFF9966)
-              : Colors.white38,
+              ? Theme.of(context).colorScheme.tertiary
+              : Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 12,
         ),
       ),

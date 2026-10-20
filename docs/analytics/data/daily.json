@@ -2,12 +2,14 @@
   "schema_version": 1,
   "timezone": "UTC",
   "tracking_started": "2026-09-23",
-  "generated_at": "2026-10-19T03:16:16Z",
+  "generated_at": "2026-10-20T03:24:47Z",
   "apk": {
-    "live_downloads": 57,
+    "live_downloads": 61,
     "archived_downloads": 3,
-    "total_downloads": 60,
+    "total_downloads": 64,
     "asset_counts": {
+      "Weekend-v2.8.1-release.apk": 3,
+      "Weekend-v2.8.0-release.apk": 1,
       "Weekend-v2.7.0-release.apk": 23,
       "Weekend-v2.6.0-release.apk": 10,
       "Weekend-v2.5.1-release.apk": 8,
@@ -20,12 +22,12 @@
     "archived_note": "Weekend-v2.2.0-supabase.apk had download_count=3 when it was removed from release v2.2.0 on 2026-09-23; the count is kept here so cumulative totals stay accurate."
   },
   "release": {
-    "tag": "v2.7.0",
-    "version": "2.7.0",
-    "published_at": "2026-09-30T23:53:02Z",
-    "apk_asset": "Weekend-v2.7.0-release.apk",
-    "apk_downloads": 23,
-    "sha256": "a167137138e58d50cbd7e7bc32270f7cf65bc218ca105090ae93f530c615af32"
+    "tag": "v2.8.1",
+    "version": "2.8.1",
+    "published_at": "2026-10-19T10:53:13Z",
+    "apk_asset": "Weekend-v2.8.1-release.apk",
+    "apk_downloads": 3,
+    "sha256": "1df142ee23ecb27797e2afa7945772ff35d048fcb39f92b30436136a397d9f04"
   },
   "days": [
     {
@@ -390,8 +392,8 @@
     },
     {
       "date": "2026-10-18",
-      "repository_views": null,
-      "repository_unique_visitors": null,
+      "repository_views": 1,
+      "repository_unique_visitors": 1,
       "repository_clones": null,
       "repository_unique_cloners": null,
       "apk_downloads_daily": 1,
@@ -405,11 +407,20 @@
       "repository_unique_cloners": null,
       "apk_downloads_daily": 0,
       "apk_downloads_cumulative": 60
+    },
+    {
+      "date": "2026-10-20",
+      "repository_views": null,
+      "repository_unique_visitors": null,
+      "repository_clones": null,
+      "repository_unique_cloners": null,
+      "apk_downloads_daily": 4,
+      "apk_downloads_cumulative": 64
     }
   ],
   "traffic_window_totals": {
-    "views": 75,
-    "unique_visitors": 44
+    "views": 73,
+    "unique_visitors": 42
   },
-  "traffic_fetched_at": "2026-10-19T03:16:15Z"
+  "traffic_fetched_at": "2026-10-20T03:24:46Z"
 }

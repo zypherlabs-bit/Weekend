@@ -6,12 +6,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../models/models.dart';
 import '../../providers/feature_providers.dart';
-import '../../providers/weekend_provider.dart';
+import '../../providers/weekend_provider.dart'
+    show weekendProvider, surgeProvider, DiscoveryMode, WeekendState;
 import '../../repositories/discovery_repository.dart';
 import '../../services/ad_service.dart';
 import '../../repositories/ad_repository.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/match_celebration_dialog.dart';
+import '../../widgets/weekend_design_system.dart';
 
 /// Horizontal distance (logical pixels) a drag must travel before it counts
 /// as a pass or like swipe.
@@ -161,7 +163,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     super.build(context);
     final state = ref.watch(weekendProvider);
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final topProfile = state.deckProfiles.isEmpty
         ? null
         : state.deckProfiles.last;
@@ -170,30 +171,90 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
       _recordSeenImpression(topProfile);
     }
 
-    return Scaffold(
-      backgroundColor: isDark
-          ? AppTheme.darkBackground
-          : AppTheme.lightBackground,
-      body: SafeArea(
-        child: Column(
+    // Use a Stack to layer: full-screen photo, gradients, top tabs, profile details, action buttons
+    return topProfile == null
+        ? _EmptyDiscovery(
+            onAdjustFilters: _showFilterSheet,
+            onRediscover: () => ref
+                .read(weekendProvider.notifier)
+                .loadDiscoveryProfiles(),
+          )
+        : AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: _buildFullScreenDiscovery(topProfile),
+          );
+  }
+
+  Widget _buildFullScreenDiscovery(UserProfile profile) {
+    final photos = profile.photos;
+    final showDistance = ref
+        .read(weekendProvider)
+        .locationPreferences
+        .showDistanceEnabled;
+    final mediaQuery = MediaQuery.of(context);
+    final statusBarHeight = mediaQuery.padding.top;
+    final bottomInset = mediaQuery.padding.bottom;
+
+    return GestureDetector(
+      onHorizontalDragStart: (_) => setState(() => _dragOffset = Offset.zero),
+      onHorizontalDragUpdate: (d) => setState(() => _dragOffset += d.delta),
+      onHorizontalDragEnd: (d) => _onDragEnd(d, profile),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        transform: Matrix4.translationValues(_dragOffset.dx, 0, 0)
+          ..rotateZ(_dragOffset.dx * 0.0008),
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            _DiscoveryHeader(state: state, onFilterTap: _showFilterSheet),
-            Expanded(
-              child: topProfile == null
-                  ? _EmptyDiscovery(
-                      onAdjustFilters: _showFilterSheet,
-                      onRediscover: () => ref
-                          .read(weekendProvider.notifier)
-                          .loadDiscoveryProfiles(),
-                    )
-                  : AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      switchInCurve: Curves.easeOut,
-                      switchOutCurve: Curves.easeIn,
-                      child: _buildDiscoveryCard(topProfile),
-                    ),
+            // 1. Full-screen background profile image
+            Positioned.fill(child: _buildPhoto(profile)),
+            // 2. Subtle gradient overlay for text readability (top for tabs, bottom for details/buttons)
+            Positioned.fill(child: _buildFullScreenScrim()),
+            // 3. Top photo indicators (dots)
+            if (photos.length >= 2)
+              Positioned(
+                top: statusBarHeight + 14,
+                left: 0,
+                right: 0,
+                child: _photoIndicators(photos.length),
+              ),
+            // 4. Top verification badge and online dot
+            if (photos.isNotEmpty) ...[
+              Positioned(
+                top: statusBarHeight + 16,
+                left: 16,
+                child: _verificationBadge(profile),
+              ),
+              Positioned(
+                top: statusBarHeight + 16,
+                right: 16,
+                child: _onlineDot(profile),
+              ),
+            ],
+            // 5. Fixed top discovery tabs (anchored below status bar)
+            Positioned(
+              top: statusBarHeight,
+              left: 0,
+              right: 0,
+              child: _DiscoveryHeader(state: ref.watch(weekendProvider), onFilterTap: _showFilterSheet),
             ),
-            if (topProfile != null) _buildActionRow(topProfile),
+            // 6. Profile details near bottom of photo
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 100 + bottomInset, // Space for action buttons + bottom inset
+              child: _buildDetails(profile, showDistance),
+            ),
+            // 7. Action buttons above bottom navigation
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: bottomInset,
+              child: _buildActionRow(profile),
+            ),
           ],
         ),
       ),
@@ -210,47 +271,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
       return;
     }
     pass ? _pass(profile) : _like(profile);
-  }
-
-  Widget _buildDiscoveryCard(UserProfile profile) {
-    final photos = profile.photos;
-    final showDistance = ref
-        .read(weekendProvider)
-        .locationPreferences
-        .showDistanceEnabled;
-    return GestureDetector(
-      onHorizontalDragStart: (_) => setState(() => _dragOffset = Offset.zero),
-      onHorizontalDragUpdate: (d) => setState(() => _dragOffset += d.delta),
-      onHorizontalDragEnd: (d) => _onDragEnd(d, profile),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        transform: Matrix4.translationValues(_dragOffset.dx, 0, 0)
-          ..rotateZ(_dragOffset.dx * 0.0008),
-        child: Stack(
-          children: [
-            Positioned.fill(child: _buildPhoto(profile)),
-            Positioned.fill(child: _buildScrim()),
-            if (photos.isNotEmpty) ...[
-              Positioned(
-                top: 14,
-                left: 0,
-                right: 0,
-                child: _photoIndicators(photos.length),
-              ),
-              Positioned(top: 16, left: 16, child: _verificationBadge(profile)),
-              Positioned(top: 16, right: 16, child: _onlineDot(profile)),
-            ],
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _buildDetails(profile, showDistance),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildPhoto(UserProfile profile) {
@@ -295,12 +315,23 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     );
   }
 
-  Widget _buildScrim() => DecoratedBox(
+  Widget _buildFullScreenScrim() => DecoratedBox(
     decoration: BoxDecoration(
-      gradient: const LinearGradient(
+      gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Colors.transparent, Colors.black26, Colors.black87],
+        colors: [
+          // Top gradient for tab readability
+          Colors.black.withValues(alpha: 0.45),
+          Colors.black.withValues(alpha: 0.3),
+          Colors.transparent,
+          Colors.transparent,
+          // Bottom gradient for profile details and action buttons
+          Colors.black.withValues(alpha: 0.25),
+          Colors.black.withValues(alpha: 0.55),
+          Colors.black.withValues(alpha: 0.85),
+        ],
+        stops: const [0.0, 0.08, 0.35, 0.55, 0.7, 0.88, 1.0],
       ),
     ),
   );
@@ -385,7 +416,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
       meta.add(profile.relationshipIntent);
     }
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,8 +500,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
   }
 
   Widget _buildActionRow(UserProfile profile) {
+    final mediaQuery = MediaQuery.of(context);
+    final bottomInset = mediaQuery.padding.bottom;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 10, 32, 10),
+      padding: EdgeInsets.fromLTRB(32, 10, 32, 10 + bottomInset),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -507,9 +540,13 @@ class _DiscoveryHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final surge = ref.watch(surgeProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Tab row - transparent background so photo shows through
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 6, 12, 6),
           child: Row(
@@ -544,24 +581,16 @@ class _DiscoveryHeader extends ConsumerWidget {
             ],
           ),
         ),
+        // Surge banner - use glass effect for readability over photo
         if (surge.active) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
             child: Semantics(
               label: 'Swipe surge is active in ${surge.city}',
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: AppTheme.sunsetCoral.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: AppTheme.sunsetCoral.withValues(alpha: 0.5),
-                  ),
-                ),
+              child: WeekendGlass(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                radius: 14,
+                blurSigma: 12,
                 child: const Text(
                   'Swipe surge active',
                   style: TextStyle(
@@ -606,14 +635,14 @@ class _ModeTab extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected
                 ? theme.colorScheme.primary
-                : theme.colorScheme.surface.withValues(
-                    alpha: theme.brightness == Brightness.dark ? 0.58 : 0.76,
-                  ),
+                : (theme.brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : Colors.black.withValues(alpha: 0.08)),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: selected
                   ? theme.colorScheme.primary
-                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.55),
+                  : Colors.white.withValues(alpha: 0.3),
             ),
           ),
           child: Text(
@@ -621,7 +650,7 @@ class _ModeTab extends StatelessWidget {
             style: theme.textTheme.labelMedium?.copyWith(
               color: selected
                   ? theme.colorScheme.onPrimary
-                  : theme.colorScheme.onSurface,
+                  : Colors.white,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
@@ -637,10 +666,16 @@ class _FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.tune_rounded),
-      onPressed: onTap,
-      tooltip: 'Discovery filters',
+    final theme = Theme.of(context);
+    return WeekendGlass(
+      padding: const EdgeInsets.all(10),
+      radius: 22,
+      blurSigma: 12,
+      child: IconButton(
+        icon: const Icon(Icons.tune_rounded, color: Colors.white),
+        onPressed: onTap,
+        tooltip: 'Discovery filters',
+      ),
     );
   }
 }
@@ -655,48 +690,79 @@ class _EmptyDiscovery extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.people_outline_rounded,
-              size: 64,
-              color: Colors.white38,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No profiles right now',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+    final theme = Theme.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    final bottomInset = mediaQuery.padding.bottom;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Background atmosphere
+        const WeekendAtmosphere(child: SizedBox.expand()),
+        // Content
+        SafeArea(
+          top: true,
+          bottom: false,
+          child: Column(
+            children: [
+              // Top tabs header (empty state still shows tabs)
+              _DiscoveryHeader(
+                state: WeekendState.initial(),
+                onFilterTap: onAdjustFilters,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try another discovery mode or adjust your filters.',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 14,
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.people_outline_rounded,
+                          size: 64,
+                          color: Colors.white38,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No profiles right now',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Try another discovery mode or adjust your filters.',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 14,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        WeekendGlassButton(
+                          label: 'Adjust filters',
+                          onPressed: onAdjustFilters,
+                          primary: true,
+                        ),
+                        const SizedBox(height: 12),
+                        WeekendGlassButton(
+                          label: 'Rediscover',
+                          onPressed: onRediscover,
+                          primary: false,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: onAdjustFilters,
-              child: const Text('Adjust filters'),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: onRediscover,
-              child: const Text('Rediscover'),
-            ),
-          ],
+              // Bottom spacing for nav bar
+              SizedBox(height: 80 + bottomInset),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -731,13 +797,18 @@ class _ActionButton extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.35),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: Colors.black.withValues(alpha: 0.45),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: color.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
-          child: Icon(icon, color: Colors.white, size: 28),
+          child: Icon(icon, color: Colors.white, size: size * 0.54),
         ),
       ),
     );

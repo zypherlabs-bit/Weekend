@@ -7,7 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/models.dart';
 import '../../providers/feature_providers.dart';
 import '../../providers/weekend_provider.dart'
-    show weekendProvider, surgeProvider, DiscoveryMode, WeekendState;
+    show weekendProvider, WeekendState;
 import '../../repositories/discovery_repository.dart';
 import '../../services/ad_service.dart';
 import '../../repositories/ad_repository.dart';
@@ -162,7 +162,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final state = ref.watch(weekendProvider);
-    final theme = Theme.of(context);
     final topProfile = state.deckProfiles.isEmpty
         ? null
         : state.deckProfiles.last;
@@ -175,9 +174,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     return topProfile == null
         ? _EmptyDiscovery(
             onAdjustFilters: _showFilterSheet,
-            onRediscover: () => ref
-                .read(weekendProvider.notifier)
-                .loadDiscoveryProfiles(),
+            onRediscover: () =>
+                ref.read(weekendProvider.notifier).loadDiscoveryProfiles(),
           )
         : AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
@@ -239,13 +237,17 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
               top: statusBarHeight,
               left: 0,
               right: 0,
-              child: _DiscoveryHeader(state: ref.watch(weekendProvider), onFilterTap: _showFilterSheet),
+              child: _DiscoveryHeader(
+                state: ref.watch(weekendProvider),
+                onFilterTap: _showFilterSheet,
+              ),
             ),
             // 6. Profile details near bottom of photo
             Positioned(
               left: 0,
               right: 0,
-              bottom: 100 + bottomInset, // Space for action buttons + bottom inset
+              bottom:
+                  100 + bottomInset, // Space for action buttons + bottom inset
               child: _buildDetails(profile, showDistance),
             ),
             // 7. Action buttons above bottom navigation
@@ -540,8 +542,6 @@ class _DiscoveryHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final surge = ref.watch(surgeProvider);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -588,7 +588,10 @@ class _DiscoveryHeader extends ConsumerWidget {
             child: Semantics(
               label: 'Swipe surge is active in ${surge.city}',
               child: WeekendGlass(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 radius: 14,
                 blurSigma: 12,
                 child: const Text(
@@ -636,8 +639,8 @@ class _ModeTab extends StatelessWidget {
             color: selected
                 ? theme.colorScheme.primary
                 : (theme.brightness == Brightness.dark
-                    ? Colors.white.withValues(alpha: 0.12)
-                    : Colors.black.withValues(alpha: 0.08)),
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.08)),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: selected
@@ -648,9 +651,7 @@ class _ModeTab extends StatelessWidget {
           child: Text(
             label,
             style: theme.textTheme.labelMedium?.copyWith(
-              color: selected
-                  ? theme.colorScheme.onPrimary
-                  : Colors.white,
+              color: selected ? theme.colorScheme.onPrimary : Colors.white,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
@@ -666,7 +667,6 @@ class _FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return WeekendGlass(
       padding: const EdgeInsets.all(10),
       radius: 22,
@@ -690,7 +690,6 @@ class _EmptyDiscovery extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final mediaQuery = MediaQuery.of(context);
     final bottomInset = mediaQuery.padding.bottom;
 

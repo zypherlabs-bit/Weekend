@@ -90,6 +90,15 @@ keeping location and personal data deliberately private.
 ## Screenshots
 
 <p align="center">
+  <img src="docs/screenshots/onboarding-welcome.jpg" width="195" alt="Weekend app screenshot — onboarding welcome screen of the free dating app for Android">
+  <img src="docs/screenshots/onboarding-discover.jpg" width="195" alt="Weekend app screenshot — onboarding discover and connect with people nearby">
+  <img src="docs/screenshots/onboarding-plans.jpg" width="195" alt="Weekend app screenshot — onboarding make real weekend plans">
+  <img src="docs/screenshots/signup-email-step.jpg" width="195" alt="Weekend app screenshot — sign-up wizard step 1 of 6, email">
+</p>
+
+<p align="center"><em>Real captures from the running app — onboarding & the 6-step sign-up wizard</em></p>
+
+<p align="center">
   <img src="docs/screenshots/signed-in-profile.jpg" width="195" alt="Weekend app screenshot — signed-in profile screen with profile tools">
   <img src="docs/screenshots/privacy-availability.jpg" width="195" alt="Weekend app screenshot — Privacy and Availability settings: incognito, snooze, online status, away note, travel mode">
   <img src="docs/screenshots/privacy-incognito.jpg" width="195" alt="Weekend app screenshot — incognito mode switched on, confirmed by the server response">
@@ -112,7 +121,9 @@ moves, spotlight and photo verification</em></p>
 > toggle, the saved opening move and the spotlight window are all confirmed by
 > the backend, not drawn by the client. This repository never publishes captures
 > containing real people's profiles, so the discovery feed (which renders real
-> accounts) is deliberately not shown here.
+> accounts) is deliberately not shown here. You can explore the onboarding and
+> sign-up flow yourself in
+> [offline demo mode](#run-without-a-backend-offline-demo-mode).
 >
 > The account is **not photo-verified**, and the verification capture says so.
 > A verification badge created by a test fixture was reset before the captures
@@ -741,7 +752,7 @@ does today:
 | **Email confirmation** | Behaviour depends on your own Supabase Auth settings (email confirmation on/off). |
 | **iOS** | An `ios/` host project is present, but only Android is built, released and tested. |
 | **Sign-in methods** | Email + password (plus optional TOTP two-factor). Google/other OAuth providers are not implemented. |
-| **Screenshots** | Every screenshot in this README is a real capture from the running app. The signed-in captures are from a **synthetic test account against a live Supabase backend** (never a real person's profile). See [Screenshots](#screenshots). |
+| **Screenshots** | Every screenshot in this README is a real capture from the running app. Onboarding and the sign-up wizard are shown from the shipped client; the signed-in captures are from a **synthetic test account against a live Supabase backend** (never a real person's profile). See [Screenshots](#screenshots). |
 
 What Weekend does **not** do: it does not collect exact GPS coordinates for other
 users, does not sell or share personal data with advertisers, and does not gate

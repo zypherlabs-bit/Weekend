@@ -108,6 +108,13 @@ well under Play's size limits.
 Play requires a minimum of 2 phone screenshots. Genuine screenshots must come
 from a real device showing real app state.
 
+Real screenshots exist in `docs/screenshots/` (`onboarding-*.jpg`,
+`signup-email-step.jpg`) — onboarding and sign-up captures from the app. Note
+that `discovery.jpg`, `profile.jpg`, `match.jpg` and `messaging.jpg` have now
+been removed from the repo because they were brand artwork, not app captures.
+The remaining images are **emulator captures**, and they predate the
+age-enforcement work.
+
 **Do not upload these as-is.** Re-capture on the physical device during the
 Phase 25 walkthrough, at minimum:
 

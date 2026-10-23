@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/weekend-logo.jpg" width="132" alt="Weekend — free dating app for Android logo">
+<img src="docs/assets/weekend-logo.png" width="132" alt="Weekend — free dating app for Android logo">
 
 # Weekend — Free Dating App for Android · Open Source
 

@@ -1,7 +1,4 @@
-<div align="center">
-
-<img src="docs/assets/weekend-logo.png" width="132" alt="Weekend — free dating app for Android logo">
-
+﻿<div align="center">
 # Weekend — Free Dating App for Android · Open Source
 
 **Make Every Weekend Brighter.** Weekend is a free, location-based dating app
@@ -98,36 +95,13 @@ keeping location and personal data deliberately private.
 
 <p align="center"><em>Real captures from the running app — onboarding & the 6-step sign-up wizard</em></p>
 
-<p align="center">
-  <img src="docs/screenshots/signed-in-profile.jpg" width="195" alt="Weekend app screenshot — signed-in profile screen with profile tools">
-  <img src="docs/screenshots/privacy-availability.jpg" width="195" alt="Weekend app screenshot — Privacy and Availability settings: incognito, snooze, online status, away note, travel mode">
-  <img src="docs/screenshots/privacy-incognito.jpg" width="195" alt="Weekend app screenshot — incognito mode switched on, confirmed by the server response">
-  <img src="docs/screenshots/opening-moves-saved.jpg" width="195" alt="Weekend app screenshot — opening move saved on the server, confirmation shown">
-</p>
 
-<p align="center">
-  <img src="docs/screenshots/opening-moves.jpg" width="195" alt="Weekend app screenshot — opening moves editor reloading the saved prompt from the server">
-  <img src="docs/screenshots/spotlight-photo-insights.jpg" width="195" alt="Weekend app screenshot — spotlight window and photo insights from server state">
-  <img src="docs/screenshots/photo-verification.jpg" width="195" alt="Weekend app screenshot — photo verification dialog reporting an unverified profile">
-</p>
-
-<p align="center"><em>Signed in against a live Supabase backend — privacy modes, opening
-moves, spotlight and photo verification</em></p>
 
 > **Screenshot honesty note:** every image above was captured from the running
-> app; none is a mock-up. The signed-in captures are from a **synthetic test
-> account** on a live Supabase project, so the account shows no real person's
-> data. Every state they display came from a server response — the incognito
-> toggle, the saved opening move and the spotlight window are all confirmed by
-> the backend, not drawn by the client. This repository never publishes captures
-> containing real people's profiles, so the discovery feed (which renders real
-> accounts) is deliberately not shown here. You can explore the onboarding and
-> sign-up flow yourself in
-> [offline demo mode](#run-without-a-backend-offline-demo-mode).
->
-> The account is **not photo-verified**, and the verification capture says so.
-> A verification badge created by a test fixture was reset before the captures
-> were taken, so nothing above claims a verification that was never earned.
+> app; none is a mock-up. This repository never publishes captures containing
+> real people's profiles, so the discovery feed (which renders real accounts)
+> is deliberately not shown here. You can explore the onboarding and sign-up
+> flow yourself in [offline demo mode](#run-without-a-backend-offline-demo-mode).
 
 ---
 
@@ -752,7 +726,7 @@ does today:
 | **Email confirmation** | Behaviour depends on your own Supabase Auth settings (email confirmation on/off). |
 | **iOS** | An `ios/` host project is present, but only Android is built, released and tested. |
 | **Sign-in methods** | Email + password (plus optional TOTP two-factor). Google/other OAuth providers are not implemented. |
-| **Screenshots** | Every screenshot in this README is a real capture from the running app. Onboarding and the sign-up wizard are shown from the shipped client; the signed-in captures are from a **synthetic test account against a live Supabase backend** (never a real person's profile). See [Screenshots](#screenshots). |
+| **Screenshots** | Every screenshot in this README is a real capture from the running app. Onboarding and the sign-up wizard are shown from the shipped client. See [Screenshots](#screenshots). |
 
 What Weekend does **not** do: it does not collect exact GPS coordinates for other
 users, does not sell or share personal data with advertisers, and does not gate
@@ -1301,6 +1275,8 @@ Free • Open Source • Android • Flutter • Supabase
 Built by the Weekend maintainers and contributors.
 
 </div>
+
+
 
 
 

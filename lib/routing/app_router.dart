@@ -15,6 +15,7 @@ import '../features/auth/security_setup_screen.dart';
 import '../features/auth/signup_wizard_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/profile/profile_viewer_screen.dart';
 
 import '../features/profile/edit_profile_screen.dart';
 import '../features/discovery/explore_screen.dart';
@@ -221,6 +222,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileScreen(),
+        routes: [
+          GoRoute(
+            path: 'viewer',
+            builder: (context, state) {
+              final index =
+                  int.tryParse(state.uri.queryParameters['index'] ?? '') ?? 0;
+              return ProfileViewerScreen(initialIndex: index);
+            },
+          ),
+        ],
       ),
 
       GoRoute(

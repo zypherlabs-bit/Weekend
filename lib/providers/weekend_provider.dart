@@ -178,6 +178,7 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     required PlanRepository planRepository,
     required SafetyRepository safetyRepository,
     required DateIdeasRepository dateIdeasRepository,
+    WeekendState? initialState,
   }) : _discoveryRepo = discoveryRepository,
        _profileRepo = profileRepository,
        _matchRepo = matchRepository,
@@ -185,7 +186,7 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
        _planRepo = planRepository,
        _safetyRepo = safetyRepository,
        _dateIdeasRepo = dateIdeasRepository,
-       super(WeekendState.initial());
+       super(initialState ?? WeekendState.initial());
 
   SupabaseClient? get _client => SupabaseConfig.client;
 

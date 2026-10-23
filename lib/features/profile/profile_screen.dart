@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/supabase_config.dart';
+import '../../models/models.dart';
 import '../../providers/weekend_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/image_optimizer.dart';
@@ -26,10 +27,40 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isUploadingPhoto = false;
 
+  /// The avatar photo widget shown for the current user. Reused both inside
+  /// the [Hero] (when the user has photos) and as a plain fallback (when
+  /// they don't), keeping a single source of truth for the avatar render.
+  Widget _avatarPhoto(UserProfile user, ColorScheme scheme) {
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: scheme.primary, width: 3),
+      ),
+      child: CircleAvatar(
+        radius: 58,
+        backgroundImage: user.photos.isNotEmpty
+            ? NetworkImage(user.photos.first)
+            : null,
+        backgroundColor: scheme.surfaceContainerHighest,
+        child: user.photos.isEmpty
+            ? Icon(
+                Icons.person_rounded,
+                size: 60,
+                color: scheme.onSurfaceVariant,
+              )
+            : null,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(weekendProvider);
     final user = state.currentUser;
+    final heroTag =
+        'profileAvatar_${user.primaryPhotoId.isNotEmpty ? user.primaryPhotoId : user.id}';
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
@@ -44,28 +75,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Stack(
                 alignment: Alignment.bottomRight,
                 children: [
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: scheme.primary, width: 3),
-                    ),
-                    child: CircleAvatar(
-                      radius: 58,
-                      backgroundImage: user.photos.isNotEmpty
-                          ? NetworkImage(user.photos.first)
-                          : null,
-                      backgroundColor: scheme.surfaceContainerHighest,
-                      child: user.photos.isEmpty
-                          ? Icon(
-                              Icons.person_rounded,
-                              size: 60,
-                              color: scheme.onSurfaceVariant,
-                            )
-                          : null,
-                    ),
-                  ),
+                  if (user.photos.isNotEmpty)
+                    GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: () => context.push('/profile/viewer'),
+                      child: Hero(
+                        tag: heroTag,
+                        child: _avatarPhoto(user, scheme),
+                      ),
+                    )
+                  else
+                    _avatarPhoto(user, scheme),
                   Positioned(
                     bottom: 8,
                     right: 8,
@@ -104,9 +124,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   // The age is omitted entirely when unknown rather than
                   // showing a fabricated number.
                   Text(
-                    user.age > 0
-                        ? '${user.name}, ${user.age}'
-                        : user.name,
+                    user.age > 0 ? '${user.name}, ${user.age}' : user.name,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: scheme.onSurface,
@@ -378,10 +396,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     context.go('/auth');
                   },
 
-                  icon: Icon(
-                    Icons.logout_rounded,
-                    color: scheme.error,
-                  ),
+                  icon: Icon(Icons.logout_rounded, color: scheme.error),
                   label: Text(
                     'Sign Out',
 
@@ -449,8 +464,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     // placeholder) id held in app state.
     final authId = SupabaseConfig.client?.auth.currentUser?.id;
     if (authId == null || authId.isEmpty || authId == 'unauthenticated') {
-      _showMessage('You are not signed in, so the photo was not uploaded.',
-          isError: true);
+      _showMessage(
+        'You are not signed in, so the photo was not uploaded.',
+        isError: true,
+      );
       return;
     }
 
@@ -475,8 +492,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        _showMessage('Failed to upload photo. ${_readableError(e)}',
-            isError: true);
+        _showMessage(
+          'Failed to upload photo. ${_readableError(e)}',
+          isError: true,
+        );
       }
     } finally {
       if (mounted) {

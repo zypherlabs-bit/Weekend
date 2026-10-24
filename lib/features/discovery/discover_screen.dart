@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../models/models.dart';
 import '../../providers/feature_providers.dart';
+import 'widgets/swipe_deck.dart';
 import '../../providers/weekend_provider.dart'
     show weekendProvider, WeekendState;
 import '../../repositories/discovery_repository.dart';
@@ -14,14 +15,6 @@ import '../../repositories/ad_repository.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/match_celebration_dialog.dart';
 import '../../widgets/weekend_design_system.dart';
-
-/// Horizontal distance (logical pixels) a drag must travel before it counts
-/// as a pass or like swipe.
-const double _kSwipeThresholdPx = 100;
-
-/// Drag velocity (logical pixels per second) that counts as a swipe even if
-/// the card has not travelled the full threshold.
-const double _kSwipeVelocityThreshold = 700;
 
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key});
@@ -32,10 +25,7 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   final AdService _adService = AdService(repository: AdRepository());
-  Offset _dragOffset = Offset.zero;
-  int _photoIndex = 0;
   final Set<String> _impressionSubmitted = {};
-  bool _isActing = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -113,25 +103,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     );
   }
 
-  void _pass(UserProfile profile) => _actOnProfile(profile, like: false);
-  void _like(UserProfile profile) => _actOnProfile(profile, like: true);
-
-  Future<void> _actOnProfile(UserProfile profile, {required bool like}) async {
-    if (_isActing) return;
-    _isActing = true;
-    try {
-      if (like) {
-        await ref.read(weekendProvider.notifier).swipeRight(profile);
-      } else {
-        await ref.read(weekendProvider.notifier).swipeLeft(profile.id);
-      }
-    } finally {
-      if (mounted) {
-        _isActing = false;
-        setState(() => _dragOffset = Offset.zero);
-      }
-    }
-  }
 
   void _openProfile(UserProfile profile) {
     showModalBottomSheet<void>(
@@ -151,387 +122,92 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     );
   }
 
-  void _selectPhoto(int index, int count) {
-    if (count < 2) return;
-    setState(() {
-      _photoIndex = ((index % count) + count) % count;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final state = ref.watch(weekendProvider);
-    final topProfile = state.deckProfiles.isEmpty
-        ? null
-        : state.deckProfiles.last;
+    final profiles = state.deckProfiles;
+    final topProfile = profiles.isEmpty ? null : profiles.last;
 
     if (topProfile != null) {
       _recordSeenImpression(topProfile);
     }
 
-    // Use a Stack to layer: full-screen photo, gradients, top tabs, profile details, action buttons
-    return topProfile == null
-        ? _EmptyDiscovery(
-            onAdjustFilters: _showFilterSheet,
-            onRediscover: () =>
-                ref.read(weekendProvider.notifier).loadDiscoveryProfiles(),
-          )
-        : AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            switchInCurve: Curves.easeOut,
-            switchOutCurve: Curves.easeIn,
-            child: _buildFullScreenDiscovery(topProfile),
-          );
-  }
+    // The discovery tabs stay anchored above the swipe deck.
+    final header = _DiscoveryHeader(state: state, onFilterTap: _showFilterSheet);
 
-  Widget _buildFullScreenDiscovery(UserProfile profile) {
-    final photos = profile.photos;
-    final showDistance = ref
-        .read(weekendProvider)
-        .locationPreferences
-        .showDistanceEnabled;
-    final mediaQuery = MediaQuery.of(context);
-    final statusBarHeight = mediaQuery.padding.top;
-    final bottomInset = mediaQuery.padding.bottom;
-
-    return GestureDetector(
-      onHorizontalDragStart: (_) => setState(() => _dragOffset = Offset.zero),
-      onHorizontalDragUpdate: (d) => setState(() => _dragOffset += d.delta),
-      onHorizontalDragEnd: (d) => _onDragEnd(d, profile),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        transform: Matrix4.translationValues(_dragOffset.dx, 0, 0)
-          ..rotateZ(_dragOffset.dx * 0.0008),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 1. Full-screen background profile image
-            Positioned.fill(child: _buildPhoto(profile)),
-            // 2. Subtle gradient overlay for text readability (top for tabs, bottom for details/buttons)
-            Positioned.fill(child: _buildFullScreenScrim()),
-            // 3. Top photo indicators (dots)
-            if (photos.length >= 2)
-              Positioned(
-                top: statusBarHeight + 14,
-                left: 0,
-                right: 0,
-                child: _photoIndicators(photos.length),
-              ),
-            // 4. Top verification badge and online dot
-            if (photos.isNotEmpty) ...[
-              Positioned(
-                top: statusBarHeight + 16,
-                left: 16,
-                child: _verificationBadge(profile),
-              ),
-              Positioned(
-                top: statusBarHeight + 16,
-                right: 16,
-                child: _onlineDot(profile),
-              ),
-            ],
-            // 5. Fixed top discovery tabs (anchored below status bar)
-            Positioned(
-              top: statusBarHeight,
-              left: 0,
-              right: 0,
-              child: _DiscoveryHeader(
-                state: ref.watch(weekendProvider),
-                onFilterTap: _showFilterSheet,
-              ),
-            ),
-            // 6. Profile details near bottom of photo
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom:
-                  100 + bottomInset, // Space for action buttons + bottom inset
-              child: _buildDetails(profile, showDistance),
-            ),
-            // 7. Action buttons above bottom navigation
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: bottomInset,
-              child: _buildActionRow(profile),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _onDragEnd(DragEndDetails details, UserProfile profile) {
-    final v = details.primaryVelocity ?? 0;
-    final dx = _dragOffset.dx;
-    final pass = dx > _kSwipeThresholdPx || v > _kSwipeVelocityThreshold;
-    final like = dx < -_kSwipeThresholdPx || v < -_kSwipeVelocityThreshold;
-    if (!pass && !like) {
-      setState(() => _dragOffset = Offset.zero);
-      return;
-    }
-    pass ? _pass(profile) : _like(profile);
-  }
-
-  Widget _buildPhoto(UserProfile profile) {
-    final photos = profile.photos;
-    if (photos.isEmpty) {
-      return Container(
-        color: const Color(0xFF2E244A),
-        alignment: Alignment.center,
-        child: const Icon(
-          Icons.person_rounded,
-          size: 88,
-          color: Colors.white24,
-        ),
+    if (topProfile == null) {
+      return _EmptyDiscovery(
+        onAdjustFilters: _showFilterSheet,
+        onRediscover: () =>
+            ref.read(weekendProvider.notifier).loadDiscoveryProfiles(),
       );
     }
-    return CachedNetworkImage(
-      imageUrl: photos[_photoIndex.clamp(0, photos.length - 1)],
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      placeholder: (_, __) => Container(
-        color: const Color(0xFF2E244A),
-        alignment: Alignment.center,
-        child: const SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-            strokeWidth: 2.5,
-            color: AppTheme.sunsetCoral,
-          ),
-        ),
-      ),
-      errorWidget: (_, __, ___) => Container(
-        color: const Color(0xFF2E244A),
-        alignment: Alignment.center,
-        child: const Icon(
-          Icons.broken_image_rounded,
-          size: 60,
-          color: Colors.white24,
-        ),
-      ),
-    );
-  }
 
-  Widget _buildFullScreenScrim() => DecoratedBox(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          // Top gradient for tab readability
-          Colors.black.withValues(alpha: 0.45),
-          Colors.black.withValues(alpha: 0.3),
-          Colors.transparent,
-          Colors.transparent,
-          // Bottom gradient for profile details and action buttons
-          Colors.black.withValues(alpha: 0.25),
-          Colors.black.withValues(alpha: 0.55),
-          Colors.black.withValues(alpha: 0.85),
-        ],
-        stops: const [0.0, 0.08, 0.35, 0.55, 0.7, 0.88, 1.0],
-      ),
-    ),
-  );
-
-  Widget _photoIndicators(int count) {
-    if (count < 2) return const SizedBox.shrink();
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
       children: [
-        for (var i = 0; i < count; i++)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 3),
-            child: GestureDetector(
-              onTap: () => _selectPhoto(i, count),
-              child: Container(
-                width: i == _photoIndex ? 22 : 7,
-                height: 7,
-                decoration: BoxDecoration(
-                  color: i == _photoIndex
-                      ? Colors.white
-                      : Colors.white.withValues(alpha: 0.45),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
+        header,
+        Expanded(
+          child: SwipeDeck(
+            profiles: profiles.reversed.map((profile) {
+              return SwipeProfile(
+                id: profile.id,
+                name: profile.name,
+                age: profile.age,
+                photoUrls: profile.photos,
+                subtitle: profile.bio.isEmpty ? null : profile.bio,
+              );
+            }).toList(),
+            onAction: (SwipeProfile profile, SwipeDirection direction) async {
+              final notifier = ref.read(weekendProvider.notifier);
+              try {
+                if (direction == SwipeDirection.pass) {
+                  await notifier.swipeLeft(profile.id);
+                } else {
+                  final current = ref.read(weekendProvider);
+                  final userProfile = current.deckProfiles.firstWhere(
+                    (candidate) => candidate.id == profile.id,
+                    orElse: () => throw StateError('profile not in deck'),
+                  );
+                  await notifier.swipeRight(userProfile);
+                }
+
+                // Weekend's notifier removes the card optimistically and
+                // restores it internally only when the server write genuinely
+                // fails. If the profile is still in the deck, restoration
+                // happened, so SwipeDeck restores its copy too: no profile is
+                // silently lost and no false match is created.
+                final stillPresent = ref.read(weekendProvider).deckProfiles.any(
+                  (candidate) => candidate.id == profile.id,
+                );
+                return !stillPresent;
+              } catch (_) {
+                return false;
+              }
+            },
+            onProfileTap: (SwipeProfile profile) {
+              final current = ref.read(weekendProvider);
+              final userProfile = current.deckProfiles.firstWhere(
+                (candidate) => candidate.id == profile.id,
+                orElse: () => throw StateError('profile not in deck'),
+              );
+              if (mounted) {
+                _openProfile(userProfile);
+              }
+            },
+            onEmpty: () =>
+                ref.read(weekendProvider.notifier).loadDiscoveryProfiles(),
           ),
+        ),
       ],
     );
   }
 
-  Widget _verificationBadge(UserProfile profile) {
-    if (!profile.isPhotoVerified) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1C162E),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.verified_rounded, color: Color(0xFF6FD08C), size: 14),
-          SizedBox(width: 4),
-          Text(
-            'Verified',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _onlineDot(UserProfile profile) {
-    if (!profile.isOnline) return const SizedBox.shrink();
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: const BoxDecoration(
-        color: Color(0xFF6FD08C),
-        shape: BoxShape.circle,
-      ),
-    );
-  }
 
-  Widget _buildDetails(UserProfile profile, bool showDistance) {
-    final age = profile.age > 0 ? profile.age : null;
-    final meta = <String>[];
-    if (showDistance &&
-        (profile.distanceDisplay.trim().isNotEmpty || profile.distanceKm > 0)) {
-      meta.add(
-        profile.distanceDisplay.trim().isNotEmpty
-            ? profile.distanceDisplay
-            : '${profile.distanceKm} km away',
-      );
-    }
-    if (profile.heightCm != null) meta.add('${profile.heightCm} cm');
-    if (profile.relationshipIntent.trim().isNotEmpty) {
-      meta.add(profile.relationshipIntent);
-    }
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  profile.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    height: 1.1,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (age != null)
-                Text(
-                  '$age',
-                  style: const TextStyle(color: Colors.white70, fontSize: 24),
-                ),
-              if (profile.isPhotoVerified) ...[
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.verified_rounded,
-                  color: Color(0xFF6FD08C),
-                  size: 18,
-                ),
-              ],
-            ],
-          ),
-          if (meta.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < meta.length; i++) ...[
-                  if (i > 0) ...[
-                    Container(
-                      width: 1,
-                      height: 10,
-                      color: Colors.white.withValues(alpha: 0.35),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  _MetaLine(icon: _metaIcon(meta[i]), text: meta[i]),
-                ],
-              ],
-            ),
-          ],
-          if (profile.occupation.trim().isNotEmpty ||
-              profile.education.trim().isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              profile.occupation.trim().isNotEmpty
-                  ? profile.occupation
-                  : profile.education,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 
-  IconData _metaIcon(String text) {
-    if (text == 'Nearby' || text.endsWith('km away')) {
-      return Icons.near_me_rounded;
-    }
-    if (text.endsWith('cm')) return Icons.height_rounded;
-    return Icons.location_on_rounded;
-  }
 
-  Widget _buildActionRow(UserProfile profile) {
-    final mediaQuery = MediaQuery.of(context);
-    final bottomInset = mediaQuery.padding.bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(32, 10, 32, 10 + bottomInset),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _ActionButton(
-            icon: Icons.close_rounded,
-            label: 'Pass',
-            color: const Color(0xFF22202A),
-            onPressed: () => _pass(profile),
-          ),
-          _ActionButton(
-            icon: Icons.favorite_rounded,
-            label: 'Like',
-            color: AppTheme.sunsetCoral,
-            size: 64,
-            onPressed: () => _like(profile),
-          ),
-          _ActionButton(
-            icon: Icons.info_outline_rounded,
-            label: 'View profile',
-            color: const Color(0xFF22202A),
-            onPressed: () => _openProfile(profile),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _DiscoveryHeader extends ConsumerWidget {
@@ -766,71 +442,7 @@ class _EmptyDiscovery extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final double size;
-  final VoidCallback onPressed;
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    this.size = 52,
-    required this.onPressed,
-  });
 
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: label,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(size / 2),
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.45),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-              BoxShadow(
-                color: color.withValues(alpha: 0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Icon(icon, color: Colors.white, size: size * 0.54),
-        ),
-      ),
-    );
-  }
-}
-
-class _MetaLine extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _MetaLine({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: Colors.white54),
-        const SizedBox(width: 4),
-        Text(text, style: const TextStyle(color: Colors.white70, fontSize: 13)),
-      ],
-    );
-  }
-}
 
 class _Tag extends StatelessWidget {
   final String label;

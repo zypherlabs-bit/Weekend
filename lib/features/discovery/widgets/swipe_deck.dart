@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-enum SwipeDirection { like, pass }
+enum SwipeDirection { like, pass, superLike }
 
 class SwipeProfile {
   const SwipeProfile({
@@ -43,7 +43,7 @@ class SwipeDeck extends StatefulWidget {
 
 class _SwipeDeckState extends State<SwipeDeck>
     with SingleTickerProviderStateMixin {
-  static const double _swipeThreshold = 110;
+  static const double _swipeThreshold = 120;
   static const double _velocityThreshold = 700;
 
   late final AnimationController _controller;
@@ -85,14 +85,18 @@ class _SwipeDeckState extends State<SwipeDeck>
     }
   }
 
-  void _animateTo(Offset target) {
+  void _animateTo(Offset target, {
+    Duration duration = const Duration(milliseconds: 240),
+    Curve curve = Curves.easeOutCubic,
+  }) {
+    _controller.duration = duration;
     _positionAnimation = Tween<Offset>(
       begin: _dragOffset,
       end: target,
     ).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Curves.easeOutCubic,
+        curve: curve,
       ),
     );
 
@@ -125,7 +129,11 @@ class _SwipeDeckState extends State<SwipeDeck>
     }
 
     if (direction == null) {
-      _animateTo(Offset.zero);
+      _animateTo(
+        Offset.zero,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutBack,
+      );
       return;
     }
 
@@ -142,7 +150,7 @@ class _SwipeDeckState extends State<SwipeDeck>
 
     final screenWidth = MediaQuery.sizeOf(context).width;
     final target = Offset(
-      direction == SwipeDirection.like
+      (direction == SwipeDirection.like || direction == SwipeDirection.superLike)
           ? screenWidth * 1.5
           : -screenWidth * 1.5,
       _dragOffset.dy + 60,
@@ -183,7 +191,11 @@ class _SwipeDeckState extends State<SwipeDeck>
         _error = 'Could not save your action. Please try again.';
       });
 
-      _animateTo(Offset.zero);
+      _animateTo(
+        Offset.zero,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutBack,
+      );
       await _controller.forward(from: 0);
 
       if (mounted) {
@@ -256,6 +268,24 @@ class _SwipeDeckState extends State<SwipeDeck>
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
+                  if (_queue.length > 2)
+                    Positioned.fill(
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          top: 20,
+                          left: 16,
+                          right: 16,
+                          bottom: 0,
+                        ),
+                        child: Transform.scale(
+                          scale: 0.9,
+                          child: _ProfileCard(
+                            profile: _queue[2],
+                            onTap: null,
+                          ),
+                        ),
+                      ),
+                    ),
                   if (_queue.length > 1)
                     Positioned.fill(
                       child: Padding(
@@ -265,9 +295,12 @@ class _SwipeDeckState extends State<SwipeDeck>
                           right: 8,
                           bottom: 0,
                         ),
-                        child: _ProfileCard(
-                          profile: _queue[1],
-                          onTap: null,
+                        child: Transform.scale(
+                          scale: 0.95,
+                          child: _ProfileCard(
+                            profile: _queue[1],
+                            onTap: null,
+                          ),
                         ),
                       ),
                     ),
@@ -292,22 +325,27 @@ class _SwipeDeckState extends State<SwipeDeck>
                                 ),
                               ),
 
-                              if (_dragOffset.dx.abs() > 18)
+                              if (_dragOffset.dx.abs() > 8)
                                 Positioned(
                                   top: 36,
                                   left: _dragOffset.dx > 0 ? 24 : null,
                                   right: _dragOffset.dx < 0 ? 24 : null,
-                                  child: Transform.rotate(
-                                    angle: _dragOffset.dx > 0
-                                        ? -0.15
-                                        : 0.15,
-                                    child: _SwipeLabel(
-                                      label: _dragOffset.dx > 0
-                                          ? 'LIKE'
-                                          : 'PASS',
-                                      color: _dragOffset.dx > 0
-                                          ? Colors.greenAccent
-                                          : Colors.redAccent,
+                                  child: Opacity(
+                                    opacity: (_dragOffset.dx.abs() /
+                                            _swipeThreshold)
+                                        .clamp(0.0, 1.0),
+                                    child: Transform.rotate(
+                                      angle: _dragOffset.dx > 0
+                                          ? -0.15
+                                          : 0.15,
+                                      child: _SwipeLabel(
+                                        label: _dragOffset.dx > 0
+                                            ? 'LIKE'
+                                            : 'NOPE',
+                                        color: _dragOffset.dx > 0
+                                            ? Colors.greenAccent
+                                            : Colors.redAccent,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -337,7 +375,7 @@ class _SwipeDeckState extends State<SwipeDeck>
 
         const SizedBox(height: 12),
 
-        Row(
+Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _ActionButton(
@@ -348,7 +386,16 @@ class _SwipeDeckState extends State<SwipeDeck>
                   ? null
                   : () => _performAction(SwipeDirection.pass),
             ),
-            const SizedBox(width: 28),
+            const SizedBox(width: 20),
+            _ActionButton(
+              icon: Icons.star_rounded,
+              color: Colors.blueAccent,
+              size: 52,
+              onPressed: _busy
+                  ? null
+                  : () => _performAction(SwipeDirection.superLike),
+            ),
+            const SizedBox(width: 20),
             _ActionButton(
               icon: Icons.favorite_rounded,
               color: Colors.pinkAccent,
@@ -524,7 +571,9 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: icon == Icons.close_rounded ? 'Pass profile' : 'Like profile',
+      label: icon == Icons.close_rounded
+            ? 'Pass profile'
+            : (icon == Icons.star_rounded ? 'Super like profile' : 'Like profile'),
       child: SizedBox(
         width: size,
         height: size,

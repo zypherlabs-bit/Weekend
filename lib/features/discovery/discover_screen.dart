@@ -170,7 +170,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                     (candidate) => candidate.id == profile.id,
                     orElse: () => throw StateError('profile not in deck'),
                   );
-                  await notifier.swipeRight(userProfile);
+                  await notifier.swipeRight(
+                    userProfile,
+                    isStandOut: direction == SwipeDirection.superLike,
+                  );
                 }
 
                 // Weekend's notifier removes the card optimistically and

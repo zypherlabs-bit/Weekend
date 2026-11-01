@@ -79,10 +79,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     try {
       // Persisted via the provider; the persisted row is delivered to both
       // participants through the Realtime subscription — no local echo.
-      await ref.read(weekendProvider.notifier).sendMessage(
-            widget.match.id,
-            text,
-          );
+      await ref
+          .read(weekendProvider.notifier)
+          .sendMessage(widget.match.id, text);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -180,8 +179,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (deadline > 0) {
       _notify('Window extended — the new deadline was set by the server.');
     } else {
-      _notify('Could not extend the window. It may have already been extended.',
-          isError: true);
+      _notify(
+        'Could not extend the window. It may have already been extended.',
+        isError: true,
+      );
     }
   }
 
@@ -193,10 +194,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final me = SupabaseConfig.currentUserId;
     if (me.isEmpty) return;
     setState(() => _windowActionInFlight = true);
-    final outcome = await _matchRepository.recordLike(
-      me,
-      widget.match.user.id,
-    );
+    final outcome = await _matchRepository.recordLike(me, widget.match.user.id);
     if (!mounted) return;
     setState(() => _windowActionInFlight = false);
     switch (outcome) {
@@ -215,20 +213,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget _lifecycleArea(List<ChatMessage> messages) {
     final banners = <Widget>[];
     if (_awayNote.isNotEmpty) banners.add(_awayBanner());
-    final status =
-        _effectiveInitiationStatus(conversationStarted: messages.isNotEmpty);
+    final status = _effectiveInitiationStatus(
+      conversationStarted: messages.isNotEmpty,
+    );
     if (status == 'awaiting_you') {
-      banners.add(_windowBar(
-        'It’s your move — send the first message',
-        _countdownSuffix(),
-        icon: Icons.edit_rounded,
-      ));
+      banners.add(
+        _windowBar(
+          'It’s your move — send the first message',
+          _countdownSuffix(),
+          icon: Icons.edit_rounded,
+        ),
+      );
     } else if (status == 'awaiting_them') {
-      banners.add(_windowBar(
-        'Waiting for ${widget.match.user.name} to send the first message',
-        _countdownSuffix(),
-        icon: Icons.hourglass_top_rounded,
-      ));
+      banners.add(
+        _windowBar(
+          'Waiting for ${widget.match.user.name} to send the first message',
+          _countdownSuffix(),
+          icon: Icons.hourglass_top_rounded,
+        ),
+      );
     } else if (status == 'expired') {
       banners.add(_expiredBar());
     }
@@ -244,8 +247,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       color: AppTheme.warningAmber.withValues(alpha: 0.12),
       child: Row(
         children: [
-          const Icon(Icons.do_not_disturb_on_rounded,
-              color: Color(0xFFFFB74D), size: 16),
+          const Icon(
+            Icons.do_not_disturb_on_rounded,
+            color: Color(0xFFFFB74D),
+            size: 16,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -311,7 +317,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       color: theme.colorScheme.errorContainer.withValues(alpha: 0.55),
       child: Row(
         children: [
-          Icon(Icons.timer_off_rounded, color: theme.colorScheme.error, size: 16),
+          Icon(
+            Icons.timer_off_rounded,
+            color: theme.colorScheme.error,
+            size: 16,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -352,7 +362,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // is the 'me' placeholder until the profile load resolves, which would
     // render every bubble on the wrong side.
     final authId = SupabaseConfig.client?.auth.currentUser?.id;
-    final currentUserId = (authId != null &&
+    final currentUserId =
+        (authId != null &&
             authId.isNotEmpty &&
             authId != 'unauthenticated' &&
             authId != 'me')
@@ -375,9 +386,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               backgroundColor: theme.colorScheme.surfaceContainerHighest,
               backgroundImage: widget.match.user.photos.isEmpty
                   ? null
-                  : CachedNetworkImageProvider(
-                      widget.match.user.photos.first,
-                    ),
+                  : CachedNetworkImageProvider(widget.match.user.photos.first),
               child: widget.match.user.photos.isEmpty
                   ? Icon(
                       Icons.person_rounded,
@@ -412,28 +421,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           ],
         ),
-         actions: [
-DateIdeasButton(
-              partnerInterests: widget.match.user.interests,
-              city: state.currentUser.city.isNotEmpty
-                  ? state.currentUser.city
-                  : widget.match.user.city,
+        actions: [
+          DateIdeasButton(
+            partnerInterests: widget.match.user.interests,
+            city: state.currentUser.city.isNotEmpty
+                ? state.currentUser.city
+                : widget.match.user.city,
+          ),
+          IcebreakerButton(match: widget.match, currentUser: state.currentUser),
+          IconButton(
+            tooltip: 'Voice calls are not available in this release',
+            onPressed: null,
+            icon: Icon(
+              Icons.call_rounded,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
-            IcebreakerButton(
-              match: widget.match,
-              currentUser: state.currentUser,
-            ),
-           IconButton(
-             tooltip: 'Voice calls are not available in this release',
-             onPressed: null,
-             icon: Icon(
-               Icons.call_rounded,
-               color: theme.colorScheme.onSurfaceVariant.withValues(
-                 alpha: 0.5,
-               ),
-             ),
-           ),
-            PopupMenuButton(
+          ),
+          PopupMenuButton(
             icon: const Icon(Icons.more_vert_rounded),
             color: theme.colorScheme.surfaceContainerHigh,
             itemBuilder: (context) => [
@@ -455,9 +459,7 @@ DateIdeasButton(
               try {
                 switch (value) {
                   case 'block':
-                    await ref
-                        .read(weekendProvider.notifier)
-                        .blockUser(otherId);
+                    await ref.read(weekendProvider.notifier).blockUser(otherId);
                     if (mounted) _notify('User blocked.');
                     break;
                   case 'report':
@@ -494,149 +496,153 @@ DateIdeasButton(
                     _lifecycleArea(messages),
                     Expanded(
                       child: ListView.builder(
-                  controller: _scrollController,
-
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-
-                  itemCount: messages.length,
-
-                  itemBuilder: (context, index) {
-                    final message = messages[index];
-
-                    final isMe = message.senderId == currentUserId;
-
-                    return Align(
-                      alignment: isMe
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
-
-                      child: Container(
-                        margin: EdgeInsets.only(
-                          bottom: 8,
-
-                          left: isMe ? 48 : 0,
-
-                          right: isMe ? 0 : 48,
-                        ),
+                        controller: _scrollController,
 
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 10,
+                          vertical: 8,
                         ),
 
-                        decoration: BoxDecoration(
-                          gradient: isMe
-                              ? const LinearGradient(
-                                  colors: [
-                                    Color(0xFFFF5E62),
-                                    Color(0xFFFF4081),
-                                  ],
-                                )
-                              : null,
-                          color: isMe
-                              ? null
-                              : theme.colorScheme.surfaceContainerHighest,
+                        itemCount: messages.length,
 
-                          borderRadius: BorderRadius.circular(18).copyWith(
-                            bottomLeft: isMe
-                                ? const Radius.circular(18)
-                                : const Radius.circular(4),
+                        itemBuilder: (context, index) {
+                          final message = messages[index];
 
-                            bottomRight: isMe
-                                ? const Radius.circular(4)
-                                : const Radius.circular(18),
-                          ),
-                        ),
+                          final isMe = message.senderId == currentUserId;
 
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          return Align(
+                            alignment: isMe
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
 
-                          children: [
-                            Text(
-                              message.text,
+                            child: Container(
+                              margin: EdgeInsets.only(
+                                bottom: 8,
 
-                              style: TextStyle(
+                                left: isMe ? 48 : 0,
+
+                                right: isMe ? 0 : 48,
+                              ),
+
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+
+                              decoration: BoxDecoration(
+                                gradient: isMe
+                                    ? const LinearGradient(
+                                        colors: [
+                                          Color(0xFFFF5E62),
+                                          Color(0xFFFF4081),
+                                        ],
+                                      )
+                                    : null,
                                 color: isMe
-                                    ? Colors.white
-                                    : theme.colorScheme.onSurface,
+                                    ? null
+                                    : theme.colorScheme.surfaceContainerHighest,
 
-                                fontSize: 14.5,
+                                borderRadius: BorderRadius.circular(18)
+                                    .copyWith(
+                                      bottomLeft: isMe
+                                          ? const Radius.circular(18)
+                                          : const Radius.circular(4),
 
-                                height: 1.4,
+                                      bottomRight: isMe
+                                          ? const Radius.circular(4)
+                                          : const Radius.circular(18),
+                                    ),
                               ),
-                            ),
 
-                            // Explainable risk surfacing: server-computed
-                            // flags only (migration 033). Never an automatic
-                            // ban and never a fabricated warning — the
-                            // flags are shown as the server produced them.
-                            if (!isMe && message.riskFlags.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                'Flagged: ${message.riskFlags.join(' · ')}',
-                                style: TextStyle(
-                                  color: theme.brightness == Brightness.dark
-                                      ? const Color(0xFFFFB74D)
-                                      : const Color(0xFF8A4B00),
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
 
-                            if (message.isTranslated &&
-                              message.translatedText != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                '${message.translatedText}',
-                                style: TextStyle(
-                                  color: theme.colorScheme.primary,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                                children: [
+                                  Text(
+                                    message.text,
 
-                            if (!isMe && !message.isTranslated) ...[
-                              const SizedBox(height: 4),
-                              GestureDetector(
-                                onTap: () async {
-                                  await _messageRepository.translateMessage(
-                                    widget.match.id,
-                                    message.id,
-                                  );
-                                  setState(() {});
-                                },
-                                child: Text(
-                                  'Translate',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.primary,
-                                    fontSize: 12,
-                                    decoration: TextDecoration.underline,
+                                    style: TextStyle(
+                                      color: isMe
+                                          ? Colors.white
+                                          : theme.colorScheme.onSurface,
+
+                                      fontSize: 14.5,
+
+                                      height: 1.4,
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ],
 
-                            const SizedBox(height: 4),
+                                  // Explainable risk surfacing: server-computed
+                                  // flags only (migration 033). Never an automatic
+                                  // ban and never a fabricated warning — the
+                                  // flags are shown as the server produced them.
+                                  if (!isMe &&
+                                      message.riskFlags.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Flagged: ${message.riskFlags.join(' · ')}',
+                                      style: TextStyle(
+                                        color:
+                                            theme.brightness == Brightness.dark
+                                            ? const Color(0xFFFFB74D)
+                                            : const Color(0xFF8A4B00),
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
 
-                            Text(
-                              _formatTime(message.timestamp),
+                                  if (message.isTranslated &&
+                                      message.translatedText != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${message.translatedText}',
+                                      style: TextStyle(
+                                        color: theme.colorScheme.primary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
 
-                              style: TextStyle(
-                                color: isMe
-                                    ? Colors.white.withValues(alpha: 0.7)
-                                    : theme.colorScheme.onSurfaceVariant,
+                                  if (!isMe && !message.isTranslated) ...[
+                                    const SizedBox(height: 4),
+                                    GestureDetector(
+                                      onTap: () async {
+                                        await _messageRepository
+                                            .translateMessage(
+                                              widget.match.id,
+                                              message.id,
+                                            );
+                                        setState(() {});
+                                      },
+                                      child: Text(
+                                        'Translate',
+                                        style: TextStyle(
+                                          color: theme.colorScheme.primary,
+                                          fontSize: 12,
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
 
-                                fontSize: 10,
+                                  const SizedBox(height: 4),
+
+                                  Text(
+                                    _formatTime(message.timestamp),
+
+                                    style: TextStyle(
+                                      color: isMe
+                                          ? Colors.white.withValues(alpha: 0.7)
+                                          : theme.colorScheme.onSurfaceVariant,
+
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                          );
+                        },
                       ),
                     ),
                   ],

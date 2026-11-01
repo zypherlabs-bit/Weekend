@@ -39,7 +39,8 @@ class _VisibilityDialogState extends State<VisibilityDialog> {
     final spotlight = await _repository.getMySpotlight();
     final insights = await _repository.getMyPhotoInsights();
     // Signed URLs for the photos the insights cover, resolved once.
-    final paths = insights?.photos
+    final paths =
+        insights?.photos
             .map((p) => p.storagePath)
             .where((p) => p.isNotEmpty)
             .toSet()
@@ -71,22 +72,30 @@ class _VisibilityDialogState extends State<VisibilityDialog> {
       case 'already_active':
         break; // the live window is rendered
       case 'monthly_limit':
-        messenger.showSnackBar(const SnackBar(
-          content: Text('You have used all 3 Spotlights in the last 30 days.'),
-          backgroundColor: Colors.red,
-        ));
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'You have used all 3 Spotlights in the last 30 days.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
         break;
       case 'insufficient_privilege':
-        messenger.showSnackBar(const SnackBar(
-          content: Text('Spotlight is not available for this account.'),
-          backgroundColor: Colors.red,
-        ));
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Spotlight is not available for this account.'),
+            backgroundColor: Colors.red,
+          ),
+        );
         break;
       default:
-        messenger.showSnackBar(const SnackBar(
-          content: Text('Spotlight could not be activated. Try again.'),
-          backgroundColor: Colors.red,
-        ));
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Spotlight could not be activated. Try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
         break;
     }
   }
@@ -107,8 +116,13 @@ class _VisibilityDialogState extends State<VisibilityDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Visibility',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18)),
+            Text(
+              'Visibility',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 18,
+              ),
+            ),
             const SizedBox(height: 12),
             Text(
               _spotlight.active
@@ -149,15 +163,21 @@ class _VisibilityDialogState extends State<VisibilityDialog> {
             Divider(color: Theme.of(context).colorScheme.outlineVariant),
             Text(
               'Photo Insights',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 15,
+              ),
             ),
             Text(
               _insights == null
                   ? 'Insights are available once your photos are approved and viewed.'
                   : 'Impressions over the last ${_insights!.windowDays} days '
-                      '(a photo needs ${_insights!.minimumRequiredImpressions} '
-                      'for a meaningful sample).',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                        '(a photo needs ${_insights!.minimumRequiredImpressions} '
+                        'for a meaningful sample).',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
             ),
             const SizedBox(height: 8),
             if (_loadingInsights)
@@ -176,18 +196,28 @@ class _VisibilityDialogState extends State<VisibilityDialog> {
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'No approved photos with impressions yet.',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
               )
             else
               for (final entry in _insights!.photos)
-                _InsightTile(entry: entry, photoUrl: _photoUrls[entry.storagePath]),
+                _InsightTile(
+                  entry: entry,
+                  photoUrl: _photoUrls[entry.storagePath],
+                ),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
-                child:
-                    Text('Close', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                child: Text(
+                  'Close',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             ),
           ],
@@ -216,7 +246,11 @@ class _InsightTile extends StatelessWidget {
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         child: photoUrl == null
-            ? Icon(Icons.image_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20)
+            ? Icon(
+                Icons.image_rounded,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                size: 20,
+              )
             : ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(photoUrl!, fit: BoxFit.cover),
@@ -224,7 +258,10 @@ class _InsightTile extends StatelessWidget {
       ),
       title: Text(
         entry.isPrimary ? 'Primary photo' : 'Photo',
-        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: 14,
+        ),
       ),
       subtitle: Text(
         entry.hasSufficientData

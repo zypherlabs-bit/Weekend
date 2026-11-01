@@ -83,7 +83,8 @@ class MatchRepository {
             trustScore: row['trust_score'] as int? ?? 50,
             commonInterests: shared,
           ),
-          matchedAt: DateTime.tryParse(
+          matchedAt:
+              DateTime.tryParse(
                 row['matched_at'] as String? ?? '',
               )?.millisecondsSinceEpoch ??
               0,
@@ -97,7 +98,8 @@ class MatchRepository {
           sharedInterests: shared,
           conversationId: row['conversation_id'] as String? ?? '',
           initiationStatus: row['initiation_status'] as String? ?? '',
-          windowEndsAtMs: DateTime.tryParse(
+          windowEndsAtMs:
+              DateTime.tryParse(
                 row['window_ends_at'] as String? ?? '',
               )?.millisecondsSinceEpoch ??
               0,
@@ -232,8 +234,7 @@ class MatchRepository {
           photos: photoUrl == null ? const [] : <String>[photoUrl],
           city: row['city'] as String? ?? '',
           bio: row['bio'] as String? ?? '',
-          relationshipIntent:
-              row['relationship_intent'] as String? ?? 'Dating',
+          relationshipIntent: row['relationship_intent'] as String? ?? 'Dating',
           isPhotoVerified: row['is_photo_verified'] as bool? ?? false,
           trustScore: row['trust_score'] as int? ?? 50,
         ),
@@ -287,4 +288,3 @@ class MatchRepository {
     return '${diff.inDays}d ago';
   }
 }
-

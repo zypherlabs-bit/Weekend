@@ -58,10 +58,11 @@ class SearchState {
   }
 }
 
-final searchProvider =
-    StateNotifierProvider<SearchNotifier, SearchState>((ref) {
-      return SearchNotifier(ref.watch(discoveryRepositoryProvider));
-    });
+final searchProvider = StateNotifierProvider<SearchNotifier, SearchState>((
+  ref,
+) {
+  return SearchNotifier(ref.watch(discoveryRepositoryProvider));
+});
 
 /// Drives the advanced-search screen.
 ///
@@ -132,7 +133,9 @@ class SearchNotifier extends StateNotifier<SearchState> {
     state = state.copyWith(
       isLoading: false,
       isLoadingMore: false,
-      profiles: replace ? result.profiles : [...state.profiles, ...result.profiles],
+      profiles: replace
+          ? result.profiles
+          : [...state.profiles, ...result.profiles],
       reachedEnd: result.reachedEnd,
       // reachedEnd=false on an empty page is the failure signal the
       // repository returns; surface it as an error rather than "no matches".

@@ -33,10 +33,7 @@ void main() {
         'password',
         'secret',
       ]) {
-        expect(
-          kWeekendRepositoryUrl.toLowerCase(),
-          isNot(contains(forbidden)),
-        );
+        expect(kWeekendRepositoryUrl.toLowerCase(), isNot(contains(forbidden)));
       }
     });
   });
@@ -88,7 +85,6 @@ void main() {
       expect(params['p_page_size'], 25);
     });
   });
-
 
   group('DiscoveryPreferences invariants', () {
     test('normalization orders and clamps the age range', () {

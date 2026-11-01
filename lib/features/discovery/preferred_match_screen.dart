@@ -112,29 +112,26 @@ class _PreferredMatchScreenState extends ConsumerState<PreferredMatchScreen> {
     _update(apply(next));
   }
 
-  void _toggleGender(String value) => _toggleMulti(
-        (v) => _prefs.copyWith(genders: v),
-        _prefs.genders,
-        value,
-      );
+  void _toggleGender(String value) =>
+      _toggleMulti((v) => _prefs.copyWith(genders: v), _prefs.genders, value);
 
   void _toggleIntent(String value) => _toggleMulti(
-        (v) => _prefs.copyWith(relationshipIntents: v),
-        _prefs.relationshipIntents,
-        value,
-      );
+    (v) => _prefs.copyWith(relationshipIntents: v),
+    _prefs.relationshipIntents,
+    value,
+  );
 
   void _toggleInterest(String value) => _toggleMulti(
-        (v) => _prefs.copyWith(interests: v),
-        _prefs.interests,
-        value,
-      );
+    (v) => _prefs.copyWith(interests: v),
+    _prefs.interests,
+    value,
+  );
 
   void _toggleLanguage(String value) => _toggleMulti(
-        (v) => _prefs.copyWith(languages: v),
-        _prefs.languages,
-        value,
-      );
+    (v) => _prefs.copyWith(languages: v),
+    _prefs.languages,
+    value,
+  );
 
   /// Lifestyle is single-select per key, and re-picking the current value
   /// clears it so the dimension stops filtering.
@@ -175,7 +172,9 @@ class _PreferredMatchScreenState extends ConsumerState<PreferredMatchScreen> {
     // Mirror the choices the rest of the app already understands so the deck
     // and the location settings cannot disagree.
     final current = ref.read(weekendProvider).locationPreferences;
-    ref.read(weekendProvider.notifier).setLocationPreferences(
+    ref
+        .read(weekendProvider.notifier)
+        .setLocationPreferences(
           current.copyWith(
             preferredGenders: _prefs.genders,
             discoveryRadiusKm: (_prefs.maxDistanceKm ?? 50).round(),
@@ -316,9 +315,7 @@ class _PreferredMatchScreenState extends ConsumerState<PreferredMatchScreen> {
       decoration: BoxDecoration(
         color: AppTheme.sunsetCoral.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(WeekendTokens.radiusLg),
-        border: Border.all(
-          color: AppTheme.sunsetCoral.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: AppTheme.sunsetCoral.withValues(alpha: 0.25)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,8 +453,8 @@ class _PreferredMatchScreenState extends ConsumerState<PreferredMatchScreen> {
                   _prefs.copyWith(
                     maxDistanceKm:
                         (selected != null && (selected - km).abs() < 0.5)
-                            ? null
-                            : km,
+                        ? null
+                        : km,
                   ),
                 ),
               ),
@@ -600,8 +597,8 @@ class _PreferredMatchScreenState extends ConsumerState<PreferredMatchScreen> {
         message: _prefs.activeFilterLabels.isEmpty
             ? 'There are no active profiles on Weekend yet. Check back soon.'
             : 'Nothing matches every filter you selected.\n\n'
-                'Your filters were not changed. Adjust them to widen the '
-                'search.',
+                  'Your filters were not changed. Adjust them to widen the '
+                  'search.',
         tint: AppTheme.sunsetCoral,
         chips: _prefs.activeFilterLabels,
         primaryLabel: 'Adjust Preferences',
@@ -624,7 +621,8 @@ class _PreferredMatchScreenState extends ConsumerState<PreferredMatchScreen> {
                 final next = _prefs.maxDistanceKm! * 2;
                 _update(
                   _prefs.copyWith(
-                    maxDistanceKm: next > DiscoveryPreferences.kMaximumDistanceKm
+                    maxDistanceKm:
+                        next > DiscoveryPreferences.kMaximumDistanceKm
                         ? null
                         : next,
                   ),
@@ -637,10 +635,12 @@ class _PreferredMatchScreenState extends ConsumerState<PreferredMatchScreen> {
     return ResultPanel(
       theme: theme,
       icon: Icons.people_alt_rounded,
-      title: '${_results.length} '
+      title:
+          '${_results.length} '
           '${_results.length == 1 ? 'profile matches' : 'profiles match'} '
           'every filter',
-      message: 'Each of these satisfies all '
+      message:
+          'Each of these satisfies all '
           '${_prefs.activeFilterCount} active '
           '${_prefs.activeFilterCount == 1 ? 'filter' : 'filters'}.',
       tint: AppTheme.successGreen,

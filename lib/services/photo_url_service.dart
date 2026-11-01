@@ -22,8 +22,9 @@ class PhotoUrlService {
     final wanted = paths.where((p) => p.isNotEmpty).toSet();
     if (wanted.isEmpty) return const {};
 
-    final missing =
-        wanted.where((p) => !_cache.containsKey(p)).toList(growable: false);
+    final missing = wanted
+        .where((p) => !_cache.containsKey(p))
+        .toList(growable: false);
 
     if (missing.isNotEmpty) {
       // Coalesce concurrent requests for the same missing paths.

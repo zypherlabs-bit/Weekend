@@ -85,11 +85,9 @@ class VoiceIntroService {
     final fileName = '$userId/voice_intro.wav';
 
     try {
-      await client.storage.from(bucket).upload(
-            fileName,
-            file,
-            fileOptions: const FileOptions(upsert: true),
-          );
+      await client.storage
+          .from(bucket)
+          .upload(fileName, file, fileOptions: const FileOptions(upsert: true));
 
       final url = client.storage.from(bucket).getPublicUrl(fileName);
       return url;

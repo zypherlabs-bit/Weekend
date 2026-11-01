@@ -236,15 +236,9 @@ class _PlanCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _PlanMeta(
-                    icon: Icons.location_on_rounded,
-                    text: plan.venue,
-                  ),
+                  _PlanMeta(icon: Icons.location_on_rounded, text: plan.venue),
                   const SizedBox(height: 4),
-                  _PlanMeta(
-                    icon: Icons.access_time_rounded,
-                    text: plan.time,
-                  ),
+                  _PlanMeta(icon: Icons.access_time_rounded, text: plan.time),
                   if (plan.description.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(

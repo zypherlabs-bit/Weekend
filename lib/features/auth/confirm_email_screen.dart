@@ -60,8 +60,9 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
 
   Future<void> _resend() async {
     setState(() => _isResending = true);
-    final message =
-        await ref.read(authStateProvider.notifier).resendConfirmationEmail();
+    final message = await ref
+        .read(authStateProvider.notifier)
+        .resendConfirmationEmail();
     if (!mounted) return;
     setState(() => _isResending = false);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -97,7 +98,10 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
                   height: 96,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.tertiary],
+                      colors: [
+                        Theme.of(context).colorScheme.primary,
+                        Theme.of(context).colorScheme.tertiary,
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -124,7 +128,7 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
               Text(
                 (email == null || email.isEmpty)
                     ? 'Your account was created. Open the confirmation link '
-                        'we sent to finish setting it up.'
+                          'we sent to finish setting it up.'
                     : 'We sent a confirmation link to\n$email',
                 style: bodyStyle,
                 textAlign: TextAlign.center,
@@ -135,26 +139,33 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.1),
+                  ),
                 ),
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _Step(
                       number: '1',
-                      text: 'Open the email from Weekend and tap the '
+                      text:
+                          'Open the email from Weekend and tap the '
                           'confirmation link.',
                     ),
                     SizedBox(height: 12),
                     _Step(
                       number: '2',
-                      text: 'Come back to the app and sign in. Your account is '
+                      text:
+                          'Come back to the app and sign in. Your account is '
                           'then confirmed and Personal Details opens.',
                     ),
                     SizedBox(height: 12),
                     _Step(
                       number: '3',
-                      text: 'No email after a few minutes? Check spam, then '
+                      text:
+                          'No email after a few minutes? Check spam, then '
                           'tap "Resend confirmation email".',
                     ),
                   ],
@@ -200,7 +211,9 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
                       : _continueAfterConfirmation,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.tertiary,
-                    side: BorderSide(color: Theme.of(context).colorScheme.tertiary),
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.tertiary,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
                     ),
@@ -228,7 +241,10 @@ class _ConfirmEmailScreenState extends ConsumerState<ConfirmEmailScreen> {
                 onPressed: () => context.go('/auth?mode=signup'),
                 child: Text(
                   'Use a different email',
-                  style: TextStyle(color: Theme.of(context).colorScheme.tertiary, fontSize: 14),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.tertiary,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ],
@@ -272,7 +288,9 @@ class _Step extends StatelessWidget {
           child: Text(
             text,
             style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.8),
               fontSize: 13.5,
               height: 1.45,
             ),

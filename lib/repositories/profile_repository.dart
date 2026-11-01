@@ -31,9 +31,7 @@ List<Map<String, dynamic>>? encodePrompts(List<ProfilePrompt> prompts) {
     final limit = template?.maxLength ?? 300;
     // Truncate rather than reject: a long answer losing its tail is better than
     // the whole save failing on a CHECK constraint.
-    final capped = answer.length <= limit
-        ? answer
-        : answer.substring(0, limit);
+    final capped = answer.length <= limit ? answer : answer.substring(0, limit);
 
     out.add(<String, dynamic>{
       if (p.id.isNotEmpty) 'id': p.id,
@@ -365,7 +363,9 @@ class ProfileRepository {
         interests: const [],
         favoritePlaces: const [],
         languages:
-            (response['languages'] as List?)?.map((e) => e.toString()).toList() ??
+            (response['languages'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
             const [],
         prompts: decodePrompts(response['prompts']),
         isPhotoVerified:
@@ -402,9 +402,7 @@ class ProfileRepository {
       if (entry is! Map) continue;
       final answer = (entry['answer'] ?? '').toString().trim();
       if (answer.isEmpty) continue;
-      out.add(
-        ProfilePrompt.fromJson(Map<String, dynamic>.from(entry)),
-      );
+      out.add(ProfilePrompt.fromJson(Map<String, dynamic>.from(entry)));
     }
     return out;
   }
@@ -430,9 +428,9 @@ class ProfileRepository {
           .order('is_primary', ascending: false)
           .order('created_at', ascending: false);
 
-      final rows = (response as List)
-          .whereType<Map<String, dynamic>>()
-          .toList(growable: false);
+      final rows = (response as List).whereType<Map<String, dynamic>>().toList(
+        growable: false,
+      );
 
       final paths = rows
           .map((r) => r['storage_path'] as String? ?? '')
@@ -502,9 +500,7 @@ class ProfileRepository {
     try {
       await client.rpc(
         'set_profile_photo_order',
-        params: {
-          'p_photo_ids': photoIds,
-        },
+        params: {'p_photo_ids': photoIds},
       );
     } catch (e) {
       final classified = classifyProfileSaveError(e, stage: 'photos.reorder');
@@ -524,9 +520,10 @@ class ProfileRepository {
     }
     if (photoId.isEmpty) return;
     try {
-      await client.rpc('set_primary_profile_photo', params: {
-        'p_photo_id': photoId,
-      });
+      await client.rpc(
+        'set_primary_profile_photo',
+        params: {'p_photo_id': photoId},
+      );
     } catch (e) {
       final classified = classifyProfileSaveError(e, stage: 'photos.primary');
       classified.log(e.runtimeType.toString());
@@ -557,9 +554,9 @@ class ProfileRepository {
       throw error;
     }
     try {
-      final remaining = (await fetchProfilePhotoRecords(authId))
-          .where((p) => p.id != photo.id)
-          .length;
+      final remaining = (await fetchProfilePhotoRecords(
+        authId,
+      )).where((p) => p.id != photo.id).length;
       final minimum = await minimumPhotos();
       if (remaining < minimum) {
         throw const ProfileSaveException(
@@ -678,7 +675,8 @@ class ProfileRepository {
       throw const ProfileSaveException(
         ProfileSaveFailure.validation,
         stage: 'profiles.dob.range',
-        userMessageOverride: 'That date of birth looks out of range. '
+        userMessageOverride:
+            'That date of birth looks out of range. '
             'Please check it and try again.',
       );
     }
@@ -789,10 +787,7 @@ class ProfileRepository {
           .uploadBinary(
             path,
             bytes,
-            fileOptions: FileOptions(
-              contentType: 'image/jpeg',
-              upsert: false,
-            ),
+            fileOptions: FileOptions(contentType: 'image/jpeg', upsert: false),
           );
     } catch (e) {
       throw StateError(_storageErrorMessage(e));
@@ -888,8 +883,7 @@ class ProfileRepository {
       return 'The photo was uploaded but could not be linked to your profile. '
           'Please sign out and sign back in, then try again.';
     }
-    if (msg.contains('moderation_status') ||
-        msg.contains('moderation')) {
+    if (msg.contains('moderation_status') || msg.contains('moderation')) {
       return 'The photo was uploaded but could not be approved automatically. '
           'Please try again.';
     }

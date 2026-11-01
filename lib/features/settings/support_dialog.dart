@@ -127,27 +127,38 @@ class _SupportDialogState extends State<SupportDialog> {
           children: [
             Text(
               'Support',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 18,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               'Reports reach the Weekend moderations team; safety and scam '
               'reports are handled first.',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 12,
               ),
             ),
             SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              dropdownColor: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest,
               initialValue: _category,
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
                 labelText: 'Category',
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                fillColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
+                labelStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                   borderSide: BorderSide.none,
@@ -169,10 +180,16 @@ class _SupportDialogState extends State<SupportDialog> {
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
                 labelText: 'Subject',
-                counterStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                counterStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                fillColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
+                labelStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                   borderSide: BorderSide.none,
@@ -187,10 +204,16 @@ class _SupportDialogState extends State<SupportDialog> {
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
                 labelText: 'What happened?',
-                counterStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                counterStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                fillColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
+                labelStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                   borderSide: BorderSide.none,
@@ -215,16 +238,21 @@ class _SupportDialogState extends State<SupportDialog> {
                         if (subject.isEmpty || details.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content:
-                                  Text('Add a subject and describe what happened.'),
+                              content: Text(
+                                'Add a subject and describe what happened.',
+                              ),
                             ),
                           );
                           return;
                         }
                         _submit();
                       },
-                      child: Text('Send report',
-                          style: TextStyle(color: Theme.of(context).colorScheme.tertiary)),
+                      child: Text(
+                        'Send report',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.tertiary,
+                        ),
+                      ),
                     ),
             ),
             Divider(color: Theme.of(context).colorScheme.outlineVariant),
@@ -232,9 +260,12 @@ class _SupportDialogState extends State<SupportDialog> {
               _loadingTickets
                   ? 'Checking your previous reports…'
                   : _tickets.isEmpty
-                      ? 'No support tickets yet.'
-                      : 'Your tickets (${_tickets.length})',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                  ? 'No support tickets yet.'
+                  : 'Your tickets (${_tickets.length})',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
             ),
             SizedBox(height: 4),
             for (final ticket in _tickets.take(5))
@@ -245,25 +276,37 @@ class _SupportDialogState extends State<SupportDialog> {
                   ticket.subject,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 14,
+                  ),
                 ),
                 subtitle: Text(
                   '${ticket.category} · '
                   '${DateTime.fromMillisecondsSinceEpoch(ticket.createdAtMs).toLocal().toString().split(' ').first}',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
                 ),
                 trailing: Text(
                   ticket.status,
                   style: TextStyle(
-                      color: _statusColor(ticket.status), fontSize: 12),
+                    color: _statusColor(ticket.status),
+                    fontSize: 12,
+                  ),
                 ),
               ),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text('Close',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                child: Text(
+                  'Close',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             ),
           ],

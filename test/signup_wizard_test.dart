@@ -21,8 +21,9 @@ void main() {
     expect(find.text('Step 1 of 6'), findsOneWidget);
   }
 
-  testWidgets('wizard walks all six steps; failure keeps the user on step 6',
-      (WidgetTester tester) async {
+  testWidgets('wizard walks all six steps; failure keeps the user on step 6', (
+    WidgetTester tester,
+  ) async {
     await openWizard(tester);
 
     // Step 1 — empty email is rejected, then a valid one advances.
@@ -80,16 +81,18 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('wizard back arrow on step 1 returns to onboarding',
-      (WidgetTester tester) async {
+  testWidgets('wizard back arrow on step 1 returns to onboarding', (
+    WidgetTester tester,
+  ) async {
     await openWizard(tester);
     await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
     await tester.pumpAndSettle();
     expect(find.text('Welcome to Weekend'), findsOneWidget);
   });
 
-  testWidgets('sign-in screen offers only email/password and passkey',
-      (WidgetTester tester) async {
+  testWidgets('sign-in screen offers only email/password and passkey', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const ProviderScope(child: WeekendApp()));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));

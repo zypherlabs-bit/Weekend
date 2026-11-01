@@ -27,19 +27,29 @@ void main() {
   group('SearchFilters hasActiveFilters', () {
     test('detects each narrowing dimension', () {
       expect(const SearchFilters(genders: ['Woman']).hasActiveFilters, isTrue);
-      expect(const SearchFilters(interestedIn: ['Man']).hasActiveFilters, isTrue);
+      expect(
+        const SearchFilters(interestedIn: ['Man']).hasActiveFilters,
+        isTrue,
+      );
       expect(
         const SearchFilters(ageMin: 25, ageMax: 32).hasActiveFilters,
         isTrue,
       );
       expect(
-        const SearchFilters(relationshipIntents: ['Long-term relationship'])
-            .hasActiveFilters,
+        const SearchFilters(
+          relationshipIntents: ['Long-term relationship'],
+        ).hasActiveFilters,
         isTrue,
       );
       expect(const SearchFilters(cities: ['Pune']).hasActiveFilters, isTrue);
-      expect(const SearchFilters(interests: ['Travel']).hasActiveFilters, isTrue);
-      expect(const SearchFilters(languages: ['English']).hasActiveFilters, isTrue);
+      expect(
+        const SearchFilters(interests: ['Travel']).hasActiveFilters,
+        isTrue,
+      );
+      expect(
+        const SearchFilters(languages: ['English']).hasActiveFilters,
+        isTrue,
+      );
       expect(const SearchFilters(smoking: 'Never').hasActiveFilters, isTrue);
       expect(const SearchFilters(drinking: 'Never').hasActiveFilters, isTrue);
       expect(const SearchFilters(exercise: 'Often').hasActiveFilters, isTrue);

@@ -27,7 +27,9 @@ void main() {
 
       test('toApproximateCoordinates returns nearby grid', () {
         final (lat, lon) = LocationService.toApproximateCoordinates(
-          48.8567, 2.3522, 2.0,
+          48.8567,
+          2.3522,
+          2.0,
         );
         expect(lat, inInclusiveRange(48.8, 48.9));
         expect(lon, inInclusiveRange(2.3, 2.4));
@@ -35,23 +37,29 @@ void main() {
 
       test('distance computation is accurate', () {
         final distance = LocationService.distanceInKm(
-          48.8567, 2.3522,
-          48.8570, 2.3525,
+          48.8567,
+          2.3522,
+          48.8570,
+          2.3525,
         );
         expect(distance, lessThan(0.5));
       });
 
       test('isWithinRadius works for known distances', () {
         final isIn5km = LocationService.isWithinRadius(
-          48.8567, 2.3522,
-          48.8570, 2.3525,
+          48.8567,
+          2.3522,
+          48.8570,
+          2.3525,
           5.0,
         );
         expect(isIn5km, true);
 
         final tooFar = LocationService.isWithinRadius(
-          48.8567, 2.3522,
-          40.7128, -74.0060,
+          48.8567,
+          2.3522,
+          40.7128,
+          -74.0060,
           5.0,
         );
         expect(tooFar, false);
@@ -63,7 +71,9 @@ void main() {
         const originalLat = 48.8567123;
         const originalLon = 2.3522345;
         final (lat, lon) = LocationService.toApproximateCoordinates(
-          originalLat, originalLon, 2.0,
+          originalLat,
+          originalLon,
+          2.0,
         );
         expect(lat, isNot(equals(originalLat)));
         expect(lon, isNot(equals(originalLon)));

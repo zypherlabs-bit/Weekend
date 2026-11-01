@@ -47,7 +47,12 @@ void main() {
     test('a malformed or missing data column does not take down the list', () {
       // `data` is jsonb and a bad row must not be able to break the whole
       // notification screen.
-      for (final bad in <Object?>[null, 'not a map', 42, <String>['a']]) {
+      for (final bad in <Object?>[
+        null,
+        'not a map',
+        42,
+        <String>['a'],
+      ]) {
         final n = AppNotification.fromRow({
           'id': 'n3',
           'type': 'new_match',
@@ -153,7 +158,10 @@ void main() {
       expect(repo.mapReportType('Harassment'), 'harassment');
       expect(repo.mapReportType('Fake profile'), 'impersonation');
       expect(repo.mapReportType('Inappropriate photo'), 'photo');
-      expect(repo.mapReportType('Inappropriate content'), 'inappropriate_content');
+      expect(
+        repo.mapReportType('Inappropriate content'),
+        'inappropriate_content',
+      );
       expect(repo.mapReportType('Rude message'), 'message');
     });
 
@@ -222,7 +230,14 @@ void main() {
   group('ReceivedLike', () {
     test('carries the stand-out flag that was previously write-only', () {
       final like = ReceivedLike(
-        profile: const UserProfile(id: 'u-1', name: 'Ada', age: 30, gender: 'Woman', photos: [], city: 'Lisbon'),
+        profile: const UserProfile(
+          id: 'u-1',
+          name: 'Ada',
+          age: 30,
+          gender: 'Woman',
+          photos: [],
+          city: 'Lisbon',
+        ),
         isStandOut: true,
         likedAt: DateTime.utc(2026, 1, 1),
       );
@@ -233,7 +248,16 @@ void main() {
     });
 
     test('defaults are inert rather than invented', () {
-      final like = ReceivedLike(profile: const UserProfile(id: 'u-2', name: 'Grace', age: 28, gender: 'Man', photos: [], city: 'Porto'));
+      final like = ReceivedLike(
+        profile: const UserProfile(
+          id: 'u-2',
+          name: 'Grace',
+          age: 28,
+          gender: 'Man',
+          photos: [],
+          city: 'Porto',
+        ),
+      );
       expect(like.isStandOut, isFalse);
       expect(like.likedAt, isNull);
     });

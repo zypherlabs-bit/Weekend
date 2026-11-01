@@ -131,7 +131,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-
   Widget _buildBody(SearchState state, SearchNotifier notifier) {
     if (state.isLoading && state.profiles.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -156,9 +155,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       return _NoMatchesView(
         hasFilters: state.filters.hasActiveFilters,
         onAdjust: () => _showFilterSheet(context, state.filters),
-        onIncreaseDistance: () => notifier.applyFilters(
-          _nextWiderDistance(state.filters),
-        ),
+        onIncreaseDistance: () =>
+            notifier.applyFilters(_nextWiderDistance(state.filters)),
         onExpandAge: () => notifier.applyFilters(_widerAge(state.filters)),
       );
     }
@@ -228,7 +226,6 @@ Future<void> _showFilterSheet(BuildContext context, SearchFilters current) {
     builder: (_) => _AdvancedFilterSheet(initial: current),
   );
 }
-
 
 /// Summary strip showing the active filters; tapping opens the full sheet.
 class _FilterBar extends StatelessWidget {
@@ -409,7 +406,6 @@ class _NoMatchesView extends StatelessWidget {
   }
 }
 
-
 /// One search result row.
 class _SearchResultTile extends StatelessWidget {
   final UserProfile profile;
@@ -546,7 +542,6 @@ class _InterestPill extends StatelessWidget {
   }
 }
 
-
 /// Dual-handle age range. Both bounds null means "any".
 class _AgeRangeSelector extends StatelessWidget {
   final int? min;
@@ -639,7 +634,6 @@ class _SingleSelect extends StatelessWidget {
   }
 }
 
-
 /// The full multi-filter editor.
 ///
 /// The draft is local to the sheet; nothing is applied until the user taps
@@ -654,8 +648,7 @@ class _AdvancedFilterSheet extends ConsumerStatefulWidget {
       _AdvancedFilterSheetState();
 }
 
-class _AdvancedFilterSheetState
-    extends ConsumerState<_AdvancedFilterSheet> {
+class _AdvancedFilterSheetState extends ConsumerState<_AdvancedFilterSheet> {
   late SearchFilters _draft = widget.initial;
   late final TextEditingController _cityController = TextEditingController(
     text: widget.initial.searchCity ?? '',
@@ -670,13 +663,15 @@ class _AdvancedFilterSheetState
   void _apply() {
     final city = _cityController.text.trim();
     Navigator.of(context).pop();
-    ref.read(searchProvider.notifier).applyFilters(
-      _draft.copyWith(
-        cities: city.isEmpty ? const [] : [city],
-        clearSearchCity: city.isEmpty,
-        searchCity: city.isEmpty ? null : city,
-      ),
-    );
+    ref
+        .read(searchProvider.notifier)
+        .applyFilters(
+          _draft.copyWith(
+            cities: city.isEmpty ? const [] : [city],
+            clearSearchCity: city.isEmpty,
+            searchCity: city.isEmpty ? null : city,
+          ),
+        );
   }
 
   /// Toggle a value inside one of the multi-select lists.
@@ -716,10 +711,7 @@ class _AdvancedFilterSheetState
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),
-                  TextButton(
-                    onPressed: _reset,
-                    child: const Text('Reset'),
-                  ),
+                  TextButton(onPressed: _reset, child: const Text('Reset')),
                 ],
               ),
             ),
@@ -787,16 +779,14 @@ class _AdvancedFilterSheetState
     const SizedBox(height: 8),
     SwitchListTile(
       value: _draft.includeDealt,
-      onChanged: (v) => setState(
-        () => _draft = _draft.copyWith(includeDealt: v),
-      ),
+      onChanged: (v) =>
+          setState(() => _draft = _draft.copyWith(includeDealt: v)),
       title: const Text('Include people I have already seen'),
       subtitle: const Text(
         'Off by default so you are not shown the same profiles twice.',
       ),
     ),
   ];
-
 
   Widget _distanceChips() => Wrap(
     spacing: 8,
@@ -806,9 +796,8 @@ class _AdvancedFilterSheetState
           (km) => ChoiceChip(
             label: Text('${km.toInt()} km'),
             selected: _draft.maxDistanceKm == km,
-            onSelected: (_) => setState(
-              () => _draft = _draft.copyWith(maxDistanceKm: km),
-            ),
+            onSelected: (_) =>
+                setState(() => _draft = _draft.copyWith(maxDistanceKm: km)),
           ),
         )
         .toList(),
@@ -970,4 +959,3 @@ class _AdvancedFilterSheetState
     ],
   );
 }
-

@@ -1,4 +1,4 @@
-﻿/// Weekend's own profile schema: the prompts a user answers, the lifestyle
+/// Weekend's own profile schema: the prompts a user answers, the lifestyle
 /// attributes they pick, and the interests they select.
 ///
 /// Design rules:
@@ -13,7 +13,6 @@
 ///   outside the allowed set.
 
 library;
-
 
 class ProfilePromptTemplate {
   /// Stable identifier persisted alongside the answer. The human-readable
@@ -125,7 +124,8 @@ class ProfileSchema {
         ProfilePromptTemplate(
           id: 'two_truths_and_a_lie',
           question: 'Two truths and a lie',
-          hint: 'Give three statements. We will never say which one is the lie.',
+          hint:
+              'Give three statements. We will never say which one is the lie.',
         ),
         ProfilePromptTemplate(
           id: 'passionate_about',

@@ -111,13 +111,21 @@ class _OpeningMovesDialogState extends State<OpeningMovesDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Opening Moves',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18)),
+            Text(
+              'Opening Moves',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 18,
+              ),
+            ),
             SizedBox(height: 4),
             Text(
               'Up to 3 lines the server may use when you match. Leave one '
               'blank to clear it.',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
             ),
             SizedBox(height: 12),
             if (_loading)
@@ -139,14 +147,21 @@ class _OpeningMovesDialogState extends State<OpeningMovesDialog> {
                     controller: _controllers[slot],
                     maxLength: 160,
                     maxLines: 2,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                     decoration: InputDecoration(
                       labelText: 'Opening move $slot',
-                      counterStyle:
-                          TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                      labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      counterStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      fillColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       border: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(12)),
                         borderSide: BorderSide.none,
@@ -167,16 +182,24 @@ class _OpeningMovesDialogState extends State<OpeningMovesDialog> {
                     )
                   : TextButton(
                       onPressed: _save,
-                      child: Text('Save',
-                          style: TextStyle(color: Theme.of(context).colorScheme.tertiary)),
+                      child: Text(
+                        'Save',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.tertiary,
+                        ),
+                      ),
                     ),
             ),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
-                child:
-                    Text('Close', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                child: Text(
+                  'Close',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             ),
           ],

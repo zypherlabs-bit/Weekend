@@ -107,7 +107,9 @@ class SearchRepository {
             bio: row['bio'] as String? ?? '',
             relationshipIntent: row['relationship_intent'] as String? ?? '',
             interests:
-                (row['interests'] as List?)?.map((e) => e.toString()).toList() ??
+                (row['interests'] as List?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
                 const [],
             isPhotoVerified: row['is_photo_verified'] as bool? ?? false,
             trustScore: (row['trust_score'] as num?)?.toInt() ?? 0,
@@ -133,7 +135,6 @@ class SearchRepository {
     }
   }
 
-
   static String _displayName(Object? raw) {
     final name = (raw as String? ?? '').trim();
     return name.isEmpty ? 'Weekend member' : name;
@@ -157,7 +158,8 @@ class SearchRepository {
       return 'Profile search is unavailable on this backend yet. '
           'Please try again later.';
     }
-    if (msg.contains('permission denied') || msg.contains('row-level security')) {
+    if (msg.contains('permission denied') ||
+        msg.contains('row-level security')) {
       return 'Profile search was blocked by security policy. Please sign in again.';
     }
     return 'Could not load profiles. Check your connection and try again.';
@@ -205,7 +207,8 @@ class ProfileCompletion {
 
   /// True only when the user may be shown to other people: the server's
   /// minimum-photo rule plus the identity fields every profile needs.
-  bool get isComplete => meetsPhotoMinimum && hasName && hasBirthdate && hasCity;
+  bool get isComplete =>
+      meetsPhotoMinimum && hasName && hasBirthdate && hasCity;
 
   factory ProfileCompletion.fromJson(Map<String, dynamic> json) {
     return ProfileCompletion(

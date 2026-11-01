@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../services/app_lock_service.dart';
 import '../../services/biometric_auth_service.dart';
@@ -213,7 +213,11 @@ class _LockSurface extends StatelessWidget {
             children: [
               // Weekend's own identity - no third-party branding.
               Center(
-                child: Icon(Icons.weekend_rounded, size: 56, color: Theme.of(context).colorScheme.primary),
+                child: Icon(
+                  Icons.weekend_rounded,
+                  size: 56,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
               const SizedBox(height: 40),
               Center(
@@ -221,10 +225,16 @@ class _LockSurface extends StatelessWidget {
                   width: 96,
                   height: 96,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary),
+                  child: Icon(
+                    icon,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ),
               const SizedBox(height: 28),
@@ -244,7 +254,9 @@ class _LockSurface extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   height: 1.4,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               if (error != null) ...[
@@ -254,16 +266,25 @@ class _LockSurface extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.35)),
+                    border: Border.all(
+                      color: Colors.red.withValues(alpha: 0.35),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline_rounded, color: Colors.red, size: 20),
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: Colors.red,
+                        size: 20,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           error!,
-                          style: const TextStyle(color: Colors.red, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
@@ -285,7 +306,10 @@ class _LockSurface extends StatelessWidget {
                     icon: Icon(icon, size: 22),
                     label: const Text(
                       'Unlock',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
@@ -302,7 +326,9 @@ class _LockSurface extends StatelessWidget {
                 child: Text(
                   'Turn off app lock',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.45),
                     fontSize: 13,
                   ),
                 ),

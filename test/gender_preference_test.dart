@@ -44,10 +44,26 @@ void main() {
     test('empty preference shows all genders', () {
       final preferences = <String>[];
       final profiles = [
-        UserProfile(id: '1', name: 'Alice', age: 25, gender: 'Woman', photos: [],
-            city: '', distanceKm: 0, bio: ''),
-        UserProfile(id: '2', name: 'Bob', age: 30, gender: 'Man', photos: [],
-            city: '', distanceKm: 0, bio: ''),
+        UserProfile(
+          id: '1',
+          name: 'Alice',
+          age: 25,
+          gender: 'Woman',
+          photos: [],
+          city: '',
+          distanceKm: 0,
+          bio: '',
+        ),
+        UserProfile(
+          id: '2',
+          name: 'Bob',
+          age: 30,
+          gender: 'Man',
+          photos: [],
+          city: '',
+          distanceKm: 0,
+          bio: '',
+        ),
       ];
 
       final filtered = profiles.where((p) {
@@ -61,10 +77,26 @@ void main() {
     test('Man preference shows only male profiles', () {
       final preferences = ['Man'];
       final profiles = [
-        UserProfile(id: '1', name: 'Alice', age: 25, gender: 'Woman', photos: [],
-            city: '', distanceKm: 0, bio: ''),
-        UserProfile(id: '2', name: 'Bob', age: 30, gender: 'Man', photos: [],
-            city: '', distanceKm: 0, bio: ''),
+        UserProfile(
+          id: '1',
+          name: 'Alice',
+          age: 25,
+          gender: 'Woman',
+          photos: [],
+          city: '',
+          distanceKm: 0,
+          bio: '',
+        ),
+        UserProfile(
+          id: '2',
+          name: 'Bob',
+          age: 30,
+          gender: 'Man',
+          photos: [],
+          city: '',
+          distanceKm: 0,
+          bio: '',
+        ),
       ];
 
       final filtered = profiles.where((p) {

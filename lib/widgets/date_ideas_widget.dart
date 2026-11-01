@@ -59,7 +59,10 @@ class _DateIdeasButtonState extends ConsumerState<DateIdeasButton> {
   Widget build(BuildContext context) {
     return IconButton(
       tooltip: 'Suggest date ideas',
-      icon: Icon(Icons.lightbulb_rounded, color: Theme.of(context).colorScheme.onSurface),
+      icon: Icon(
+        Icons.lightbulb_rounded,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
       onPressed: _toggle,
     );
   }
@@ -95,7 +98,9 @@ class _DateIdeasSheetState extends ConsumerState<_DateIdeasSheet> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(weekendProvider.notifier).generateDateIdeas(
+      ref
+          .read(weekendProvider.notifier)
+          .generateDateIdeas(
             partnerInterests: widget.partnerInterests,
             city: widget.city,
           );
@@ -123,8 +128,8 @@ class _DateIdeasSheetState extends ConsumerState<_DateIdeasSheet> {
             child: isGenerating && !hasContent
                 ? const _LoadingContent()
                 : hasContent
-                    ? _IdeasList(ideas: ideas)
-                    : const _EmptyContent(),
+                ? _IdeasList(ideas: ideas)
+                : const _EmptyContent(),
           ),
         ],
       ),
@@ -161,7 +166,9 @@ class _DateIdeasSheetState extends ConsumerState<_DateIdeasSheet> {
           ),
           TextButton(
             onPressed: () {
-              ref.read(weekendProvider.notifier).generateDateIdeas(
+              ref
+                  .read(weekendProvider.notifier)
+                  .generateDateIdeas(
                     partnerInterests: widget.partnerInterests,
                     city: widget.city,
                   );
@@ -187,12 +194,17 @@ class _LoadingContent extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Theme.of(context).colorScheme.primary,
+            ),
           ),
           SizedBox(height: 16),
           Text(
             'Crafting date ideas...',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 14,
+            ),
           ),
         ],
       ),
@@ -260,11 +272,16 @@ class _DateIdeaCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Theme.of(context).colorScheme.surfaceContainerHigh, Color(0xFF282534)],
+          colors: [
+            Theme.of(context).colorScheme.surfaceContainerHigh,
+            Color(0xFF282534),
+          ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.05),
         ),
       ),
       child: Column(
@@ -295,7 +312,9 @@ class _DateIdeaCard extends StatelessWidget {
                 Text(
                   idea.description,
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.8),
                     fontSize: 14,
                     height: 1.4,
                   ),
@@ -307,9 +326,12 @@ class _DateIdeaCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
-                borderRadius:
-                    const BorderRadius.vertical(bottom: Radius.circular(16)),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.05),
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(16),
+                ),
               ),
               child: Row(
                 children: [

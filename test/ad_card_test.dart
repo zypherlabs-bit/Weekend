@@ -19,21 +19,19 @@ void main() {
     testWidgets('renders ADVERTISEMENT badge', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: AdCard(ad: testAd),
-          ),
+          home: Scaffold(body: AdCard(ad: testAd)),
         ),
       );
 
       expect(find.text('ADVERTISEMENT'), findsOneWidget);
     });
 
-    testWidgets('renders ad title and description', (WidgetTester tester) async {
+    testWidgets('renders ad title and description', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: AdCard(ad: testAd),
-          ),
+          home: Scaffold(body: AdCard(ad: testAd)),
         ),
       );
 
@@ -44,9 +42,7 @@ void main() {
     testWidgets('renders CTA button with ctaText', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: AdCard(ad: testAd),
-          ),
+          home: Scaffold(body: AdCard(ad: testAd)),
         ),
       );
 
@@ -58,27 +54,26 @@ void main() {
       expect(buttonFinder, findsOneWidget);
     });
 
-    testWidgets('renders Sponsored label at bottom', (WidgetTester tester) async {
+    testWidgets('renders Sponsored label at bottom', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: AdCard(ad: testAd),
-          ),
+          home: Scaffold(body: AdCard(ad: testAd)),
         ),
       );
 
       expect(find.text('Sponsored'), findsOneWidget);
     });
 
-    testWidgets('calls onReport when menu report selected', (WidgetTester tester) async {
+    testWidgets('calls onReport when menu report selected', (
+      WidgetTester tester,
+    ) async {
       bool reportCalled = false;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: AdCard(
-              ad: testAd,
-              onReport: () => reportCalled = true,
-            ),
+            body: AdCard(ad: testAd, onReport: () => reportCalled = true),
           ),
         ),
       );
@@ -93,15 +88,14 @@ void main() {
       expect(reportCalled, true);
     });
 
-    testWidgets('calls onHide when menu hide selected', (WidgetTester tester) async {
+    testWidgets('calls onHide when menu hide selected', (
+      WidgetTester tester,
+    ) async {
       bool hideCalled = false;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: AdCard(
-              ad: testAd,
-              onHide: () => hideCalled = true,
-            ),
+            body: AdCard(ad: testAd, onHide: () => hideCalled = true),
           ),
         ),
       );
@@ -119,21 +113,19 @@ void main() {
     testWidgets('loads image from network', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: AdCard(ad: testAd),
-          ),
+          home: Scaffold(body: AdCard(ad: testAd)),
         ),
       );
 
       expect(find.byType(CachedNetworkImage), findsOneWidget);
     });
 
-    testWidgets('handles null callbacks gracefully', (WidgetTester tester) async {
+    testWidgets('handles null callbacks gracefully', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: AdCard(ad: testAd),
-          ),
+          home: Scaffold(body: AdCard(ad: testAd)),
         ),
       );
 

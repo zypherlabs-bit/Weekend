@@ -46,7 +46,9 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('WeekendErrorState renders message and retries', (tester) async {
+    testWidgets('WeekendErrorState renders message and retries', (
+      tester,
+    ) async {
       var retried = false;
       await tester.pumpWidget(
         MaterialApp(

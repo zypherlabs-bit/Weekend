@@ -34,7 +34,9 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
       // `authState.user.referralCode` was read here before, but that object is
       // built from the auth session only and never carries a referral code, so
       // the screen always failed with "No referral code available".
-      final profile = await ref.read(weekendProvider.notifier).loadCurrentUserProfile();
+      final profile = await ref
+          .read(weekendProvider.notifier)
+          .loadCurrentUserProfile();
       final user = profile;
       if (user == null) {
         setState(() {
@@ -146,7 +148,10 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
+          icon: Icon(
+            Icons.arrow_back_rounded,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
         title: Text(
           'My Weekend QR',
@@ -161,7 +166,10 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
           if (_qrPayload != null)
             IconButton(
               onPressed: _shareQRCode,
-              icon: Icon(Icons.share_rounded, color: Theme.of(context).colorScheme.onSurface),
+              icon: Icon(
+                Icons.share_rounded,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               tooltip: 'Share Invitation',
             ),
         ],
@@ -177,14 +185,19 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                 height: 100,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.tertiary],
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.tertiary,
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.3),
                       blurRadius: 30,
                       spreadRadius: 10,
                     ),
@@ -211,7 +224,9 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                 'Share this QR code to invite friends to Weekend. When they scan it, you\'ll both get referral rewards!',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
@@ -219,7 +234,9 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
               const SizedBox(height: 32),
               if (_isGenerating)
                 CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).colorScheme.primary,
+                  ),
                 )
               else if (_error != null)
                 Container(
@@ -248,7 +265,9 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                       ElevatedButton(
                         onPressed: _generateQRCode,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
                         ),
                         child: const Text('Retry'),
                       ),
@@ -283,7 +302,9 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                           dataModuleShape: QrDataModuleShape.square,
                           color: Theme.of(context).scaffoldBackgroundColor,
                         ),
-                        backgroundColor: Theme.of(context).colorScheme.onSurface,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onSurface,
                         errorCorrectionLevel: QrErrorCorrectLevel.H,
                         gapless: false,
                       ),
@@ -294,7 +315,9 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: const Color(
@@ -332,8 +355,12 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                               icon: const Icon(Icons.share_rounded, size: 20),
                               label: const Text('Share'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Theme.of(context).colorScheme.onSurface,
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary,
+                                foregroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 14,
                                 ),
@@ -353,7 +380,9 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                               ),
                               label: const Text('Save Image'),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: Theme.of(context).colorScheme.primary,
+                                foregroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary,
                                 side: BorderSide(
                                   color: Theme.of(context).colorScheme.primary,
                                 ),
@@ -378,7 +407,9 @@ class _QRInviteScreenState extends ConsumerState<QRInviteScreen> {
                   color: Theme.of(context).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.1),
                   ),
                 ),
                 child: Column(
@@ -459,7 +490,9 @@ class _SecurityPoint extends StatelessWidget {
             child: Text(
               text,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
                 fontSize: 12,
                 height: 1.4,
               ),

@@ -187,7 +187,9 @@ class _LikeCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Photo(photoUrl: profile.photos.isEmpty ? null : profile.photos.first),
+          _Photo(
+            photoUrl: profile.photos.isEmpty ? null : profile.photos.first,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -289,8 +291,7 @@ class _LikeCard extends StatelessWidget {
                         Icon(
                           Icons.format_quote_rounded,
                           size: 14,
-                          color:
-                              theme.colorScheme.onSurfaceVariant.withValues(
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
                             alpha: 0.6,
                           ),
                         ),
@@ -310,8 +311,9 @@ class _LikeCard extends StatelessWidget {
                   Text(
                     'Liked ${timeago.format(like.likedAt!)}',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant
-                          .withValues(alpha: 0.7),
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.7,
+                      ),
                     ),
                   ),
                 ],

@@ -72,8 +72,7 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
   final AuthRepository _repo;
   final MfaAttemptLimiter attemptLimiter = MfaAttemptLimiter();
 
-  AuthNotifier(this._repo)
-      : super(const WeekendAuthState(isLoading: true)) {
+  AuthNotifier(this._repo) : super(const WeekendAuthState(isLoading: true)) {
     _listenToAuthChanges();
     _checkSession();
   }
@@ -185,7 +184,10 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       if (client == null) {
         // Unconfigured mode: no persisted session, so the user starts
         // unauthenticated and proceeds through onboarding → auth.
-        state = const WeekendAuthState(isLoading: false, isAuthenticated: false);
+        state = const WeekendAuthState(
+          isLoading: false,
+          isAuthenticated: false,
+        );
         return;
       }
       final session = client.auth.currentSession;
@@ -608,7 +610,8 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     if (attemptLimiter.isLockedOut(factorId)) {
       final until = attemptLimiter.lockedUntil(factorId);
       state = state.copyWith(
-        error: 'Too many attempts. Try again after ${until != null ? '${until.difference(DateTime.now()).inMinutes + 1} min' : 'a few minutes'}.',
+        error:
+            'Too many attempts. Try again after ${until != null ? '${until.difference(DateTime.now()).inMinutes + 1} min' : 'a few minutes'}.',
       );
       return false;
     }
@@ -626,8 +629,9 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
         user: user != null ? _profileFromAuth(user, 'User') : state.user,
         session: session?.accessToken ?? state.session,
         emailVerified: user?.emailConfirmedAt != null || state.emailVerified,
-        needsProfileSetup:
-            user != null ? await _profileNeedsSetup(user.id) : false,
+        needsProfileSetup: user != null
+            ? await _profileNeedsSetup(user.id)
+            : false,
       );
       if (user != null) await _loadLocationPreferences(user.id);
       return true;
@@ -724,7 +728,11 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       );
       return;
     }
-    state = state.copyWith(isLoading: true, clearError: true, needsMfaChallenge: false);
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      needsMfaChallenge: false,
+    );
 
     try {
       final result = await _repo.signInWithPasskey();
@@ -741,8 +749,9 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
           session: result.session?.accessToken,
           emailVerified: user?.emailConfirmedAt != null,
           needsMfaChallenge: false,
-          needsProfileSetup:
-              user != null ? await _profileNeedsSetup(user.id) : true,
+          needsProfileSetup: user != null
+              ? await _profileNeedsSetup(user.id)
+              : true,
           clearError: true,
         );
         if (user != null) await _loadLocationPreferences(user.id);
@@ -794,12 +803,12 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
   Future<void> requestPasswordReset(String email) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      await _repo.resetPassword(email, emailRedirectTo: SupabaseConfig.emailRedirectOrNull);
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: _readableAuthError(e),
+      await _repo.resetPassword(
+        email,
+        emailRedirectTo: SupabaseConfig.emailRedirectOrNull,
       );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: _readableAuthError(e));
       rethrow;
     }
     state = state.copyWith(isLoading: false, clearError: true);
@@ -841,7 +850,8 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       if (!deleted) {
         state = state.copyWith(
           isLoading: false,
-          error: 'Account deletion is unavailable without a backend connection.',
+          error:
+              'Account deletion is unavailable without a backend connection.',
         );
         return false;
       }

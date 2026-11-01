@@ -39,11 +39,17 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
         elevation: 0,
         leading: IconButton(
           onPressed: () => context.pop(),
-          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
+          icon: Icon(
+            Icons.arrow_back_rounded,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
         title: Text(
           'Safety Center',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
       ),
@@ -59,7 +65,10 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Theme.of(context).colorScheme.primary, Color(0xFFFF6B45)],
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Color(0xFFFF6B45),
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -89,7 +98,9 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                           Text(
                             'If you\'re in immediate danger, contact emergency services.',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.9),
                               fontSize: 13,
                             ),
                           ),
@@ -99,7 +110,9 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                     ElevatedButton(
                       onPressed: () => _launchPhone('112'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.onSurface,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onSurface,
                         foregroundColor: Theme.of(context).colorScheme.primary,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -304,78 +317,86 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                     ),
                   )
                 : snapshot.hasError
-                    // A failed read must never be rendered as "you have not
-                    // blocked anyone".
-                    ? Text(
-                        'Could not load your blocked users.\n'
-                        '${snapshot.error}',
-                        style: TextStyle(color: Colors.redAccent),
-                      )
-                    : blocked.isEmpty
-                        ? Text(
-                            'No blocked users yet. Use the block button on any profile or in chat.',
-                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                          )
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${blocked.length} blocked',
-                                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                              ),
-                              SizedBox(height: 8),
-                              ...blocked.map((id) => ListTile(
-                                    title: Text(
-                                      id,
-                                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                                    ),
-                                    trailing: IconButton(
-                                      icon: Icon(
-                                        Icons.lock_open_rounded,
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                      ),
-                                      onPressed: () async {
-                                        try {
-                                          await ref
-                                              .read(weekendProvider.notifier)
-                                              .unblockUser(id);
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                content:
-                                                    Text('Unblocked: $id'),
-                                                backgroundColor:
-                                                    AppTheme.onlineGreen,
-                                              ),
-                                            );
-                                          }
-                                        } catch (e) {
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                content: const Text(
-                                                  'Could not unblock this user. '
-                                                  'Please try again.',
-                                                ),
-                                                backgroundColor: Colors.red,
-                                              ),
-                                            );
-                                          }
-                                        }
-                                      },
-                                    ),
-                                  )),
-                            ],
+                // A failed read must never be rendered as "you have not
+                // blocked anyone".
+                ? Text(
+                    'Could not load your blocked users.\n'
+                    '${snapshot.error}',
+                    style: TextStyle(color: Colors.redAccent),
+                  )
+                : blocked.isEmpty
+                ? Text(
+                    'No blocked users yet. Use the block button on any profile or in chat.',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${blocked.length} blocked',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      ...blocked.map(
+                        (id) => ListTile(
+                          title: Text(
+                            id,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                           ),
+                          trailing: IconButton(
+                            icon: Icon(
+                              Icons.lock_open_rounded,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                            onPressed: () async {
+                              try {
+                                await ref
+                                    .read(weekendProvider.notifier)
+                                    .unblockUser(id);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Unblocked: $id'),
+                                      backgroundColor: AppTheme.onlineGreen,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text(
+                                        'Could not unblock this user. '
+                                        'Please try again.',
+                                      ),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: Text(
                   'Close',
-                  style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ),
             ],
@@ -396,7 +417,7 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
   }
 
   void _showReportDialog(BuildContext context) {
-      final targetCtrl = TextEditingController();
+    final targetCtrl = TextEditingController();
     String? selectedReason;
     showDialog(
       context: context,
@@ -413,17 +434,27 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
             children: [
               Text(
                 'Target user ID:',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               SizedBox(height: 8),
               TextField(
                 controller: targetCtrl,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Enter user ID to report',
-                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+                  hintStyle: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.4),
+                  ),
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  fillColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -433,14 +464,18 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
               SizedBox(height: 16),
               Text(
                 'Select a reason for reporting:',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               SizedBox(height: 8),
               ..._reportReasons.map(
                 (reason) => ListTile(
                   title: Text(
                     reason,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                   onTap: () {
                     setDialogState(() => selectedReason = reason);
@@ -454,7 +489,9 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Cancel',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
             ElevatedButton(
@@ -497,7 +534,9 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
               ),
               child: Text(
                 'Submit',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ),
           ],
@@ -531,9 +570,13 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
             TextField(
               decoration: InputDecoration(
                 labelText: 'Contact Name',
-                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                labelStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 hintText: 'Who are you meeting?',
-                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                hintStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
@@ -541,9 +584,13 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
             TextField(
               decoration: InputDecoration(
                 labelText: 'Venue',
-                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                labelStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 hintText: 'Where are you meeting?',
-                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                hintStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
@@ -551,9 +598,13 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
             TextField(
               decoration: InputDecoration(
                 labelText: 'Time',
-                labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                labelStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 hintText: 'When?',
-                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                hintStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
@@ -564,7 +615,9 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           ElevatedButton(
@@ -572,7 +625,10 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
             ),
-            child: Text('Share', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            child: Text(
+              'Share',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            ),
           ),
         ],
       ),
@@ -590,14 +646,18 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
         ),
         content: Text(
           'Upload a selfie to verify your profile. This helps ensure a safe community.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           ElevatedButton(
@@ -619,10 +679,7 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
     // '/settings' is not a registered route (the settings UI is a dialog opened
     // from Profile), so pushing it threw a GoRouter "no routes for location"
     // error instead of opening anything. Open the real settings surface.
-    showDialog(
-      context: context,
-      builder: (context) => const SettingsDialog(),
-    );
+    showDialog(context: context, builder: (context) => const SettingsDialog());
   }
 
   /// The current `user_settings` privacy flags, read from LIVE Supabase.
@@ -630,9 +687,7 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
     const fallback = _PrivacySettings();
     final client = SupabaseConfig.client;
     final userId = SupabaseConfig.currentUserId;
-    if (client == null ||
-        userId == 'unauthenticated' ||
-        userId == 'me') {
+    if (client == null || userId == 'unauthenticated' || userId == 'me') {
       return fallback;
     }
     try {
@@ -716,7 +771,9 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                 onPressed: () => Navigator.pop(context),
                 child: Text(
                   'Close',
-                  style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ),
               ElevatedButton(
@@ -763,7 +820,9 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
                 ),
                 child: Text(
                   'Save',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ),
             ],
@@ -780,7 +839,10 @@ class _SafetyCenterScreenState extends ConsumerState<SafetyCenterScreen> {
     ValueChanged<bool> onChanged,
   ) {
     return SwitchListTile(
-      title: Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+      title: Text(
+        title,
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+      ),
       subtitle: Text(
         subtitle,
         style: TextStyle(
@@ -859,7 +921,11 @@ class _SafetyToolCard extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+          style: TextStyle(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
         trailing: Icon(
           Icons.chevron_right_rounded,
@@ -893,10 +959,16 @@ class _SafetyTipCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 22),
+              child: Icon(
+                icon,
+                color: Theme.of(context).colorScheme.primary,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -914,7 +986,9 @@ class _SafetyTipCard extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontSize: 13,
                     ),
                   ),
@@ -951,10 +1025,16 @@ class _ResourceCard extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.15),
+            color: Theme.of(
+              context,
+            ).colorScheme.tertiary.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: Theme.of(context).colorScheme.tertiary, size: 22),
+          child: Icon(
+            icon,
+            color: Theme.of(context).colorScheme.tertiary,
+            size: 22,
+          ),
         ),
         title: Text(
           title,
@@ -965,9 +1045,16 @@ class _ResourceCard extends StatelessWidget {
         ),
         subtitle: Text(
           description,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+          style: TextStyle(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
-        trailing: Icon(Icons.open_in_new_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        trailing: Icon(
+          Icons.open_in_new_rounded,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }
@@ -1019,7 +1106,9 @@ class _FeatureCard extends StatelessWidget {
                   Text(
                     description,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontSize: 13,
                     ),
                   ),

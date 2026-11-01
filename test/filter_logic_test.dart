@@ -50,9 +50,7 @@ bool isEligible(Candidate c, DiscoveryPreferences p) {
   if (p.ageMin != null || p.ageMax != null) {
     // An unknown age can never be proven to satisfy the range.
     checks.add(
-      c.age != null &&
-          c.age! >= (p.ageMin ?? 0) &&
-          c.age! <= (p.ageMax ?? 200),
+      c.age != null && c.age! >= (p.ageMin ?? 0) && c.age! <= (p.ageMax ?? 200),
     );
   }
   if (p.maxDistanceKm != null) {
@@ -72,14 +70,16 @@ bool isEligible(Candidate c, DiscoveryPreferences p) {
     // ALL requested interests must be present.
     checks.add(
       p.interests.every(
-        (want) => c.interests.any((have) => have.toLowerCase() == want.toLowerCase()),
+        (want) =>
+            c.interests.any((have) => have.toLowerCase() == want.toLowerCase()),
       ),
     );
   }
   if (p.languages.isNotEmpty) {
     checks.add(
       p.languages.every(
-        (want) => c.languages.any((have) => have.toLowerCase() == want.toLowerCase()),
+        (want) =>
+            c.languages.any((have) => have.toLowerCase() == want.toLowerCase()),
       ),
     );
   }
@@ -155,14 +155,26 @@ void main() {
 
     test('each excluded profile fails for the expected reason', () {
       expect(isEligible(profiles[1], preference), isFalse, reason: 'B is 35');
-      expect(isEligible(profiles[2], preference), isFalse, reason: 'C is a man');
-      expect(isEligible(profiles[3], preference), isFalse, reason: 'D is in Mumbai');
+      expect(
+        isEligible(profiles[2], preference),
+        isFalse,
+        reason: 'C is a man',
+      );
+      expect(
+        isEligible(profiles[3], preference),
+        isFalse,
+        reason: 'D is in Mumbai',
+      );
     });
   });
 
   group('Hard-filter combinations use AND semantics', () {
     test('gender + age', () {
-      const p = DiscoveryPreferences(genders: ['Woman'], ageMin: 25, ageMax: 30);
+      const p = DiscoveryPreferences(
+        genders: ['Woman'],
+        ageMin: 25,
+        ageMax: 30,
+      );
       // A (28, Pune) and D (29, Mumbai) are both women in range. B is 35 and
       // C is a man, so only the two dimension-specific exclusions apply.
       expect(idsOf(profiles, p), ['A', 'D']);

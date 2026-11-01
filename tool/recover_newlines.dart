@@ -52,7 +52,12 @@ class _Frame {
   final bool raw;
   final bool triple;
   int braceDepth = 0;
-  _Frame(this.isString, {this.quote = '', this.raw = false, this.triple = false});
+  _Frame(
+    this.isString, {
+    this.quote = '',
+    this.raw = false,
+    this.triple = false,
+  });
 }
 
 /// Finds every `//` that starts a line comment in code context, correctly
@@ -98,8 +103,7 @@ List<int> _findCommentMarkers(String t) {
         // A real string literal never follows an identifier character
         // directly; prose apostrophes (don't, user's) do. Raw strings
         // (r'...') are the exception.
-        final isRaw =
-            i > 1 && t[i - 1] == 'r' && !_isIdentChar(t[i - 2]);
+        final isRaw = i > 1 && t[i - 1] == 'r' && !_isIdentChar(t[i - 2]);
         final prevIsIdent = i > 0 && _isIdentChar(t[i - 1]);
         if (isRaw || !prevIsIdent) {
           final isTriple = i + 2 < t.length && t[i + 1] == c && t[i + 2] == c;
@@ -117,7 +121,10 @@ List<int> _findCommentMarkers(String t) {
       continue;
     }
     if (f.triple) {
-      if (c == f.quote && i + 2 < t.length && t[i + 1] == f.quote && t[i + 2] == f.quote) {
+      if (c == f.quote &&
+          i + 2 < t.length &&
+          t[i + 1] == f.quote &&
+          t[i + 2] == f.quote) {
         frames.removeLast();
         i += 3;
         continue;

@@ -26,5 +26,6 @@ class SurgeNotifier extends StateNotifier<SurgeState> {
   }
 }
 
-final surgeProvider =
-    StateNotifierProvider<SurgeNotifier, SurgeState>((ref) => SurgeNotifier());
+final surgeProvider = StateNotifierProvider<SurgeNotifier, SurgeState>(
+  (ref) => SurgeNotifier(),
+);

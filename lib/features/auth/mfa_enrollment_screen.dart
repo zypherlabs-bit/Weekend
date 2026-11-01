@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../repositories/auth_repository.dart';
 
@@ -22,6 +22,7 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
   int _attempts = 0;
   DateTime? _cooldownUntil;
   bool _showSecret = false;
+
   /// Recovery codes generated during this screen visit, shown exactly once.
   /// Empty means "not generated right now" - the plaintext is never persisted,
   /// so it genuinely cannot be shown again after the user leaves.
@@ -31,12 +32,22 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
   int _recoveryCount = 0;
 
   @override
-  void initState() { super.initState(); _refresh(); }
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
   @override
-  void dispose() { _codeController.dispose(); super.dispose(); }
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
 
   Future<void> _refresh() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final factors = await _repo.listFactors();
       // Never derive "2FA is on" from a failed lookup: an exception below leaves
@@ -45,7 +56,9 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
       _recoveryCount = await _repo.recoveryCodeCount();
       setState(() {
         _mfaEnabled = factors.verifiedTotp.isNotEmpty;
-        _existingFactorId = factors.verifiedTotp.isNotEmpty ? factors.verifiedTotp.first.id : null;
+        _existingFactorId = factors.verifiedTotp.isNotEmpty
+            ? factors.verifiedTotp.first.id
+            : null;
       });
     } catch (e) {
       setState(() => _error = 'Could not load 2FA status: $e');
@@ -65,12 +78,16 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
         context: context,
         builder: (c) => AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-          title: Text('Replace recovery codes?',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+          title: Text(
+            'Replace recovery codes?',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          ),
           content: Text(
             'Your existing recovery codes will stop working immediately. '
             'Only the new set will unlock your account.',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           actions: [
             TextButton(
@@ -86,13 +103,18 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
       );
       if (confirm != true) return;
     }
-    setState(() { _working = true; _error = null; });
+    setState(() {
+      _working = true;
+      _error = null;
+    });
     try {
       final codes = await _repo.generateRecoveryCodes(count: 8);
       if (!mounted) return;
       if (codes.isEmpty) {
-        setState(() =>
-            _error = 'Recovery codes could not be generated. Please try again.');
+        setState(
+          () => _error =
+              'Recovery codes could not be generated. Please try again.',
+        );
         return;
       }
       setState(() {
@@ -109,13 +131,19 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
   }
 
   Future<void> _begin() async {
-    setState(() { _working = true; _error = null; });
+    setState(() {
+      _working = true;
+      _error = null;
+    });
     try {
       final enrollment = await _repo.enrollTotp();
       if (enrollment == null) {
         setState(() => _error = 'Sign-in required before enabling 2FA.');
       } else {
-        setState(() { _pending = enrollment; _attempts = 0; });
+        setState(() {
+          _pending = enrollment;
+          _attempts = 0;
+        });
       }
     } catch (e) {
       setState(() => _error = 'Could not start enrollment: $e');
@@ -135,25 +163,42 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
       setState(() => _error = 'Too many attempts. Try again in ${secs}s.');
       return;
     }
-    setState(() { _verifying = true; _error = null; });
+    setState(() {
+      _verifying = true;
+      _error = null;
+    });
     try {
       await _repo.verifyEnrollment(factorId: _pending!.factorId, code: code);
       if (!mounted) return;
-      setState(() { _pending = null; _codeController.clear(); });
+      setState(() {
+        _pending = null;
+        _codeController.clear();
+      });
       await _refresh();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Two-factor authentication enabled.')));
+          const SnackBar(content: Text('Two-factor authentication enabled.')),
+        );
       }
     } catch (e) {
       _attempts++;
       DateTime? cooldown;
-      if (_attempts >= 5) { cooldown = DateTime.now().add(const Duration(seconds: 60)); _attempts = 0; }
+      if (_attempts >= 5) {
+        cooldown = DateTime.now().add(const Duration(seconds: 60));
+        _attempts = 0;
+      }
       final msg = e.toString().toLowerCase();
-      String friendly = 'Verification failed. Enter the current code and try again.';
-      if (msg.contains('expired')) { friendly = 'That code expired. Enter the current code.'; }
-      else if (msg.contains('invalid') || msg.contains('incorrect')) { friendly = 'Incorrect code. Check your authenticator app.'; }
-      setState(() { _cooldownUntil = cooldown; _error = friendly; });
+      String friendly =
+          'Verification failed. Enter the current code and try again.';
+      if (msg.contains('expired')) {
+        friendly = 'That code expired. Enter the current code.';
+      } else if (msg.contains('invalid') || msg.contains('incorrect')) {
+        friendly = 'Incorrect code. Check your authenticator app.';
+      }
+      setState(() {
+        _cooldownUntil = cooldown;
+        _error = friendly;
+      });
     } finally {
       if (mounted) setState(() => _verifying = false);
     }
@@ -172,12 +217,16 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
 
     final code = await _promptForCode(
       title: 'Confirm it is you',
-      reason: 'Enter the current code from your authenticator app to turn '
+      reason:
+          'Enter the current code from your authenticator app to turn '
           'off two-factor authentication.',
     );
     if (code == null || !mounted) return;
 
-    setState(() { _working = true; _error = null; });
+    setState(() {
+      _working = true;
+      _error = null;
+    });
     try {
       await _repo.stepUpToAal2(factorId: factorId, code: code);
       await _repo.unenrollFactor(factorId);
@@ -191,9 +240,7 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
       await _refresh();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Two-factor authentication disabled.'),
-          ),
+          SnackBar(content: Text('Two-factor authentication disabled.')),
         );
       }
     } catch (e) {
@@ -228,14 +275,20 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-        title: Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(
+          title,
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               reason,
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -253,7 +306,9 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
                 counterText: '',
                 hintText: '......',
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+                fillColor: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.06),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -280,11 +335,16 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
     if (code == null || code.length != 6) return null;
     return code;
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(backgroundColor: Colors.transparent, foregroundColor: Theme.of(context).colorScheme.onSurface, title: const Text('Two-Factor Authentication')),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        title: const Text('Two-Factor Authentication'),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -294,8 +354,14 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
                   Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
-                    child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ),
                 _statusCard(),
                 SizedBox(height: 16),
@@ -305,13 +371,32 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
                   _verifyCard(),
                 ] else if (!_mfaEnabled)
                   SizedBox(
-                    width: double.infinity, height: 52,
+                    width: double.infinity,
+                    height: 52,
                     child: ElevatedButton(
                       onPressed: _working ? null : _begin,
-                      style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onSurface),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onSurface,
+                      ),
                       child: _working
-                          ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onSurface))
-                          : const Text('Enable 2FA', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          ? SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            )
+                          : const Text(
+                              'Enable 2FA',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   )
                 else ...[
@@ -360,10 +445,13 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
           Text(
             _recoveryCount == 0
                 ? 'You have no recovery codes. If you lose your phone you will '
-                    'need support to get back in.'
+                      'need support to get back in.'
                 : '$_recoveryCount unused recovery '
-                    '${_recoveryCount == 1 ? 'code' : 'codes'} left.',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                      '${_recoveryCount == 1 ? 'code' : 'codes'} left.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
           ),
           SizedBox(height: 12),
           SizedBox(
@@ -421,25 +509,50 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
       ),
     );
   }
+
   Widget _statusCard() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: (_mfaEnabled ? Colors.green : Colors.orange).withValues(alpha: 0.15), shape: BoxShape.circle),
-            child: Icon(_mfaEnabled ? Icons.verified_user_rounded : Icons.lock_rounded, color: _mfaEnabled ? Colors.green : Colors.orange),
+            decoration: BoxDecoration(
+              color: (_mfaEnabled ? Colors.green : Colors.orange).withValues(
+                alpha: 0.15,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _mfaEnabled ? Icons.verified_user_rounded : Icons.lock_rounded,
+              color: _mfaEnabled ? Colors.green : Colors.orange,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Authenticator app (TOTP)', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 15)),
+                Text(
+                  'Authenticator app (TOTP)',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
                 SizedBox(height: 2),
-                Text('A code is required after your password when signing in.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
+                Text(
+                  'A code is required after your password when signing in.',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),
@@ -448,21 +561,32 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
     );
   }
 
-
   Widget _enrollCard() {
     final pending = _pending!;
     return Container(
       padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('1. Scan this QR code', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold)),
+          Text(
+            '1. Scan this QR code',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           SizedBox(height: 12),
           Center(
             child: Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Theme.of(context).colorScheme.onSurface, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: pending.totpUri.isNotEmpty
                   ? QrImageView(data: pending.totpUri, size: 180)
                   : const Text('QR unavailable - use the secret below.'),
@@ -471,14 +595,37 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
           SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: Text('Manual secret key:', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12))),
-              TextButton(onPressed: () => setState(() => _showSecret = !_showSecret), child: Text(_showSecret ? 'Hide' : 'Show')),
+              Expanded(
+                child: Text(
+                  'Manual secret key:',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => setState(() => _showSecret = !_showSecret),
+                child: Text(_showSecret ? 'Hide' : 'Show'),
+              ),
             ],
           ),
           if (_showSecret && pending.secret.isNotEmpty)
-            SelectableText(pending.secret, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
+            SelectableText(
+              pending.secret,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 13,
+              ),
+            ),
           const SizedBox(height: 8),
-          Text('Shown once. Never stored on this device.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11)),
+          Text(
+            'Shown once. Never stored on this device.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 11,
+            ),
+          ),
         ],
       ),
     );
@@ -487,11 +634,20 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
   Widget _verifyCard() {
     return Container(
       padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('2. Verify your authenticator', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold)),
+          Text(
+            '2. Verify your authenticator',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           SizedBox(height: 12),
           Semantics(
             label: 'Six digit verification code',
@@ -500,24 +656,44 @@ class _MfaEnrollmentScreenState extends State<MfaEnrollmentScreen> {
               controller: _codeController,
               keyboardType: TextInputType.number,
               maxLength: 6,
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, letterSpacing: 8),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 22,
+                letterSpacing: 8,
+              ),
               decoration: InputDecoration(
                 counterText: '',
                 hintText: '......',
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                fillColor: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.06),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
           ),
           SizedBox(height: 12),
           SizedBox(
-            width: double.infinity, height: 48,
+            width: double.infinity,
+            height: 48,
             child: ElevatedButton(
               onPressed: _verifying ? null : _verify,
-              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary, foregroundColor: Theme.of(context).colorScheme.onSurface),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
+              ),
               child: _verifying
-                  ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onSurface))
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    )
                   : const Text('Verify and Enable'),
             ),
           ),

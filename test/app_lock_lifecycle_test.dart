@@ -1,4 +1,4 @@
-﻿import 'package:flutter/widgets.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:weekend/services/app_lock_service.dart';
 
@@ -117,7 +117,11 @@ void main() {
         service.debugHandleLifecycle(AppLifecycleState.resumed);
         expect(service.isLocked, isTrue, reason: 'cycle $i must stay locked');
         service.onAuthenticationSucceeded();
-        expect(service.isLocked, isFalse, reason: 'cycle $i unlocks explicitly');
+        expect(
+          service.isLocked,
+          isFalse,
+          reason: 'cycle $i unlocks explicitly',
+        );
       }
     });
   });

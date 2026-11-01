@@ -83,8 +83,9 @@ void main() {
 
     test('caps the longest edge at the profile dimension', () async {
       final result = await ImageOptimizer.optimize(_testJpeg(4000, 3000));
-      final longest =
-          result.width > result.height ? result.width : result.height;
+      final longest = result.width > result.height
+          ? result.width
+          : result.height;
       expect(longest, ImageQuality.profile.maxDimension);
     });
 

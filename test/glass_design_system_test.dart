@@ -12,7 +12,11 @@ import 'package:weekend/widgets/weekend_design_system.dart';
 ///   3. the atmospheric backdrop paints a gradient with depth layers and does
 ///      not overflow on small viewports.
 void main() {
-  Widget host(ThemeData theme, Widget child, {Size size = const Size(390, 844)}) {
+  Widget host(
+    ThemeData theme,
+    Widget child, {
+    Size size = const Size(390, 844),
+  }) {
     return MaterialApp(
       theme: theme,
       home: MediaQuery(
@@ -51,13 +55,17 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('glass renders in light mode (no dark-only assumption)',
-      (tester) async {
+  testWidgets('glass renders in light mode (no dark-only assumption)', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       host(
         AppTheme.lightTheme,
         const WeekendGlass(
-          child: Text('Light glass', style: TextStyle(color: Color(0xFF211A20))),
+          child: Text(
+            'Light glass',
+            style: TextStyle(color: Color(0xFF211A20)),
+          ),
         ),
       ),
     );
@@ -66,7 +74,10 @@ void main() {
 
     // The light-mode surface must not fall back to the old hardcoded dark fill.
     final container = tester.widget<Container>(
-      find.descendant(of: find.byType(WeekendGlass), matching: find.byType(Container)),
+      find.descendant(
+        of: find.byType(WeekendGlass),
+        matching: find.byType(Container),
+      ),
     );
     final decoration = container.decoration as BoxDecoration?;
     expect(decoration, isNotNull);
@@ -91,21 +102,19 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('atmosphere renders on a small viewport without overflow',
-      (tester) async {
+  testWidgets('atmosphere renders on a small viewport without overflow', (
+    tester,
+  ) async {
     await tester.pumpWidget(
-      host(
-        AppTheme.darkTheme,
-        const Text('small'),
-        size: const Size(320, 568),
-      ),
+      host(AppTheme.darkTheme, const Text('small'), size: const Size(320, 568)),
     );
     expect(find.byType(WeekendAtmosphere), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('WeekendCard follows the active theme surface color',
-      (tester) async {
+  testWidgets('WeekendCard follows the active theme surface color', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       host(AppTheme.lightTheme, const WeekendCard(child: Text('card'))),
     );

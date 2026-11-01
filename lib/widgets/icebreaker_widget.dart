@@ -67,8 +67,11 @@ class _IcebreakerButtonState extends ConsumerState<IcebreakerButton> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.lightbulb_outline_rounded,
-                      color: Theme.of(context).colorScheme.tertiary, size: 24),
+                  Icon(
+                    Icons.lightbulb_outline_rounded,
+                    color: Theme.of(context).colorScheme.tertiary,
+                    size: 24,
+                  ),
                   const SizedBox(width: 12),
                   Text(
                     'Icebreaker',
@@ -83,13 +86,20 @@ class _IcebreakerButtonState extends ConsumerState<IcebreakerButton> {
               SizedBox(height: 16),
               Text(
                 suggestion,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 16, height: 1.5),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 16,
+                  height: 1.5,
+                ),
               ),
               if (_sharedInterestText().isNotEmpty) ...[
                 SizedBox(height: 12),
                 Text(
                   'Shared interests: ${_sharedInterestText()}',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 13,
+                  ),
                 ),
               ],
               const SizedBox(height: 24),
@@ -100,7 +110,9 @@ class _IcebreakerButtonState extends ConsumerState<IcebreakerButton> {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Tip copied to clipboard — paste it into the chat!'),
+                        content: Text(
+                          'Tip copied to clipboard — paste it into the chat!',
+                        ),
                         backgroundColor: AppTheme.onlineGreen,
                       ),
                     );
@@ -112,17 +124,28 @@ class _IcebreakerButtonState extends ConsumerState<IcebreakerButton> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  icon: Icon(Icons.copy_rounded, color: Theme.of(context).colorScheme.onSurface),
+                  icon: Icon(
+                    Icons.copy_rounded,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                   label: Text(
                     'Copy to paste',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
               SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text('Close', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                child: Text(
+                  'Close',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             ],
           ),
@@ -145,7 +168,10 @@ class _IcebreakerButtonState extends ConsumerState<IcebreakerButton> {
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             )
-          : Icon(Icons.lightbulb_outline_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          : Icon(
+              Icons.lightbulb_outline_rounded,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
     );
   }
 }

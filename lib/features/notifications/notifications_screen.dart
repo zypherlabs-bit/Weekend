@@ -130,10 +130,7 @@ class _NotificationCentreScreenState
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: _buildBody(state),
-      ),
+      body: RefreshIndicator(onRefresh: _refresh, child: _buildBody(state)),
     );
   }
 
@@ -195,10 +192,7 @@ class _NotificationTile extends StatelessWidget {
   final AppNotification notification;
   final VoidCallback onTap;
 
-  const _NotificationTile({
-    required this.notification,
-    required this.onTap,
-  });
+  const _NotificationTile({required this.notification, required this.onTap});
 
   /// The six types the schema allows, plus the `new_like` value added in
   /// migration 026. Anything else renders with a neutral icon rather than
@@ -234,7 +228,8 @@ class _NotificationTile extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: '$label. ${notification.title}. '
+      label:
+          '$label. ${notification.title}. '
           '${notification.isRead ? '' : 'Unread. '}'
           '${when == null ? '' : timeago.format(when)}',
       child: InkWell(
@@ -274,8 +269,9 @@ class _NotificationTile extends StatelessWidget {
                                 ? label
                                 : notification.title,
                             style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight:
-                                  unread ? FontWeight.w700 : FontWeight.w500,
+                              fontWeight: unread
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                             ),
                           ),
                         ),
@@ -310,8 +306,9 @@ class _NotificationTile extends StatelessWidget {
                       Text(
                         timeago.format(when),
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant
-                              .withValues(alpha: 0.7),
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.7,
+                          ),
                         ),
                       ),
                     ],

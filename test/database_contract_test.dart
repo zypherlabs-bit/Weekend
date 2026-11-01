@@ -57,26 +57,29 @@ void main() {
     // function is the one that is actually in force after a full run. This is
     // the same rule `conftest.latest_migration_text` uses on the Python side.
     final dir = Directory('supabase/migrations');
-    final files = dir
-        .listSync()
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.sql'))
-        .toList()
-      ..sort((a, b) {
-        final an = RegExp(r'(\d+)').firstMatch(a.path)?.group(1) ?? '0';
-        final bn = RegExp(r'(\d+)').firstMatch(b.path)?.group(1) ?? '0';
-        return an.compareTo(bn);
-      });
+    final files =
+        dir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.sql'))
+            .toList()
+          ..sort((a, b) {
+            final an = RegExp(r'(\d+)').firstMatch(a.path)?.group(1) ?? '0';
+            final bn = RegExp(r'(\d+)').firstMatch(b.path)?.group(1) ?? '0';
+            return an.compareTo(bn);
+          });
 
     final texts = files.map((f) => f.readAsStringSync()).toList();
     migrations = stripSqlComments(texts.join('\n;\n'));
     addedHere = stripSqlComments(texts.last);
 
-    matchRepositorySource =
-        File('lib/repositories/match_repository.dart').readAsStringSync();
-    safetyRepositorySource =
-        File('lib/repositories/safety_repository.dart').readAsStringSync();
-});
+    matchRepositorySource = File(
+      'lib/repositories/match_repository.dart',
+    ).readAsStringSync();
+    safetyRepositorySource = File(
+      'lib/repositories/safety_repository.dart',
+    ).readAsStringSync();
+  });
 
   /// The text of a function definition: from [matchStart] to the CLOSING `$$`
   /// delimiter.
@@ -143,9 +146,7 @@ void main() {
 
   /// Every `row['x']` key the repository reads off an RPC result.
   Set<String> rowKeysRead(String source, String rpcName) {
-    final call = RegExp(
-      "rpc\\(\\s*'$rpcName'",
-    ).firstMatch(source);
+    final call = RegExp("rpc\\(\\s*'$rpcName'").firstMatch(source);
     expect(call, isNotNull, reason: '$rpcName is not called in this file');
 
     final from = call!.end;
@@ -193,13 +194,11 @@ void main() {
       expect(
         text.contains('join public.conversations'),
         isTrue,
-        reason: 'the match -> conversation link must be a join on '
+        reason:
+            'the match -> conversation link must be a join on '
             'conversations.match_id',
       );
-      expect(
-        text.contains('c.match_id = m.id'),
-        isTrue,
-      );
+      expect(text.contains('c.match_id = m.id'), isTrue);
     });
 
     test('every column MatchRepository reads is actually returned', () {
@@ -219,7 +218,8 @@ void main() {
       expect(
         missing,
         isEmpty,
-        reason: 'MatchRepository reads $missing but the RPC does not return '
+        reason:
+            'MatchRepository reads $missing but the RPC does not return '
             'them. Either column silently defaults or the RPC cannot compile.',
       );
     });
@@ -264,9 +264,10 @@ void main() {
           reason: '$fn is called by the app but not defined in any migration',
         );
         expect(
-          RegExp('grant\\s+execute\\s+on\\s+function\\s+public\\.$fn\\s*\\(',
-                  caseSensitive: false)
-              .hasMatch(migrations),
+          RegExp(
+            'grant\\s+execute\\s+on\\s+function\\s+public\\.$fn\\s*\\(',
+            caseSensitive: false,
+          ).hasMatch(migrations),
           isTrue,
           reason: '$fn must be granted to authenticated or every call fails',
         );
@@ -276,9 +277,10 @@ void main() {
         // Without the revoke, `authenticated` inherits execute from PUBLIC and
         // the function is reachable by an unauthenticated caller.
         expect(
-          RegExp('revoke\\s+all\\s+on\\s+function\\s+public\\.$fn\\s*\\(',
-                  caseSensitive: false)
-              .hasMatch(migrations),
+          RegExp(
+            'revoke\\s+all\\s+on\\s+function\\s+public\\.$fn\\s*\\(',
+            caseSensitive: false,
+          ).hasMatch(migrations),
           isTrue,
           reason: '$fn must be explicitly revoked from public/anon first',
         );
@@ -299,9 +301,11 @@ void main() {
       // exists, and that functions DEFINED IN 026 pin it inline, so a new
       // function added to 026 is correct on its own without relying on the loop.
       expect(
-        RegExp(r'alter\s+function\s+%s\s+security\s+definer\s+set\s+'
-                r'search_path\s*=\s*public\s*,\s*pg_temp', caseSensitive: false)
-            .hasMatch(migrations),
+        RegExp(
+          r'alter\s+function\s+%s\s+security\s+definer\s+set\s+'
+          r'search_path\s*=\s*public\s*,\s*pg_temp',
+          caseSensitive: false,
+        ).hasMatch(migrations),
         isTrue,
         reason: 'the pg_temp sweep over pre-existing functions is missing',
       );
@@ -316,16 +320,19 @@ void main() {
       // and scanning the corpus would flag their untouched definitions.
       for (final m in fnPattern.allMatches(addedHere)) {
         final name = m.group(1)!;
-        if (!namesAddedHere.any((n) => name.endsWith('.$n') || name.endsWith(n))) {
+        if (!namesAddedHere.any(
+          (n) => name.endsWith('.$n') || name.endsWith(n),
+        )) {
           continue;
         }
 
         final definition = definitionAt(addedHere, m.start);
         if (!definition.toLowerCase().contains('security definer')) continue;
 
-        if (RegExp(r'set\s+search_path\s*=\s*public(?!\s*,\s*pg_temp)',
-                caseSensitive: false)
-            .hasMatch(definition)) {
+        if (RegExp(
+          r'set\s+search_path\s*=\s*public(?!\s*,\s*pg_temp)',
+          caseSensitive: false,
+        ).hasMatch(definition)) {
           offenders.add(name);
         }
       }
@@ -339,16 +346,18 @@ void main() {
       // profile that used it. Migration 026 drops that policy and revokes the
       // grant.
       expect(
-        RegExp(r'drop\s+policy\s+if\s+exists\s+"[^"]*"\s+on\s+public\.interests',
-                caseSensitive: false)
-            .hasMatch(migrations),
+        RegExp(
+          r'drop\s+policy\s+if\s+exists\s+"[^"]*"\s+on\s+public\.interests',
+          caseSensitive: false,
+        ).hasMatch(migrations),
         isTrue,
         reason: 'the unrestricted interests UPDATE policy is never dropped',
       );
       expect(
-        RegExp(r'revoke\s+update\s+on\s+public\.interests\s+from\s+authenticated',
-                caseSensitive: false)
-            .hasMatch(migrations),
+        RegExp(
+          r'revoke\s+update\s+on\s+public\.interests\s+from\s+authenticated',
+          caseSensitive: false,
+        ).hasMatch(migrations),
         isTrue,
       );
       // And an interest's name can no longer be changed even in principle.
@@ -360,15 +369,17 @@ void main() {
       // exposed budget_cents / spent_cents / cpm_cents for every campaign.
       // Migration 026 drops it and replaces it with an advertiser-scoped policy.
       expect(
-        RegExp(r'drop\s+policy\s+if\s+exists\s+"[^"]*"\s+on\s+public\.ad_campaigns',
-                caseSensitive: false)
-            .hasMatch(migrations),
+        RegExp(
+          r'drop\s+policy\s+if\s+exists\s+"[^"]*"\s+on\s+public\.ad_campaigns',
+          caseSensitive: false,
+        ).hasMatch(migrations),
         isTrue,
       );
       expect(
-        RegExp(r'create\s+policy\s+"[^"]*"\s+on\s+public\.ad_campaigns\s+for\s+select',
-                caseSensitive: false)
-            .hasMatch(migrations),
+        RegExp(
+          r'create\s+policy\s+"[^"]*"\s+on\s+public\.ad_campaigns\s+for\s+select',
+          caseSensitive: false,
+        ).hasMatch(migrations),
         isTrue,
         reason: 'the replacement SELECT policy must exist',
       );
@@ -378,7 +389,8 @@ void main() {
       expect(
         migrations.contains('protect_verification_verdict'),
         isTrue,
-        reason: 'status/confidence_score must be write-protected from the client',
+        reason:
+            'status/confidence_score must be write-protected from the client',
       );
     });
 
@@ -413,23 +425,22 @@ void main() {
     });
 
     test('rate limiting covers likes and passes', () {
+      expect(migrations.contains('enforce_interaction_rate_limit'), isTrue);
       expect(
-        migrations.contains('enforce_interaction_rate_limit'),
-        isTrue,
-      );
-      expect(
-        RegExp('on_pass_rate_limit\\s+on\\s+public\\.passes',
-                caseSensitive: false)
-            .hasMatch(migrations),
+        RegExp(
+          'on_pass_rate_limit\\s+on\\s+public\\.passes',
+          caseSensitive: false,
+        ).hasMatch(migrations),
         isTrue,
       );
     });
 
     test('conversation_members is published for realtime unread counts', () {
       expect(
-        RegExp('add\\s+table\\s+public\\.conversation_members',
-                caseSensitive: false)
-            .hasMatch(migrations),
+        RegExp(
+          'add\\s+table\\s+public\\.conversation_members',
+          caseSensitive: false,
+        ).hasMatch(migrations),
         isTrue,
         reason: 'unread_count changes could not stream without this',
       );
@@ -449,19 +460,13 @@ void main() {
         reason: 'the payload must carry match_id for the deep link to resolve',
       );
       // And it must be resolved from the conversation, not invented.
-      expect(
-        body.contains('from public.conversations'),
-        isTrue,
-      );
+      expect(body.contains('from public.conversations'), isTrue);
     });
 
     test('a match notification already carries a match id', () {
       final definition = lastDefinition(migrations, 'check_mutual_like');
       expect(definition, isNotNull);
-      expect(
-        definition!.toLowerCase().contains('match_id'),
-        isTrue,
-      );
+      expect(definition!.toLowerCase().contains('match_id'), isTrue);
     });
   });
 
@@ -518,14 +523,12 @@ void main() {
 
   group('the client does not write privileged tables directly any more', () {
     test('SafetyRepository reports through submit_report', () {
-      expect(
-        safetyRepositorySource.contains("'submit_report'"),
-        isTrue,
-      );
+      expect(safetyRepositorySource.contains("'submit_report'"), isTrue);
       expect(
         safetyRepositorySource.contains("from('reports')"),
         isFalse,
-        reason: 'a direct INSERT bypasses server-side validation and rate limits',
+        reason:
+            'a direct INSERT bypasses server-side validation and rate limits',
       );
     });
 
@@ -542,19 +545,16 @@ void main() {
     test('the notification screen routes on the id the payload provides', () {
       // Guards the bug where the screen pushed /chat/<conversationId> against a
       // route keyed by match id.
-      final screen =
-          File('lib/features/notifications/notifications_screen.dart')
-              .readAsStringSync();
+      final screen = File(
+        'lib/features/notifications/notifications_screen.dart',
+      ).readAsStringSync();
 
       expect(
         screen.contains('targetMatchId'),
         isTrue,
         reason: 'the chat route is keyed by match id',
       );
-      expect(
-        screen.contains('/chat/\$matchId'),
-        isTrue,
-      );
+      expect(screen.contains('/chat/\$matchId'), isTrue);
       expect(
         screen.contains('/chat/\$conversationId'),
         isFalse,
@@ -562,34 +562,38 @@ void main() {
       );
     });
 
-    test('account deletion requires a password on both sides of the contract',
-        () {
-      final repository =
-          File('lib/repositories/auth_repository.dart').readAsStringSync();
-      final function =
-          File('supabase/functions/account-deletion/index.ts').readAsStringSync();
+    test(
+      'account deletion requires a password on both sides of the contract',
+      () {
+        final repository = File(
+          'lib/repositories/auth_repository.dart',
+        ).readAsStringSync();
+        final function = File(
+          'supabase/functions/account-deletion/index.ts',
+        ).readAsStringSync();
 
-      expect(
-        repository.contains("'password': password"),
-        isTrue,
-        reason: 'the password must actually reach the edge function',
-      );
-      expect(
-        function.contains('signInWithPassword'),
-        isTrue,
-        reason: 'the password must be verified, not merely read',
-      );
-      // Not merely accepted-and-ignored, which is the original defect.
-      expect(
-        RegExp(r"\{\s*error:\s*'Password confirmation required\.'")
-            .hasMatch(function),
-        isTrue,
-        reason: 'a missing password must be rejected with 401, not ignored',
-      );
-    });
+        expect(
+          repository.contains("'password': password"),
+          isTrue,
+          reason: 'the password must actually reach the edge function',
+        );
+        expect(
+          function.contains('signInWithPassword'),
+          isTrue,
+          reason: 'the password must be verified, not merely read',
+        );
+        // Not merely accepted-and-ignored, which is the original defect.
+        expect(
+          RegExp(
+            r"\{\s*error:\s*'Password confirmation required\.'",
+          ).hasMatch(function),
+          isTrue,
+          reason: 'a missing password must be rejected with 401, not ignored',
+        );
+      },
+    );
 
-    test('no edge function returns tokens without authenticating the caller',
-        () {
+    test('no edge function returns tokens without authenticating the caller', () {
       // The passkey endpoints were the violation: `authenticate()` was defined
       // and never called, then the function returned access/refresh tokens.
       //
@@ -620,10 +624,12 @@ void main() {
         if (!source.contains('access_token')) continue;
 
         expect(
-            RegExp(r'await\s+authenticate\s*\(').hasMatch(source),
-            isTrue,
-            reason: '${entry.path} returns a token without authenticating the '
-                'caller');
+          RegExp(r'await\s+authenticate\s*\(').hasMatch(source),
+          isTrue,
+          reason:
+              '${entry.path} returns a token without authenticating the '
+              'caller',
+        );
       }
     });
   });
@@ -655,34 +661,54 @@ void main() {
       }
       final body = migrations.substring(start, i);
 
-      final column =
-          RegExp(r'user_id\s+uuid', caseSensitive: false).firstMatch(body);
-      expect(column, isNotNull,
-          reason: 'opening_moves has no `user_id uuid` column');
+      final column = RegExp(
+        r'user_id\s+uuid',
+        caseSensitive: false,
+      ).firstMatch(body);
+      expect(
+        column,
+        isNotNull,
+        reason: 'opening_moves has no `user_id uuid` column',
+      );
       final line = body.substring(column!.start).split(',').first.toLowerCase();
-      expect(line, contains('not null'),
-          reason: 'user_id must be NOT NULL so RLS can own the row');
-      expect(line, isNot(contains('default')),
-          reason: 'user_id has no default, so the client must send it');
+      expect(
+        line,
+        contains('not null'),
+        reason: 'user_id must be NOT NULL so RLS can own the row',
+      );
+      expect(
+        line,
+        isNot(contains('default')),
+        reason: 'user_id has no default, so the client must send it',
+      );
     });
 
     test('the client upsert sends user_id with every opening_moves write', () {
-      final source =
-          File('lib/repositories/engagement_repository.dart').readAsStringSync();
-      final call = RegExp(r"from\('opening_moves'\)\s*\.\s*upsert\(")
-          .firstMatch(source);
+      final source = File(
+        'lib/repositories/engagement_repository.dart',
+      ).readAsStringSync();
+      final call = RegExp(
+        r"from\('opening_moves'\)\s*\.\s*upsert\(",
+      ).firstMatch(source);
       expect(call, isNotNull, reason: 'no opening_moves upsert found');
 
       final block = source.substring(call!.end);
       final close = block.indexOf('}, onConflict');
-      expect(close, isNot(-1),
-          reason: 'could not find the end of the upsert payload map');
+      expect(
+        close,
+        isNot(-1),
+        reason: 'could not find the end of the upsert payload map',
+      );
       final payload = block.substring(0, close);
 
-      expect(payload, contains("'user_id'"),
-          reason: 'the upsert payload omits the NOT NULL owner column, so the '
-              'RLS insert policy rejects it with 42501 and the editor saves '
-              'nothing');
+      expect(
+        payload,
+        contains("'user_id'"),
+        reason:
+            'the upsert payload omits the NOT NULL owner column, so the '
+            'RLS insert policy rejects it with 42501 and the editor saves '
+            'nothing',
+      );
     });
   });
 }

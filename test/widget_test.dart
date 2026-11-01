@@ -9,8 +9,9 @@ void main() {
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 
-  testWidgets('Demo mode: splash redirects to onboarding after session check',
-      (WidgetTester tester) async {
+  testWidgets('Demo mode: splash redirects to onboarding after session check', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(const ProviderScope(child: WeekendApp()));
     await tester.pump();
 
@@ -21,30 +22,32 @@ void main() {
     expect(find.text('Welcome to Weekend'), findsOneWidget);
   });
 
-  testWidgets('Get Started button opens the sign-up wizard (no sign-in detour)',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: WeekendApp()));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+  testWidgets(
+    'Get Started button opens the sign-up wizard (no sign-in detour)',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(const ProviderScope(child: WeekendApp()));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Welcome to Weekend'), findsOneWidget);
+      expect(find.text('Welcome to Weekend'), findsOneWidget);
 
-    // Swipe through all onboarding pages.
-    await tester.drag(find.byType(PageView), const Offset(-500, 0));
-    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+      // Swipe through all onboarding pages.
+      await tester.drag(find.byType(PageView), const Offset(-500, 0));
+      await tester.pumpAndSettle(const Duration(milliseconds: 300));
 
-    await tester.drag(find.byType(PageView), const Offset(-500, 0));
-    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+      await tester.drag(find.byType(PageView), const Offset(-500, 0));
+      await tester.pumpAndSettle(const Duration(milliseconds: 300));
 
-    expect(find.text('Get Started'), findsOneWidget);
-    await tester.tap(find.text('Get Started'));
-    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+      expect(find.text('Get Started'), findsOneWidget);
+      await tester.tap(find.text('Get Started'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 300));
 
-    // "Get Started" means "create an account", so the Tinder-style wizard
-    // opens on step 1. The user must not be sent through the sign-in screen
-    // (nor a duplicate auth screen) first.
-    expect(find.text('Step 1 of 6'), findsOneWidget);
-    expect(find.text("What's your email?"), findsOneWidget);
-    expect(find.text('Welcome Back'), findsNothing);
-  });
+      // "Get Started" means "create an account", so the Tinder-style wizard
+      // opens on step 1. The user must not be sent through the sign-in screen
+      // (nor a duplicate auth screen) first.
+      expect(find.text('Step 1 of 6'), findsOneWidget);
+      expect(find.text("What's your email?"), findsOneWidget);
+      expect(find.text('Welcome Back'), findsNothing);
+    },
+  );
 }

@@ -68,7 +68,9 @@ class SelectChip extends StatelessWidget {
                 Text(
                   label,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: selected ? Theme.of(context).colorScheme.onSurface : theme.colorScheme.onSurface,
+                    color: selected
+                        ? Theme.of(context).colorScheme.onSurface
+                        : theme.colorScheme.onSurface,
                     fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
@@ -208,8 +210,7 @@ class ResultPanel extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: tint.withValues(alpha: 0.12),
-                  borderRadius:
-                      BorderRadius.circular(WeekendTokens.radiusLg),
+                  borderRadius: BorderRadius.circular(WeekendTokens.radiusLg),
                 ),
                 child: Icon(icon, color: tint, size: 22),
               ),
@@ -247,14 +248,16 @@ class ResultPanel extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius:
-                          BorderRadius.circular(WeekendTokens.radiusSm),
+                      borderRadius: BorderRadius.circular(
+                        WeekendTokens.radiusSm,
+                      ),
                     ),
                     child: Text(
                       chip,
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.75),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.75,
+                        ),
                       ),
                     ),
                   ),
@@ -263,8 +266,7 @@ class ResultPanel extends StatelessWidget {
           ],
           if (profiles.isNotEmpty) ...[
             const SizedBox(height: WeekendTokens.spacingLg),
-            for (final profile in profiles.take(5))
-              ResultRow(profile: profile),
+            for (final profile in profiles.take(5)) ResultRow(profile: profile),
           ],
           if (primaryLabel != null && onPrimary != null) ...[
             const SizedBox(height: WeekendTokens.spacingXxl),
@@ -277,8 +279,7 @@ class ResultPanel extends StatelessWidget {
                   foregroundColor: Theme.of(context).colorScheme.onSurface,
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(WeekendTokens.radiusLg),
+                    borderRadius: BorderRadius.circular(WeekendTokens.radiusLg),
                   ),
                 ),
                 child: Text(primaryLabel!),
@@ -294,8 +295,7 @@ class ResultPanel extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(WeekendTokens.radiusLg),
+                    borderRadius: BorderRadius.circular(WeekendTokens.radiusLg),
                   ),
                 ),
                 child: Text(secondaryLabel!),
@@ -367,8 +367,7 @@ class ResultRow extends StatelessWidget {
                         profile.distanceDisplay,
                     ].join(' - '),
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color:
-                          theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
               ],
@@ -385,4 +384,3 @@ class ResultRow extends StatelessWidget {
     );
   }
 }
-

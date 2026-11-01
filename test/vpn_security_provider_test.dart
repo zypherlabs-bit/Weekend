@@ -8,15 +8,13 @@ import 'package:weekend/services/vpn_security_service.dart';
 /// Scriptable stand-in for the Android detector, so the provider contract can
 /// be tested without a platform channel.
 class FakeVpnDetectionService implements VpnDetectionService {
-  FakeVpnDetectionService({
-    this.isSupported = true,
-    VpnDetectionResult? result,
-  }) : result =
-           result ??
-           VpnDetectionResult(
-             status: VpnSecurityStatus.clear,
-             checkedAt: DateTime(2026, 1, 1),
-           );
+  FakeVpnDetectionService({this.isSupported = true, VpnDetectionResult? result})
+    : result =
+          result ??
+          VpnDetectionResult(
+            status: VpnSecurityStatus.clear,
+            checkedAt: DateTime(2026, 1, 1),
+          );
 
   @override
   final bool isSupported;
@@ -110,22 +108,25 @@ void main() {
       expect(state.accessConfirmed, isFalse);
     });
 
-    test('initialize performs exactly one check and applies the result', () async {
-      final service = FakeVpnDetectionService(
-        result: VpnDetectionResult(
-          status: VpnSecurityStatus.clear,
-          checkedAt: DateTime(2026, 1, 2),
-        ),
-      );
-      final container = containerFor(service);
-      await container.read(vpnSecurityProvider.notifier).initialize();
+    test(
+      'initialize performs exactly one check and applies the result',
+      () async {
+        final service = FakeVpnDetectionService(
+          result: VpnDetectionResult(
+            status: VpnSecurityStatus.clear,
+            checkedAt: DateTime(2026, 1, 2),
+          ),
+        );
+        final container = containerFor(service);
+        await container.read(vpnSecurityProvider.notifier).initialize();
 
-      expect(service.checkCount, 1);
-      final state = container.read(vpnSecurityProvider);
-      expect(state.status, VpnSecurityStatus.clear);
-      expect(state.accessConfirmed, isTrue);
-      expect(state.isChecking, isFalse);
-    });
+        expect(service.checkCount, 1);
+        final state = container.read(vpnSecurityProvider);
+        expect(state.status, VpnSecurityStatus.clear);
+        expect(state.accessConfirmed, isTrue);
+        expect(state.isChecking, isFalse);
+      },
+    );
 
     test('initializing twice does not re-check', () async {
       final service = FakeVpnDetectionService();
@@ -187,7 +188,11 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       expect(container.read(vpnSecurityProvider).isVpnDetected, isTrue);
-      expect(service.checkCount, 1, reason: 'events must not trigger a re-check');
+      expect(
+        service.checkCount,
+        1,
+        reason: 'events must not trigger a re-check',
+      );
     });
 
     test('an event stream failure is treated as a blocking error', () async {
@@ -223,16 +228,19 @@ void main() {
       expect(service.checkCount, 2);
     });
 
-    test('an unsupported platform short-circuits without a channel call', () async {
-      final service = FakeVpnDetectionService(isSupported: false);
-      final container = containerFor(service);
-      await container.read(vpnSecurityProvider.notifier).initialize();
+    test(
+      'an unsupported platform short-circuits without a channel call',
+      () async {
+        final service = FakeVpnDetectionService(isSupported: false);
+        final container = containerFor(service);
+        await container.read(vpnSecurityProvider.notifier).initialize();
 
-      final state = container.read(vpnSecurityProvider);
-      expect(state.status, VpnSecurityStatus.unsupported);
-      expect(state.accessConfirmed, isTrue);
-      expect(service.checkCount, 0);
-    });
+        final state = container.read(vpnSecurityProvider);
+        expect(state.status, VpnSecurityStatus.unsupported);
+        expect(state.accessConfirmed, isTrue);
+        expect(service.checkCount, 0);
+      },
+    );
 
     test('the protected location is remembered and can be cleared', () async {
       final service = FakeVpnDetectionService();
@@ -259,10 +267,7 @@ void main() {
 
       final before = container.read(vpnSecurityProvider).routingFingerprint;
       notifier.rememberProtectedLocation('/home');
-      expect(
-        container.read(vpnSecurityProvider).routingFingerprint,
-        before,
-      );
+      expect(container.read(vpnSecurityProvider).routingFingerprint, before);
     });
 
     test('dispose releases the service and the subscription', () async {

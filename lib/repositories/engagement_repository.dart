@@ -36,7 +36,7 @@ class EngagementRepository {
             endsAt: DateTime.tryParse(map['ends_at'] as String? ?? ''),
             activationsLast30Days: 0,
           ),
-          ''
+          '',
         );
       }
       final reason = map['reason'] as String? ?? 'unknown';
@@ -61,8 +61,7 @@ class EngagementRepository {
     if (client == null) return const SpotlightStatus(active: false);
     try {
       final result = await client.rpc('get_my_spotlight');
-      return SpotlightStatus.fromJson(
-          Map<String, dynamic>.from(result as Map));
+      return SpotlightStatus.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (_) {
       return const SpotlightStatus(active: false);
     }
@@ -77,8 +76,7 @@ class EngagementRepository {
     if (client == null) return null;
     try {
       final result = await client.rpc('get_my_photo_insights');
-      return PhotoInsights.fromJson(
-          Map<String, dynamic>.from(result as Map));
+      return PhotoInsights.fromJson(Map<String, dynamic>.from(result as Map));
     } catch (_) {
       return null;
     }
@@ -227,7 +225,9 @@ class VerificationRepository {
           .eq('id', me)
           .maybeSingle();
       final dynamic rowDyn = row;
-      final rowMap = rowDyn == null ? null : Map<String, dynamic>.from(rowDyn as Map);
+      final rowMap = rowDyn == null
+          ? null
+          : Map<String, dynamic>.from(rowDyn as Map);
       return rowMap?['verification_status'] as String? ?? '';
     } catch (_) {
       return '';

@@ -56,7 +56,10 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
+          icon: Icon(
+            Icons.arrow_back_rounded,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           onPressed: () {
             ref.read(authStateProvider.notifier).cancelMfaChallenge();
             context.go('/auth');
@@ -75,7 +78,9 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Icon(
@@ -99,7 +104,9 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
                   'Enter the 6-digit code from your authenticator app.',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -119,14 +126,18 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
                     hintText: '......',
                     counterText: '',
                     filled: true,
-                    fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+                    fillColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHigh,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                   ),
                   validator: (v) {
@@ -161,7 +172,9 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
                       elevation: 0,
                     ),
                     child: (authState.isLoading || _submitting)
-                        ? CircularProgressIndicator(color: Theme.of(context).colorScheme.onSurface)
+                        ? CircularProgressIndicator(
+                            color: Theme.of(context).colorScheme.onSurface,
+                          )
                         : const Text(
                             'Verify',
                             style: TextStyle(
@@ -179,7 +192,10 @@ class _MfaChallengeScreenState extends ConsumerState<MfaChallengeScreen> {
                   },
                   child: Text(
                     'Use a different account',
-                    style: TextStyle(color: Theme.of(context).colorScheme.tertiary, fontSize: 14),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.tertiary,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ],

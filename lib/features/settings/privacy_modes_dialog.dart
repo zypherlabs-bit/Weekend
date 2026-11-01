@@ -79,8 +79,7 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor:
-            isError ? Colors.red : AppTheme.onlineGreen,
+        backgroundColor: isError ? Colors.red : AppTheme.onlineGreen,
       ),
     );
   }
@@ -120,9 +119,12 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
         _busySnooze = false;
         if (ok) _snooze = true;
       });
-      _notify(ok
-          ? 'Snoozing until the server-enabled window ends.'
-          : 'Snooze could not be enabled. Try again.', isError: !ok);
+      _notify(
+        ok
+            ? 'Snoozing until the server-enabled window ends.'
+            : 'Snooze could not be enabled. Try again.',
+        isError: !ok,
+      );
       return;
     }
     setState(() => _busySnooze = true);
@@ -150,7 +152,10 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
               padding: EdgeInsets.all(16.0),
               child: Text(
                 'Take a break for how long?',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 16,
+                ),
               ),
             ),
             for (final (hours, label) in const [
@@ -160,7 +165,12 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
               (168, '7 days'),
             ])
               ListTile(
-                title: Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                title: Text(
+                  label,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
                 onTap: () => Navigator.of(context).pop(hours),
               ),
             const SizedBox(height: 8),
@@ -234,10 +244,12 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
       _busyTravel = false;
       if (ok) _travelCity = city;
     });
-    _notify(ok
-        ? 'Travel Mode on — your profile may appear around $city for 7 days.'
-        : 'Travel Mode is not available for this account on the server.',
-        isError: !ok);
+    _notify(
+      ok
+          ? 'Travel Mode on — your profile may appear around $city for 7 days.'
+          : 'Travel Mode is not available for this account on the server.',
+      isError: !ok,
+    );
   }
 
   Future<void> _disableTravel() async {
@@ -251,7 +263,9 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
         _travelController.clear();
       }
     });
-    if (!ok) _notify('Travel Mode could not be disabled. Try again.', isError: true);
+    if (!ok) {
+      _notify('Travel Mode could not be disabled. Try again.', isError: true);
+    }
   }
 
   @override
@@ -269,7 +283,10 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'Privacy & Availability',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 18,
+                ),
               ),
             ),
             if (_loading)
@@ -285,13 +302,20 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
               )
             else ...[
               SwitchListTile(
-                title:
-                    Text('Incognito', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                title: Text(
+                  'Incognito',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
                 subtitle: Text(
                   _incognito
                       ? 'Visible only to people you already liked or matched'
                       : 'Shown in normal discovery',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
                 value: _incognito,
                 onChanged: _busyIncognito ? null : _toggleIncognito,
@@ -300,26 +324,38 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
               SwitchListTile(
                 title: Text(
                   'Snooze',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
                 subtitle: Text(
                   _snooze
                       ? 'You are hidden from discovery until the window ends'
                       : 'Temporarily leave discovery without deleting anything',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
                 value: _snooze,
                 onChanged: _busySnooze ? null : _toggleSnooze,
                 activeThumbColor: Theme.of(context).colorScheme.primary,
               ),
               SwitchListTile(
-                title: Text('Hide my online status',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                title: Text(
+                  'Hide my online status',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
                 subtitle: Text(
                   _showOnline
                       ? 'People can see the Online Now dot on your cards'
                       : 'Your activity is never surfaced to others',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
                 value: !_showOnline,
                 onChanged: _busySnooze ? null : (v) => _toggleOnline(quiet: v),
@@ -333,19 +369,28 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
                   children: [
                     Text(
                       'Away note (only existing connections see it)',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
                     ),
                     SizedBox(height: 8),
                     TextField(
                       controller: _awayController,
                       maxLength: 140,
                       maxLines: 2,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       decoration: InputDecoration(
-                        counterStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        counterStyle: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                         hintText: 'Gone hiking this weekend!',
                         filled: true,
-                        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        fillColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(12)),
                           borderSide: BorderSide.none,
@@ -359,8 +404,14 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
                           TextButton(
                             onPressed: _busyAway ? null : _saveAway,
                             // An empty field + save = the server-confirmed clear.
-                            child: Text('Clear',
-                                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                            child: Text(
+                              'Clear',
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           ),
                         TextButton(
                           onPressed: _busyAway ? null : _saveAway,
@@ -369,11 +420,16 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
                                   width: 16,
                                   height: 16,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2))
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : Text(
                                   _awayNote.isEmpty ? 'Set away note' : 'Save',
-                                  style:
-                                      TextStyle(color: Theme.of(context).colorScheme.tertiary),
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.tertiary,
+                                  ),
                                 ),
                         ),
                       ],
@@ -389,7 +445,10 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
                   children: [
                     Text(
                       'Travel Mode (destination expires after 7 days)',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
                     ),
                     SizedBox(height: 8),
                     if (_busyTravel)
@@ -404,14 +463,22 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
                     else if (_travelCity.isNotEmpty) ...[
                       Text(
                         'Currently sampling: $_travelCity',
-                        style:
-                            TextStyle(color: Theme.of(context).colorScheme.tertiary, fontSize: 13),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.tertiary,
+                          fontSize: 13,
+                        ),
                       ),
                       SizedBox(height: 4),
                       TextButton(
                         onPressed: _disableTravel,
-                        child: Text('Turn Travel Mode off',
-                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                        child: Text(
+                          'Turn Travel Mode off',
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
                     ] else
                       Row(
@@ -420,14 +487,19 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
                             child: TextField(
                               controller: _travelController,
                               textInputAction: TextInputAction.done,
-                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
                               decoration: InputDecoration(
                                 hintText: 'Destination city',
                                 filled: true,
-                                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                fillColor: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                                 border: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(12)),
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
                                   borderSide: BorderSide.none,
                                 ),
                               ),
@@ -436,8 +508,12 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
                           const SizedBox(width: 8),
                           TextButton(
                             onPressed: _enableTravel,
-                            child: Text('Enable',
-                                style: TextStyle(color: Theme.of(context).colorScheme.tertiary)),
+                            child: Text(
+                              'Enable',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.tertiary,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -449,8 +525,12 @@ class _PrivacyModesDialogState extends State<PrivacyModesDialog> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
-                child:
-                    Text('Close', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                child: Text(
+                  'Close',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             ),
           ],

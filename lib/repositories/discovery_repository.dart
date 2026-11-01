@@ -167,9 +167,10 @@ class DiscoveryRepository {
     if (ids.isEmpty) return 0;
 
     try {
-      final result = await client.rpc('record_photo_impressions', params: {
-        'p_photo_ids': ids.take(50).toList(),
-      });
+      final result = await client.rpc(
+        'record_photo_impressions',
+        params: {'p_photo_ids': ids.take(50).toList()},
+      );
       if (result is Map) return result['recorded'] as int? ?? 0;
       return 0;
       // Parse errors must not break the deck.
@@ -243,10 +244,7 @@ class DiscoveryRepository {
           .toList();
 
       // A short page means the server has nothing more.
-      return SearchResults(
-        profiles: profiles,
-        reachedEnd: rows.length < limit,
-      );
+      return SearchResults(profiles: profiles, reachedEnd: rows.length < limit);
     } catch (e) {
       // A failed search must never masquerade as "no matches" - the user
       // would be told to widen filters that were never applied. Returning an

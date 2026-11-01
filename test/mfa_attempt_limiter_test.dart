@@ -8,12 +8,17 @@ void main() {
       final limiter = MfaAttemptLimiter();
 
       expect(limiter.isLockedOut('factor-1'), isFalse);
-      expect(limiter.remainingAttempts('factor-1'), MfaAttemptLimiter.maxAttempts);
+      expect(
+        limiter.remainingAttempts('factor-1'),
+        MfaAttemptLimiter.maxAttempts,
+      );
 
       expect(limiter.registerAttempt('factor-1'), isTrue);
       expect(limiter.registerAttempt('factor-1'), isTrue);
-      expect(limiter.remainingAttempts('factor-1'),
-          MfaAttemptLimiter.maxAttempts - 2);
+      expect(
+        limiter.remainingAttempts('factor-1'),
+        MfaAttemptLimiter.maxAttempts - 2,
+      );
       expect(limiter.isLockedOut('factor-1'), isFalse);
     });
 
@@ -30,7 +35,10 @@ void main() {
 
       limiter.reset('factor-2');
       expect(limiter.isLockedOut('factor-2'), isFalse);
-      expect(limiter.remainingAttempts('factor-2'), MfaAttemptLimiter.maxAttempts);
+      expect(
+        limiter.remainingAttempts('factor-2'),
+        MfaAttemptLimiter.maxAttempts,
+      );
     });
 
     test('tracks factors independently', () {
@@ -53,7 +61,10 @@ void main() {
 
     test('copyWith preserves and updates MFA fields', () {
       const state = WeekendAuthState(isLoading: false);
-      final challenged = state.copyWith(needsMfaChallenge: true, mfaEnabled: true);
+      final challenged = state.copyWith(
+        needsMfaChallenge: true,
+        mfaEnabled: true,
+      );
       expect(challenged.needsMfaChallenge, isTrue);
       expect(challenged.mfaEnabled, isTrue);
 

@@ -1,4 +1,4 @@
-﻿import 'package:credential_manager/credential_manager.dart';
+import 'package:credential_manager/credential_manager.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show PlatformException;
 
@@ -43,14 +43,12 @@ class PasskeyCeremonyResult {
     message: message,
   );
 
-  factory PasskeyCeremonyResult.failure(
-    String message, {
-    String? diagnostic,
-  }) => PasskeyCeremonyResult._(
-    success: false,
-    message: message,
-    diagnostic: diagnostic,
-  );
+  factory PasskeyCeremonyResult.failure(String message, {String? diagnostic}) =>
+      PasskeyCeremonyResult._(
+        success: false,
+        message: message,
+        diagnostic: diagnostic,
+      );
 }
 
 /// Owns the Android Credential Manager side of Weekend's passkey support.
@@ -147,8 +145,9 @@ class PasskeyService {
   static CredentialCreationOptions creationOptionsFromJson(
     Map<String, dynamic> json,
   ) {
-    final selection =
-        Map<String, dynamic>.from(json['authenticatorSelection'] as Map? ?? const {});
+    final selection = Map<String, dynamic>.from(
+      json['authenticatorSelection'] as Map? ?? const {},
+    );
 
     // Read the selection criteria from the RAW map rather than through
     // `CredentialCreationOptions.fromJson`. The plugin's
@@ -168,7 +167,7 @@ class PasskeyService {
         // to render, so fall back to the username GoTrue sends.
         displayName:
             (json['user'] as Map?)?['displayName'] as String? ??
-                _userName(json),
+            _userName(json),
         id: (json['user'] as Map?)?['id'] as String? ?? '',
       ),
       pubKeyCredParams: (json['pubKeyCredParams'] as List? ?? const [])
@@ -192,7 +191,8 @@ class PasskeyService {
           )
           .toList(growable: false),
       authenticatorSelection: AuthenticatorSelectionCriteria(
-        authenticatorAttachment: selection['authenticatorAttachment'] as String?,
+        authenticatorAttachment:
+            selection['authenticatorAttachment'] as String?,
         // A discoverable credential is what makes usernameless passkey sign-in
         // possible at all.
         requireResidentKey: true,

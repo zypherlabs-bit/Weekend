@@ -188,8 +188,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 ),
                                 onPressed: () {
                                   setState(
-                                    () =>
-                                        _obscurePassword = !_obscurePassword,
+                                    () => _obscurePassword = !_obscurePassword,
                                   );
                                 },
                               ),
@@ -226,8 +225,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: theme.colorScheme.errorContainer,
-                                borderRadius:
-                                    BorderRadius.circular(WeekendRadius.sm),
+                                borderRadius: BorderRadius.circular(
+                                  WeekendRadius.sm,
+                                ),
                                 border: Border.all(
                                   color: errorColor.withValues(alpha: 0.35),
                                 ),
@@ -246,10 +246,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             label: 'Sign In',
                             icon: Icons.login_rounded,
                             loading: _submitting,
-                            onPressed:
-                                (authState.isLoading || _submitting)
-                                    ? null
-                                    : _submit,
+                            onPressed: (authState.isLoading || _submitting)
+                                ? null
+                                : _submit,
                           ),
                           const SizedBox(height: 8),
                           TextButton(
@@ -261,9 +260,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   .dismissError();
                               context.go('/signup?from=auth');
                             },
-                            child: const Text(
-                              "Don't have an account? Sign up",
-                            ),
+                            child: const Text("Don't have an account? Sign up"),
                           ),
                           const SizedBox(height: 10),
                           Row(
@@ -293,10 +290,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           ),
                           const SizedBox(height: 10),
                           OutlinedButton.icon(
-                            onPressed:
-                                (authState.isLoading || _submitting)
-                                    ? null
-                                    : _passkeySignIn,
+                            onPressed: (authState.isLoading || _submitting)
+                                ? null
+                                : _passkeySignIn,
                             icon: const Icon(Icons.fingerprint, size: 21),
                             label: const Text('Sign in with passkey'),
                           ),

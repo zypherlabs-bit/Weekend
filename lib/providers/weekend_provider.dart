@@ -256,7 +256,10 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     if (!_hasBackend) {
       // No backend configured: never fabricate profiles. The Discover screen
       // renders its genuine empty state.
-      state = state.copyWith(deckProfiles: const [], swipedProfileIds: const []);
+      state = state.copyWith(
+        deckProfiles: const [],
+        swipedProfileIds: const [],
+      );
       return;
     }
     final userId = SupabaseConfig.currentUserId;
@@ -299,6 +302,9 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
 
   String _modeToString(DiscoveryMode mode) {
     switch (mode) {
+      case DiscoveryMode.city:
+        return 'city';
+
       case DiscoveryMode.nearby:
         return 'nearby';
       case DiscoveryMode.crossedPaths:
@@ -354,22 +360,24 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     final prefs = state.locationPreferences;
     await client
         .from('user_settings')
-        .upsert({
-          'user_id': userId,
-          'max_distance_km': prefs.discoveryRadiusKm,
-          'location_discovery_enabled': prefs.locationDiscoveryEnabled,
-          'nearby_discovery_enabled': prefs.nearbyDiscoveryEnabled,
-          'show_distance_enabled': prefs.showDistanceEnabled,
-          'travel_mode_enabled': prefs.travelModeEnabled,
-          'crossed_paths_enabled': prefs.crossedPathsEnabled,
-        },
-        // `user_settings` has a surrogate `id` primary key and a separate
-        // `unique (user_id)`. With no conflict target, PostgREST targets the
-        // PRIMARY KEY, so this became a plain INSERT on every call and hit
-        // `user_settings_user_id_key` (23505). The discovery-radius write
-        // therefore never persisted and the slider silently reset on next
-        // launch - the exact failure the try/catch above was added to surface.
-        onConflict: 'user_id')
+        .upsert(
+          {
+            'user_id': userId,
+            'max_distance_km': prefs.discoveryRadiusKm,
+            'location_discovery_enabled': prefs.locationDiscoveryEnabled,
+            'nearby_discovery_enabled': prefs.nearbyDiscoveryEnabled,
+            'show_distance_enabled': prefs.showDistanceEnabled,
+            'travel_mode_enabled': prefs.travelModeEnabled,
+            'crossed_paths_enabled': prefs.crossedPathsEnabled,
+          },
+          // `user_settings` has a surrogate `id` primary key and a separate
+          // `unique (user_id)`. With no conflict target, PostgREST targets the
+          // PRIMARY KEY, so this became a plain INSERT on every call and hit
+          // `user_settings_user_id_key` (23505). The discovery-radius write
+          // therefore never persisted and the slider silently reset on next
+          // launch - the exact failure the try/catch above was added to surface.
+          onConflict: 'user_id',
+        )
         .select('user_id')
         .limit(1);
   }
@@ -432,8 +440,9 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     // Optimistically remove the card so the UI stays responsive on slow
     // networks and the same card can never be submitted twice.
     state = state.copyWith(
-      deckProfiles:
-          state.deckProfiles.where((p) => p.id != profile.id).toList(),
+      deckProfiles: state.deckProfiles
+          .where((p) => p.id != profile.id)
+          .toList(),
       likedProfiles: [...state.likedProfiles, profile.id],
       swipedProfileIds: [...state.swipedProfileIds, profile.id],
     );
@@ -483,10 +492,12 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
         profile,
         ...state.deckProfiles.where((p) => p.id != profile.id),
       ],
-      likedProfiles:
-          state.likedProfiles.where((id) => id != profile.id).toList(),
-      swipedProfileIds:
-          state.swipedProfileIds.where((id) => id != profile.id).toList(),
+      likedProfiles: state.likedProfiles
+          .where((id) => id != profile.id)
+          .toList(),
+      swipedProfileIds: state.swipedProfileIds
+          .where((id) => id != profile.id)
+          .toList(),
     );
   }
 
@@ -507,8 +518,7 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     }
 
     state = state.copyWith(
-      deckProfiles:
-          state.deckProfiles.where((p) => p.id != profileId).toList(),
+      deckProfiles: state.deckProfiles.where((p) => p.id != profileId).toList(),
       swipedProfileIds: [...state.swipedProfileIds, profileId],
     );
 
@@ -573,10 +583,7 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
       final updatedMessages = Map<String, List<ChatMessage>>.from(
         state.chatMessages,
       );
-      updatedMessages[matchId] = [
-        ...(updatedMessages[matchId] ?? []),
-        newMsg,
-      ];
+      updatedMessages[matchId] = [...(updatedMessages[matchId] ?? []), newMsg];
 
       state = state.copyWith(chatMessages: updatedMessages);
       return;
@@ -610,8 +617,7 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
 
     state = state.copyWith(
       blockedUserIds: {...state.blockedUserIds, userId},
-      deckProfiles:
-          state.deckProfiles.where((p) => p.id != userId).toList(),
+      deckProfiles: state.deckProfiles.where((p) => p.id != userId).toList(),
       matches: state.matches.where((m) => m.user.id != userId).toList(),
     );
   }
@@ -888,7 +894,8 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
           .toSet()
           .take(8)
           .toList(growable: false);
-      if (languages.isNotEmpty && languages.length != profile.languages.length) {
+      if (languages.isNotEmpty &&
+          languages.length != profile.languages.length) {
         throw StateError('too many languages');
       }
       await client
@@ -906,13 +913,10 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
     try {
       // `onConflict: user_id` pins the upsert to the per-user unique row so
       // it can never target anything else.
-      await client.from('user_settings').upsert(
-        {
-          'user_id': authId,
-          'weekend_availability': profile.weekendAvailability,
-        },
-        onConflict: 'user_id',
-      );
+      await client.from('user_settings').upsert({
+        'user_id': authId,
+        'weekend_availability': profile.weekendAvailability,
+      }, onConflict: 'user_id');
     } catch (e) {
       debugPrint(
         'weekend availability write failed (${e.runtimeType}) '
@@ -1015,7 +1019,9 @@ class WeekendNotifier extends StateNotifier<WeekendState> {
         interests: interests,
         favoritePlaces: const [],
         languages:
-            (response['languages'] as List?)?.map((e) => e.toString()).toList() ??
+            (response['languages'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
             const [],
         prompts: ProfileRepository.decodePrompts(response['prompts']),
         isPhotoVerified: response['is_photo_verified'] as bool? ?? false,

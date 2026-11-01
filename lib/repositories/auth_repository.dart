@@ -1,4 +1,4 @@
-﻿import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../services/passkey_service.dart';
 
@@ -110,10 +110,7 @@ class AuthRepository {
   /// allow-list.
   ///
   /// LIVE-ONLY: throws [StateError] when no backend is configured.
-  Future<void> resetPassword(
-    String email, {
-    String? emailRedirectTo,
-  }) async {
+  Future<void> resetPassword(String email, {String? emailRedirectTo}) async {
     final client = _client;
     if (client == null) {
       throw StateError(
@@ -565,13 +562,14 @@ class AuthRepository {
     }
     return 'Something went wrong with the passkey. Please try again.';
   }
+
   /// Diagnostic snapshot for Settings -> Security. Contains no secrets and no
   /// key material; safe to log or display.
   static Map<String, String> passkeyDiagnostics() {
     return {
       'platform_supported': PasskeyService.isSupportedPlatform.toString(),
-      'credential_manager_initialised':
-          PasskeyService.instance.isInitialized.toString(),
+      'credential_manager_initialised': PasskeyService.instance.isInitialized
+          .toString(),
       'supabase_configured': SupabaseConfig.isConfigured.toString(),
       'expected_rp_id': PasskeyService.expectedRpId,
     };

@@ -299,7 +299,9 @@ class DiscoveryPreferences {
         _eqList(other.languages, languages) &&
         other.locationMode == locationMode &&
         other.lifestyle.length == lifestyle.length &&
-        other.lifestyle.entries.every((e) => _eqText(lifestyle[e.key], e.value));
+        other.lifestyle.entries.every(
+          (e) => _eqText(lifestyle[e.key], e.value),
+        );
   }
 
   static bool _eqList(List<String> a, List<String> b) {
@@ -417,4 +419,3 @@ class PreferredMatchOptions {
     'children': 'Children',
   };
 }
-

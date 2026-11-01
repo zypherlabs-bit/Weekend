@@ -8,14 +8,17 @@ import 'package:weekend/models/models.dart';
 void main() {
   group('MatchItem lifecycle fields', () {
     test('defaults keep legacy backends rendering honestly', () {
-      const match = MatchItem(id: 'm1', user: UserProfile(
-        id: 'u2',
-        name: 'Ada',
-        age: 29,
-        gender: 'Woman',
-        photos: ['https://x/p'],
-        city: 'Boulder',
-      ));
+      const match = MatchItem(
+        id: 'm1',
+        user: UserProfile(
+          id: 'u2',
+          name: 'Ada',
+          age: 29,
+          gender: 'Woman',
+          photos: ['https://x/p'],
+          city: 'Boulder',
+        ),
+      );
       expect(match.conversationId, '');
       expect(match.initiationStatus, '');
       expect(match.windowEndsAtMs, 0);
@@ -25,7 +28,14 @@ void main() {
     test('copyWith only overrides the requested fields', () {
       const match = MatchItem(
         id: 'm1',
-        user: UserProfile(id: 'u2', name: 'Ada', age: 29, gender: 'Woman', photos: [], city: ''),
+        user: UserProfile(
+          id: 'u2',
+          name: 'Ada',
+          age: 29,
+          gender: 'Woman',
+          photos: [],
+          city: '',
+        ),
         initiationStatus: 'awaiting_you',
         windowEndsAtMs: 1729000000000,
         awayMessage: 'Hiking!',
@@ -56,15 +66,27 @@ void main() {
 
   group('ReceivedLike', () {
     test('note defaults to empty and isPriority needs weight >= 2', () {
-      const normal = ReceivedLike(profile: UserProfile(
-        id: 'u2', name: 'Ada', age: 30, gender: 'Woman', photos: [], city: '',
-      ));
+      const normal = ReceivedLike(
+        profile: UserProfile(
+          id: 'u2',
+          name: 'Ada',
+          age: 30,
+          gender: 'Woman',
+          photos: [],
+          city: '',
+        ),
+      );
       expect(normal.note, '');
       expect(normal.isPriority, isFalse);
 
       const priority = ReceivedLike(
         profile: UserProfile(
-          id: 'u2', name: 'Ada', age: 30, gender: 'Woman', photos: [], city: '',
+          id: 'u2',
+          name: 'Ada',
+          age: 30,
+          gender: 'Woman',
+          photos: [],
+          city: '',
         ),
         priorityWeight: 3,
         note: 'You look like trouble',
@@ -126,8 +148,12 @@ void main() {
         ],
       });
       expect(insights.photos, hasLength(2));
-      expect(insights.photos[0].hasSufficientData, isFalse, reason:
-          'a photo with 4 impressions must never be presented as meaningful');
+      expect(
+        insights.photos[0].hasSufficientData,
+        isFalse,
+        reason:
+            'a photo with 4 impressions must never be presented as meaningful',
+      );
       expect(insights.photos[1].impressions30d, 88);
       expect(insights.photos[1].isPrimary, isFalse);
     });
@@ -182,8 +208,11 @@ void main() {
       });
       expect(entry.feature, 'spotlight');
       expect(entry.active, isTrue);
-      expect(entry.expiresAt, isNull, reason:
-          'system_free grants never expire');
+      expect(
+        entry.expiresAt,
+        isNull,
+        reason: 'system_free grants never expire',
+      );
     });
   });
 
@@ -200,11 +229,13 @@ void main() {
       expect(move.photoId, 'p-9');
     });
 
-    test('a missing prompt stays blank rather than rendering placeholder text',
-        () {
-      final move = OpeningMove.fromJson(const {'sort_order': 1});
-      expect(move.prompt, '');
-      expect(move.id, '');
-    });
+    test(
+      'a missing prompt stays blank rather than rendering placeholder text',
+      () {
+        final move = OpeningMove.fromJson(const {'sort_order': 1});
+        expect(move.prompt, '');
+        expect(move.id, '');
+      },
+    );
   });
 }

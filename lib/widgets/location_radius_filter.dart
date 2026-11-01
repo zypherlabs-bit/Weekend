@@ -46,7 +46,9 @@ class LocationRadiusFilter extends StatelessWidget {
                   style: TextStyle(
                     color: isSelected
                         ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                        : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.4),
                     fontSize: isSelected ? 13 : 11,
                     fontWeight: isSelected
                         ? FontWeight.bold
@@ -72,9 +74,13 @@ class LocationRadiusFilter extends StatelessWidget {
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             thumbColor: Theme.of(context).colorScheme.primary,
-            overlayColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+            overlayColor: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: 0.2),
             activeTrackColor: Theme.of(context).colorScheme.primary,
-            inactiveTrackColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+            inactiveTrackColor: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.2),
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 14),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 24),
             trackHeight: 4,

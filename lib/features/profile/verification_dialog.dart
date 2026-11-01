@@ -50,7 +50,9 @@ class _VerificationDialogState extends State<VerificationDialog> {
       return;
     }
     setState(() => _busy = true);
-    final verdict = await _repository.submitVerification(await file.readAsBytes());
+    final verdict = await _repository.submitVerification(
+      await file.readAsBytes(),
+    );
     if (!mounted) return;
     setState(() => _busy = false);
     // The authoritative state is re-read either way.
@@ -117,13 +119,20 @@ class _VerificationDialogState extends State<VerificationDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Photo Verification',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18)),
+            Text(
+              'Photo Verification',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 18,
+              ),
+            ),
             const SizedBox(height: 8),
             Text(
               _statusLabel(),
               style: TextStyle(
-                color: verified ? AppTheme.onlineGreen : Theme.of(context).colorScheme.onSurfaceVariant,
+                color: verified
+                    ? AppTheme.onlineGreen
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 13,
               ),
             ),
@@ -133,7 +142,10 @@ class _VerificationDialogState extends State<VerificationDialog> {
                 'Take (or pick) a clear selfie of your face. It is compared '
                 'with your profile photos on the server and is not shown to '
                 'anyone.',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
               ),
             ],
             const SizedBox(height: 4),
@@ -164,8 +176,12 @@ class _VerificationDialogState extends State<VerificationDialog> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => Navigator.pop(context),
-                child:
-                    Text('Close', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                child: Text(
+                  'Close',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             ),
           ],

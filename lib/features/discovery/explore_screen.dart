@@ -107,7 +107,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   Widget _buildModeChips(BuildContext context) {
     final theme = Theme.of(context);
     final state = ref.watch(weekendProvider);
-    final modes = DiscoveryMode.values;
+    final modes = const [
+      DiscoveryMode.forYou,
+      DiscoveryMode.nearby,
+      DiscoveryMode.city,
+      DiscoveryMode.global,
+      DiscoveryMode.travelMode,
+    ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -522,4 +528,3 @@ class _EmptyPreview extends StatelessWidget {
     );
   }
 }
-

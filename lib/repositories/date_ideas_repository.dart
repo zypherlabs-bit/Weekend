@@ -51,7 +51,7 @@ class DateIdeasRepository {
             description: (raw['description'] as String? ?? '').trim(),
             estimatedBudget: (raw['estimatedBudget'] as String? ?? '').trim(),
             conversationTip: (raw['conversationTip'] as String? ?? '').trim(),
-          )
+          ),
       ];
       ideas.removeWhere((idea) => idea.title.isEmpty);
 

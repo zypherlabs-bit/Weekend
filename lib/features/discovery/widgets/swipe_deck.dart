@@ -32,7 +32,7 @@ class SwipeDeck extends StatefulWidget {
   final List<SwipeProfile> profiles;
 
   final Future<bool> Function(SwipeProfile profile, SwipeDirection direction)
-      onAction;
+  onAction;
 
   final ValueChanged<SwipeProfile>? onProfileTap;
   final VoidCallback? onEmpty;
@@ -85,7 +85,8 @@ class _SwipeDeckState extends State<SwipeDeck>
     }
   }
 
-  void _animateTo(Offset target, {
+  void _animateTo(
+    Offset target, {
     Duration duration = const Duration(milliseconds: 240),
     Curve curve = Curves.easeOutCubic,
   }) {
@@ -93,12 +94,7 @@ class _SwipeDeckState extends State<SwipeDeck>
     _positionAnimation = Tween<Offset>(
       begin: _dragOffset,
       end: target,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: curve,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: curve));
 
     _controller.forward(from: 0);
   }
@@ -120,12 +116,9 @@ class _SwipeDeckState extends State<SwipeDeck>
 
     SwipeDirection? direction;
 
-    if (dx.abs() >= _swipeThreshold ||
-        velocity.abs() >= _velocityThreshold) {
+    if (dx.abs() >= _swipeThreshold || velocity.abs() >= _velocityThreshold) {
       final intendedDx = dx.abs() > 20 ? dx : velocity;
-      direction = intendedDx > 0
-          ? SwipeDirection.like
-          : SwipeDirection.pass;
+      direction = intendedDx > 0 ? SwipeDirection.like : SwipeDirection.pass;
     }
 
     if (direction == null) {
@@ -150,7 +143,8 @@ class _SwipeDeckState extends State<SwipeDeck>
 
     final screenWidth = MediaQuery.sizeOf(context).width;
     final target = Offset(
-      (direction == SwipeDirection.like || direction == SwipeDirection.superLike)
+      (direction == SwipeDirection.like ||
+              direction == SwipeDirection.superLike)
           ? screenWidth * 1.5
           : -screenWidth * 1.5,
       _dragOffset.dy + 60,
@@ -248,10 +242,7 @@ class _SwipeDeckState extends State<SwipeDeck>
             const SizedBox(height: 12),
             const Text(
               'That’s everyone for now',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             const Text('Check back later for more profiles.'),
@@ -279,10 +270,7 @@ class _SwipeDeckState extends State<SwipeDeck>
                         ),
                         child: Transform.scale(
                           scale: 0.9,
-                          child: _ProfileCard(
-                            profile: _queue[2],
-                            onTap: null,
-                          ),
+                          child: _ProfileCard(profile: _queue[2], onTap: null),
                         ),
                       ),
                     ),
@@ -297,10 +285,7 @@ class _SwipeDeckState extends State<SwipeDeck>
                         ),
                         child: Transform.scale(
                           scale: 0.95,
-                          child: _ProfileCard(
-                            profile: _queue[1],
-                            onTap: null,
-                          ),
+                          child: _ProfileCard(profile: _queue[1], onTap: null),
                         ),
                       ),
                     ),
@@ -313,7 +298,8 @@ class _SwipeDeckState extends State<SwipeDeck>
                       child: Transform.translate(
                         offset: _dragOffset,
                         child: Transform.rotate(
-                          angle: (_dragOffset.dx /
+                          angle:
+                              (_dragOffset.dx /
                                   math.max(constraints.maxWidth, 1)) *
                               0.32,
                           child: Stack(
@@ -331,13 +317,11 @@ class _SwipeDeckState extends State<SwipeDeck>
                                   left: _dragOffset.dx > 0 ? 24 : null,
                                   right: _dragOffset.dx < 0 ? 24 : null,
                                   child: Opacity(
-                                    opacity: (_dragOffset.dx.abs() /
-                                            _swipeThreshold)
-                                        .clamp(0.0, 1.0),
+                                    opacity:
+                                        (_dragOffset.dx.abs() / _swipeThreshold)
+                                            .clamp(0.0, 1.0),
                                     child: Transform.rotate(
-                                      angle: _dragOffset.dx > 0
-                                          ? -0.15
-                                          : 0.15,
+                                      angle: _dragOffset.dx > 0 ? -0.15 : 0.15,
                                       child: _SwipeLabel(
                                         label: _dragOffset.dx > 0
                                             ? 'LIKE'
@@ -366,16 +350,14 @@ class _SwipeDeckState extends State<SwipeDeck>
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               _error!,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
-              ),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
               textAlign: TextAlign.center,
             ),
           ),
 
         const SizedBox(height: 12),
 
-Row(
+        Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _ActionButton(
@@ -414,18 +396,14 @@ Row(
 }
 
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({
-    required this.profile,
-    required this.onTap,
-  });
+  const _ProfileCard({required this.profile, required this.onTap});
 
   final SwipeProfile profile;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl =
-        profile.photoUrls.isEmpty ? null : profile.photoUrls.first;
+    final imageUrl = profile.photoUrls.isEmpty ? null : profile.photoUrls.first;
 
     return Material(
       color: Colors.transparent,
@@ -440,13 +418,10 @@ class _ProfileCard extends StatelessWidget {
               Image.network(
                 imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
-                    const _PhotoPlaceholder(),
+                errorBuilder: (_, __, ___) => const _PhotoPlaceholder(),
                 loadingBuilder: (context, child, progress) {
                   if (progress == null) return child;
-                  return const _PhotoPlaceholder(
-                    loading: true,
-                  );
+                  return const _PhotoPlaceholder(loading: true);
                 },
               )
             else
@@ -490,10 +465,7 @@ class _ProfileCard extends StatelessWidget {
                       profile.subtitle!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 15),
                     ),
                   ],
                 ],
@@ -525,10 +497,7 @@ class _PhotoPlaceholder extends StatelessWidget {
 }
 
 class _SwipeLabel extends StatelessWidget {
-  const _SwipeLabel({
-    required this.label,
-    required this.color,
-  });
+  const _SwipeLabel({required this.label, required this.color});
 
   final String label;
   final Color color;
@@ -572,8 +541,10 @@ class _ActionButton extends StatelessWidget {
     return Semantics(
       button: true,
       label: icon == Icons.close_rounded
-            ? 'Pass profile'
-            : (icon == Icons.star_rounded ? 'Super like profile' : 'Like profile'),
+          ? 'Pass profile'
+          : (icon == Icons.star_rounded
+                ? 'Super like profile'
+                : 'Like profile'),
       child: SizedBox(
         width: size,
         height: size,

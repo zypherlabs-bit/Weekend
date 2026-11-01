@@ -38,11 +38,15 @@ void main() {
     group('toApproximateCoordinates', () {
       test('rounds coordinates to grid', () {
         final (lat, lon) = LocationService.toApproximateCoordinates(
-          48.8566, 2.3522, 1.0,
+          48.8566,
+          2.3522,
+          1.0,
         );
 
         final (lat2, lon2) = LocationService.toApproximateCoordinates(
-          48.8570, 2.3525, 1.0,
+          48.8570,
+          2.3525,
+          1.0,
         );
 
         expect(lat, closeTo(48.8566, 0.01));
@@ -53,10 +57,14 @@ void main() {
 
       test('different grids produce different results for distant points', () {
         final (lat1, lon1) = LocationService.toApproximateCoordinates(
-          40.7128, -74.0060, 1.0,
+          40.7128,
+          -74.0060,
+          1.0,
         );
         final (lat2, lon2) = LocationService.toApproximateCoordinates(
-          48.8567, 2.3522, 1.0,
+          48.8567,
+          2.3522,
+          1.0,
         );
 
         expect(lat1, isNot(closeTo(lat2, 0.1)));
@@ -67,22 +75,28 @@ void main() {
     group('isWithinRadius', () {
       test('returns true for nearby points', () {
         final result = LocationService.isWithinRadius(
-          48.8567, 2.3522, 48.8570, 2.3525, 5.0,
+          48.8567,
+          2.3522,
+          48.8570,
+          2.3525,
+          5.0,
         );
         expect(result, true);
       });
 
       test('returns false for distant points', () {
         final result = LocationService.isWithinRadius(
-          48.8567, 2.3522, 40.7128, -74.0060, 5.0,
+          48.8567,
+          2.3522,
+          40.7128,
+          -74.0060,
+          5.0,
         );
         expect(result, false);
       });
 
       test('boundary check', () {
-        final result = LocationService.isWithinRadius(
-          0.0, 0.0, 0.0, 1.0, 112,
-        );
+        final result = LocationService.isWithinRadius(0.0, 0.0, 0.0, 1.0, 112);
         expect(result, true);
       });
     });
@@ -90,21 +104,30 @@ void main() {
     group('distanceInKm', () {
       test('calculates distance between close coordinates', () {
         final distance = LocationService.distanceInKm(
-          48.8567, 2.3522, 48.8570, 2.3525,
+          48.8567,
+          2.3522,
+          48.8570,
+          2.3525,
         );
         expect(distance, lessThan(1.0));
       });
 
       test('calculates distance between far coordinates', () {
         final distance = LocationService.distanceInKm(
-          48.8567, 2.3522, 40.7128, -74.0060,
+          48.8567,
+          2.3522,
+          40.7128,
+          -74.0060,
         );
         expect(distance, greaterThan(5000));
       });
 
       test('returns 0 for identical coordinates', () {
         final distance = LocationService.distanceInKm(
-          48.8567, 2.3522, 48.8567, 2.3522,
+          48.8567,
+          2.3522,
+          48.8567,
+          2.3522,
         );
         expect(distance, closeTo(0, 0.001));
       });

@@ -888,11 +888,7 @@ class WeekendAtmosphere extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: isDark
-              ? [
-                  Color(0xFF160F26),
-                  AppTheme.darkBackground,
-                  Color(0xFF1B1030),
-                ]
+              ? [Color(0xFF160F26), AppTheme.darkBackground, Color(0xFF1B1030)]
               : [
                   Color(0xFFFFF7F4),
                   AppTheme.lightBackground,

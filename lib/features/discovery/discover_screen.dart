@@ -103,7 +103,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     );
   }
 
-
   void _openProfile(UserProfile profile) {
     showModalBottomSheet<void>(
       context: context,
@@ -122,7 +121,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -135,7 +133,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     }
 
     // The discovery tabs stay anchored above the swipe deck.
-    final header = _DiscoveryHeader(state: state, onFilterTap: _showFilterSheet);
+    final header = _DiscoveryHeader(
+      state: state,
+      onFilterTap: _showFilterSheet,
+    );
 
     if (topProfile == null) {
       return _EmptyDiscovery(
@@ -181,9 +182,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
                 // fails. If the profile is still in the deck, restoration
                 // happened, so SwipeDeck restores its copy too: no profile is
                 // silently lost and no false match is created.
-                final stillPresent = ref.read(weekendProvider).deckProfiles.any(
-                  (candidate) => candidate.id == profile.id,
-                );
+                final stillPresent = ref
+                    .read(weekendProvider)
+                    .deckProfiles
+                    .any((candidate) => candidate.id == profile.id);
                 return !stillPresent;
               } catch (_) {
                 return false;
@@ -206,11 +208,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
       ],
     );
   }
-
-
-
-
-
 }
 
 class _DiscoveryHeader extends ConsumerWidget {
@@ -444,8 +441,6 @@ class _EmptyDiscovery extends StatelessWidget {
     );
   }
 }
-
-
 
 class _Tag extends StatelessWidget {
   final String label;

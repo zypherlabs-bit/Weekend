@@ -11,7 +11,9 @@ final notificationRepositoryProvider = Provider<NotificationRepository>(
   (ref) => NotificationRepository(),
 );
 
-final matchRepositoryProvider = Provider<MatchRepository>((ref) => MatchRepository());
+final matchRepositoryProvider = Provider<MatchRepository>(
+  (ref) => MatchRepository(),
+);
 
 /// Unread notification count, used for the tab badge.
 ///
@@ -49,8 +51,7 @@ class UnreadCountNotifier extends StateNotifier<int> {
   }
 }
 
-final unreadCountProvider =
-    StateNotifierProvider<UnreadCountNotifier, int>(
+final unreadCountProvider = StateNotifierProvider<UnreadCountNotifier, int>(
   (ref) => UnreadCountNotifier(ref.watch(notificationRepositoryProvider)),
 );
 
@@ -92,7 +93,8 @@ class NotificationCentreState {
 
 class NotificationCentreNotifier
     extends StateNotifier<NotificationCentreState> {
-  NotificationCentreNotifier(this._repo) : super(const NotificationCentreState());
+  NotificationCentreNotifier(this._repo)
+    : super(const NotificationCentreState());
 
   static const _pageSize = 30;
 
@@ -218,15 +220,17 @@ class NotificationCentreNotifier
   }
 }
 
-final notificationCentreProvider = StateNotifierProvider<
-    NotificationCentreNotifier, NotificationCentreState>((ref) {
-  final notifier = NotificationCentreNotifier(
-    ref.watch(notificationRepositoryProvider),
-  );
-  notifier.onUnreadChanged = (count) =>
-      ref.read(unreadCountProvider.notifier).setLocal(count);
-  return notifier;
-});
+final notificationCentreProvider =
+    StateNotifierProvider<NotificationCentreNotifier, NotificationCentreState>((
+      ref,
+    ) {
+      final notifier = NotificationCentreNotifier(
+        ref.watch(notificationRepositoryProvider),
+      );
+      notifier.onUnreadChanged = (count) =>
+          ref.read(unreadCountProvider.notifier).setLocal(count);
+      return notifier;
+    });
 
 /// State for the "likes you" screen.
 class ReceivedLikesState {
@@ -327,5 +331,5 @@ class ReceivedLikesNotifier extends StateNotifier<ReceivedLikesState> {
 
 final receivedLikesProvider =
     StateNotifierProvider<ReceivedLikesNotifier, ReceivedLikesState>(
-  (ref) => ReceivedLikesNotifier(ref.watch(matchRepositoryProvider)),
-);
+      (ref) => ReceivedLikesNotifier(ref.watch(matchRepositoryProvider)),
+    );

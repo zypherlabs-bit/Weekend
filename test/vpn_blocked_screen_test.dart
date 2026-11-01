@@ -34,8 +34,9 @@ void main() {
     return container;
   }
 
-  testWidgets('a detected VPN explains itself and offers no bypass',
-      (tester) async {
+  testWidgets('a detected VPN explains itself and offers no bypass', (
+    tester,
+  ) async {
     final service = FakeVpnDetectionService(
       result: VpnDetectionResult(
         status: VpnSecurityStatus.vpnDetected,
@@ -63,8 +64,9 @@ void main() {
     }
   });
 
-  testWidgets('a transient detection error says access is hidden, retryable',
-      (tester) async {
+  testWidgets('a transient detection error says access is hidden, retryable', (
+    tester,
+  ) async {
     final service = FakeVpnDetectionService(
       result: VpnDetectionResult.failure('native_channel_failed'),
     );
@@ -81,8 +83,9 @@ void main() {
     expect(find.text('Check connection again'), findsOneWidget);
   });
 
-  testWidgets('offline is a distinct state, not reported as a VPN',
-      (tester) async {
+  testWidgets('offline is a distinct state, not reported as a VPN', (
+    tester,
+  ) async {
     final service = FakeVpnDetectionService(
       result: VpnDetectionResult(
         status: VpnSecurityStatus.noNetwork,
@@ -98,8 +101,9 @@ void main() {
     expect(find.text('VPN detected'), findsNothing);
   });
 
-  testWidgets('retry runs a fresh check and can confirm the connection',
-      (tester) async {
+  testWidgets('retry runs a fresh check and can confirm the connection', (
+    tester,
+  ) async {
     final service = FakeVpnDetectionService(
       result: VpnDetectionResult(
         status: VpnSecurityStatus.vpnDetected,
@@ -124,7 +128,9 @@ void main() {
     expect(container.read(vpnSecurityProvider).accessConfirmed, isTrue);
   });
 
-  testWidgets('the screen renders in light mode as well as dark', (tester) async {
+  testWidgets('the screen renders in light mode as well as dark', (
+    tester,
+  ) async {
     final service = FakeVpnDetectionService(
       result: VpnDetectionResult(
         status: VpnSecurityStatus.vpnDetected,
@@ -151,8 +157,9 @@ void main() {
     expect(popScope.canPop, isFalse);
   });
 
-  testWidgets('the help sheet describes detection without overpromising',
-      (tester) async {
+  testWidgets('the help sheet describes detection without overpromising', (
+    tester,
+  ) async {
     final service = FakeVpnDetectionService();
     await pumpBlocker(tester, service);
 
@@ -167,9 +174,6 @@ void main() {
       findsOneWidget,
       reason: 'the sheet must admit detection gaps',
     );
-    expect(
-      find.textContaining('does not sign you out'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('does not sign you out'), findsOneWidget);
   });
 }

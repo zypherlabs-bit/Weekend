@@ -37,11 +37,23 @@ void main() {
   final cy = canvas / 2.0;
 
   // Soft coral halo behind the silhouette.
-  _radial(image, cx, cy * 0.86, canvas * 0.42,
-      img.ColorRgba8(0xFF, 0x4B, 0x72, 26), img.ColorRgba8(0x00, 0x00, 0x00, 0));
+  _radial(
+    image,
+    cx,
+    cy * 0.86,
+    canvas * 0.42,
+    img.ColorRgba8(0xFF, 0x4B, 0x72, 26),
+    img.ColorRgba8(0x00, 0x00, 0x00, 0),
+  );
 
   // Person silhouette: head + shoulders, drawn in the Weekend gradient.
-  _disc(image, cx, canvas * 0.38, canvas * 0.135, img.ColorRgba8(0xFF, 0x4B, 0x72, 235));
+  _disc(
+    image,
+    cx,
+    canvas * 0.38,
+    canvas * 0.135,
+    img.ColorRgba8(0xFF, 0x4B, 0x72, 235),
+  );
   _halfEllipse(
     image,
     cx,
@@ -64,7 +76,13 @@ void main() {
 }
 
 /// Fills a disc of [radius] centred at ([cx], [cy]).
-void _disc(img.Image image, double cx, double cy, double radius, img.Color color) {
+void _disc(
+  img.Image image,
+  double cx,
+  double cy,
+  double radius,
+  img.Color color,
+) {
   final r2 = radius * radius;
   for (int y = (cy - radius).floor(); y <= (cy + radius).ceil(); y++) {
     for (int x = (cx - radius).floor(); x <= (cx + radius).ceil(); x++) {
@@ -98,7 +116,14 @@ void _halfEllipse(
 }
 
 /// Draws a radial glow that fades from [inner] at the centre to [outer].
-void _radial(img.Image image, double cx, double cy, double radius, img.Color inner, img.Color outer) {
+void _radial(
+  img.Image image,
+  double cx,
+  double cy,
+  double radius,
+  img.Color inner,
+  img.Color outer,
+) {
   final r2 = radius * radius;
   for (int y = (cy - radius).floor(); y <= (cy + radius).ceil(); y++) {
     for (int x = (cx - radius).floor(); x <= (cx + radius).ceil(); x++) {

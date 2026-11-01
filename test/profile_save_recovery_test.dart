@@ -108,7 +108,10 @@ void main() {
     test('trims text fields and writes only editable columns', () {
       final payload = buildProfilePayload(_profile(name: '  Ada  '));
       expect(payload['display_name'], 'Ada');
-      expect(payload['bio'], 'I enjoy music, travel, food and relaxed weekends.');
+      expect(
+        payload['bio'],
+        'I enjoy music, travel, food and relaxed weekends.',
+      );
       expect(payload['city'], 'London');
       expect(payload['gender'], 'Woman');
       expect(payload['relationship_intent'], 'Dating & Weekend Plans');
@@ -119,24 +122,21 @@ void main() {
       // Ownership: the id must never travel in the payload.
       expect(payload.containsKey('id'), isFalse);
       // No privileged columns (verification/trust/completion/photos).
-      expect(
-        payload.keys.toSet(),
-        {
-          'display_name',
-          'bio',
-          'city',
-          'gender',
-          'relationship_intent',
-          'occupation',
-          'education',
-          'favorite_music',
-          'ideal_weekend',
-          // Prompt answers, as the jsonb array the `profile_prompts_shape`
-          // CHECK constraint validates. Present even when empty so clearing
-          // the last answer actually clears the column server-side.
-          'prompts',
-        },
-      );
+      expect(payload.keys.toSet(), {
+        'display_name',
+        'bio',
+        'city',
+        'gender',
+        'relationship_intent',
+        'occupation',
+        'education',
+        'favorite_music',
+        'ideal_weekend',
+        // Prompt answers, as the jsonb array the `profile_prompts_shape`
+        // CHECK constraint validates. Present even when empty so clearing
+        // the last answer actually clears the column server-side.
+        'prompts',
+      });
     });
 
     test('encodes prompt answers and drops blank ones', () {
@@ -166,10 +166,7 @@ void main() {
 
     test('omits lifestyle columns whose value is outside the CHECK set', () {
       final payload = buildProfilePayload(
-        _profile().copyWith(
-          smoking: 'Vaporises clouds',
-          drinking: 'Socially',
-        ),
+        _profile().copyWith(smoking: 'Vaporises clouds', drinking: 'Socially'),
       );
       // Invalid -> omitted entirely, so the constraint can never be violated
       // and good stored data survives.
@@ -236,41 +233,49 @@ void main() {
       );
     });
 
-    test('concurrent insert race (23505): retries UPDATE once, succeeds',
-        () async {
-      final store = FakeProfileStore()
-        ..insertErrorOnce = const PostgrestException(
-          message: 'duplicate key value violates unique constraint',
-          code: '23505',
-        );
-      final rows = await saveProfileWithRecovery(
-        store: store,
-        authId: authId,
-        payload: {'display_name': 'Ada'},
-      );
-      expect(rows, 1);
-      expect(store.updateCalls, 2, reason: 'initial UPDATE + post-race retry');
-    });
-
-    test('update matched nothing but row exists: honest no-row failure',
-        () async {
-      // Not silently retried or faked: the caller sees a classified error.
-      final store = _NoRowUpdateStore(row: {'id': authId});
-      await expectLater(
-        saveProfileWithRecovery(
+    test(
+      'concurrent insert race (23505): retries UPDATE once, succeeds',
+      () async {
+        final store = FakeProfileStore()
+          ..insertErrorOnce = const PostgrestException(
+            message: 'duplicate key value violates unique constraint',
+            code: '23505',
+          );
+        final rows = await saveProfileWithRecovery(
           store: store,
           authId: authId,
           payload: {'display_name': 'Ada'},
-        ),
-        throwsA(
-          isA<ProfileSaveException>().having(
-            (e) => e.code,
-            'code',
-            'PROFILE_UPDATE_NO_ROW',
+        );
+        expect(rows, 1);
+        expect(
+          store.updateCalls,
+          2,
+          reason: 'initial UPDATE + post-race retry',
+        );
+      },
+    );
+
+    test(
+      'update matched nothing but row exists: honest no-row failure',
+      () async {
+        // Not silently retried or faked: the caller sees a classified error.
+        final store = _NoRowUpdateStore(row: {'id': authId});
+        await expectLater(
+          saveProfileWithRecovery(
+            store: store,
+            authId: authId,
+            payload: {'display_name': 'Ada'},
           ),
-        ),
-      );
-    });
+          throwsA(
+            isA<ProfileSaveException>().having(
+              (e) => e.code,
+              'code',
+              'PROFILE_UPDATE_NO_ROW',
+            ),
+          ),
+        );
+      },
+    );
 
     test('RLS rejection on UPDATE is classified, not swallowed', () async {
       final store = FakeProfileStore(row: {'id': authId})
@@ -386,7 +391,8 @@ void main() {
       expect(
         classify(
           const PostgrestException(
-            message: 'column "occupation" of relation "profiles" does not exist',
+            message:
+                'column "occupation" of relation "profiles" does not exist',
             code: '42703',
           ),
         ),

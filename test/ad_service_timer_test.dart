@@ -110,7 +110,15 @@ void main() {
     test('fetchAd returns null when already displayed', () async {
       adService.startActiveDiscoveryTimer();
       adService.markAdDisplayed(
-        const Advertisement(id: 'ad1', campaignId: 'c1', title: 'T', description: 'D', imageUrl: 'url', ctaText: 'CTA', destinationUrl: 'https://example.com'),
+        const Advertisement(
+          id: 'ad1',
+          campaignId: 'c1',
+          title: 'T',
+          description: 'D',
+          imageUrl: 'url',
+          ctaText: 'CTA',
+          destinationUrl: 'https://example.com',
+        ),
       );
       final result = await adService.fetchAd('user1');
       expect(result, isNull);
@@ -125,11 +133,18 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 1200));
 
       final ad = const Advertisement(
-        id: 'ad1', campaignId: 'c1', title: 'Test Ad', description: 'desc', imageUrl: 'url', ctaText: 'CTA', destinationUrl: 'https://example.com',
+        id: 'ad1',
+        campaignId: 'c1',
+        title: 'Test Ad',
+        description: 'desc',
+        imageUrl: 'url',
+        ctaText: 'CTA',
+        destinationUrl: 'https://example.com',
       );
 
-      when(() => mockRepo.fetchAd('user1'))
-          .thenAnswer((_) async => (ad, const AdConfig()));
+      when(
+        () => mockRepo.fetchAd('user1'),
+      ).thenAnswer((_) async => (ad, const AdConfig()));
 
       final adService1 = shortConfig;
       final future1 = adService1.fetchAd('user1');
@@ -152,11 +167,18 @@ void main() {
       await Future.delayed(const Duration(milliseconds: 1200));
 
       final ad = const Advertisement(
-        id: 'ad1', campaignId: 'c1', title: 'Test Ad', description: 'desc', imageUrl: 'url', ctaText: 'CTA', destinationUrl: 'https://example.com',
+        id: 'ad1',
+        campaignId: 'c1',
+        title: 'Test Ad',
+        description: 'desc',
+        imageUrl: 'url',
+        ctaText: 'CTA',
+        destinationUrl: 'https://example.com',
       );
 
-      when(() => mockRepo.fetchAd('user1'))
-          .thenAnswer((_) async => (ad, const AdConfig()));
+      when(
+        () => mockRepo.fetchAd('user1'),
+      ).thenAnswer((_) async => (ad, const AdConfig()));
 
       final result = await shortConfig.fetchAd('user1');
       expect(result, isNotNull);
@@ -178,7 +200,10 @@ void main() {
 
       final disabledShort = AdService(
         repository: mockRepo,
-        config: const AdConfig(adIntervalSeconds: 1, isAdvertisingEnabled: false),
+        config: const AdConfig(
+          adIntervalSeconds: 1,
+          isAdvertisingEnabled: false,
+        ),
       );
       disabledShort.startActiveDiscoveryTimer();
       await Future.delayed(const Duration(milliseconds: 1200));
@@ -207,36 +232,66 @@ void main() {
     });
 
     test('recordImpression calls repository', () async {
-      when(() => mockRepo.recordEvent('user1', 'ad1', 'impression', metadata: null))
-          .thenAnswer((_) async {});
+      when(
+        () =>
+            mockRepo.recordEvent('user1', 'ad1', 'impression', metadata: null),
+      ).thenAnswer((_) async {});
       await adService.recordImpression('user1', 'ad1');
-      verify(() => mockRepo.recordEvent('user1', 'ad1', 'impression', metadata: null)).called(1);
+      verify(
+        () =>
+            mockRepo.recordEvent('user1', 'ad1', 'impression', metadata: null),
+      ).called(1);
     });
 
     test('recordClick calls repository', () async {
-      when(() => mockRepo.recordEvent('user1', 'ad1', 'click', metadata: null))
-          .thenAnswer((_) async {});
+      when(
+        () => mockRepo.recordEvent('user1', 'ad1', 'click', metadata: null),
+      ).thenAnswer((_) async {});
       await adService.recordClick('user1', 'ad1');
-      verify(() => mockRepo.recordEvent('user1', 'ad1', 'click', metadata: null)).called(1);
+      verify(
+        () => mockRepo.recordEvent('user1', 'ad1', 'click', metadata: null),
+      ).called(1);
     });
 
     test('recordReport calls repository with reason', () async {
-      when(() => mockRepo.recordEvent('user1', 'ad1', 'report', metadata: {'reason': 'spam'}))
-          .thenAnswer((_) async {});
+      when(
+        () => mockRepo.recordEvent(
+          'user1',
+          'ad1',
+          'report',
+          metadata: {'reason': 'spam'},
+        ),
+      ).thenAnswer((_) async {});
       await adService.recordReport('user1', 'ad1', reason: 'spam');
-      verify(() => mockRepo.recordEvent('user1', 'ad1', 'report', metadata: {'reason': 'spam'})).called(1);
+      verify(
+        () => mockRepo.recordEvent(
+          'user1',
+          'ad1',
+          'report',
+          metadata: {'reason': 'spam'},
+        ),
+      ).called(1);
     });
 
     test('recordHide calls repository', () async {
-      when(() => mockRepo.recordEvent('user1', 'ad1', 'hide', metadata: null))
-          .thenAnswer((_) async {});
+      when(
+        () => mockRepo.recordEvent('user1', 'ad1', 'hide', metadata: null),
+      ).thenAnswer((_) async {});
       await adService.recordHide('user1', 'ad1');
-      verify(() => mockRepo.recordEvent('user1', 'ad1', 'hide', metadata: null)).called(1);
+      verify(
+        () => mockRepo.recordEvent('user1', 'ad1', 'hide', metadata: null),
+      ).called(1);
     });
 
     test('markAdDisplayed updates state correctly', () {
       final ad = const Advertisement(
-        id: 'ad1', campaignId: 'c1', title: 'Test Ad', description: 'desc', imageUrl: 'url', ctaText: 'CTA', destinationUrl: 'https://example.com',
+        id: 'ad1',
+        campaignId: 'c1',
+        title: 'Test Ad',
+        description: 'desc',
+        imageUrl: 'url',
+        ctaText: 'CTA',
+        destinationUrl: 'https://example.com',
       );
       adService.markAdDisplayed(ad);
       expect(adService.adDisplayed, true);

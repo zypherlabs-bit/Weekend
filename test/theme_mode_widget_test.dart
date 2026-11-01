@@ -56,11 +56,10 @@ void main() {
     expect(brightnessOf(tester), Brightness.dark);
   });
 
-  testWidgets('a stored Night choice is applied without a manual toggle',
-      (tester) async {
-    SharedPreferences.setMockInitialValues({
-      'weekend.theme_mode.v1': 'dark',
-    });
+  testWidgets('a stored Night choice is applied without a manual toggle', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'weekend.theme_mode.v1': 'dark'});
 
     final container = ProviderContainer();
     addTearDown(container.dispose);
@@ -70,8 +69,7 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: Consumer(
-          builder: (context, ref, _) =>
-              host(ref.watch(themeModeProvider)),
+          builder: (context, ref, _) => host(ref.watch(themeModeProvider)),
         ),
       ),
     );

@@ -101,11 +101,7 @@ class _DiscoveryCardState extends State<DiscoveryCard> {
               // Online Now: server-computed from the person's own consent and
               // a 5-minute presence window. Never faked client-side.
               if (widget.profile.isOnline)
-                const Positioned(
-                  top: 16,
-                  right: 16,
-                  child: _OnlineDot(),
-                ),
+                const Positioned(top: 16, right: 16, child: _OnlineDot()),
               // Spotlight: reflects a live server-side window only.
               if (widget.profile.isSpotlit)
                 const Positioned(
@@ -471,7 +467,8 @@ class _ProfileDetailSheet extends StatelessWidget {
                                     Text(
                                       row.$1,
                                       style: TextStyle(
-                                        color: theme.colorScheme.onSurfaceVariant,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
                                         fontSize: 14,
                                       ),
                                     ),

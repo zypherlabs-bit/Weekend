@@ -30,14 +30,20 @@ void main() {
     await pumpEventQueue();
 
     final second = container.read(appRouterProvider);
-    expect(identical(first, second), isTrue,
-        reason: 'The GoRouter must survive auth-state changes.');
+    expect(
+      identical(first, second),
+      isTrue,
+      reason: 'The GoRouter must survive auth-state changes.',
+    );
 
     // A later, routing-relevant transition must not replace it either.
     container.read(authStateProvider.notifier).dismissError();
     await pumpEventQueue();
 
-    expect(identical(first, container.read(appRouterProvider)), isTrue,
-        reason: 'Auth transitions must not reset navigation state.');
+    expect(
+      identical(first, container.read(appRouterProvider)),
+      isTrue,
+      reason: 'Auth transitions must not reset navigation state.',
+    );
   });
 }

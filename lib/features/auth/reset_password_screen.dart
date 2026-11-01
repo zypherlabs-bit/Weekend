@@ -78,14 +78,16 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                     labelText: 'New password',
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscure
-                          ? Icons.visibility_off
-                          : Icons.visibility),
+                      icon: Icon(
+                        _obscure ? Icons.visibility_off : Icons.visibility,
+                      ),
                       onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Please enter a password';
+                    if (v == null || v.isEmpty) {
+                      return 'Please enter a password';
+                    }
                     if (v.length < 6) {
                       return 'Password must be at least 6 characters';
                     }

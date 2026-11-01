@@ -73,10 +73,12 @@ void main() {
         final bb = (114 + (102 - 114) * t).round();
         // soft glow halo
         if (distSq <= r * r && distSq >= (r * 0.94) * (r * 0.94)) {
-          final a = ((1 - (distSq - (r * 0.94) * (r * 0.94)) /
-                  (r * r - (r * 0.94) * (r * 0.94))) *
-                  70)
-              .round();
+          final a =
+              ((1 -
+                          (distSq - (r * 0.94) * (r * 0.94)) /
+                              (r * r - (r * 0.94) * (r * 0.94))) *
+                      70)
+                  .round();
           full.setPixel(x, y, img.ColorRgba8(rr, gg, bb, 255 - a));
         } else {
           full.setPixel(x, y, img.ColorRgba8(rr, gg, bb, 255));
@@ -85,26 +87,63 @@ void main() {
     }
   }
   // Inner translucent ring
-  _circle(full, cx0, cy0, (r * 0.88).round(),
-      img.ColorRgba8(255, 255, 255, 60));
-  _annulus(full, cx0, cy0, (r * 0.88).round(), 4,
-      img.ColorRgba8(255, 255, 255, 60));
+  _circle(
+    full,
+    cx0,
+    cy0,
+    (r * 0.88).round(),
+    img.ColorRgba8(255, 255, 255, 60),
+  );
+  _annulus(
+    full,
+    cx0,
+    cy0,
+    (r * 0.88).round(),
+    4,
+    img.ColorRgba8(255, 255, 255, 60),
+  );
   // Sparkles
-  _circle(full, cx0 - 116 * 1.35, cy0 - 116 * 1.35, 5,
-      img.ColorRgba8(255, 255, 255, 200));
-  _circle(full, cx0 + 124 * 1.35, cy0 + 124 * 1.35, 4,
-      img.ColorRgba8(255, 255, 255, 150));
-  _circle(full, cx0 - 136 * 1.35, cy0 + 134 * 1.35, 4,
-      img.ColorRgba8(255, 255, 255, 130));
-  _circle(full, cx0 + 134 * 1.35, cy0 - 136 * 1.35, 5,
-      img.ColorRgba8(255, 255, 255, 180));
+  _circle(
+    full,
+    cx0 - 116 * 1.35,
+    cy0 - 116 * 1.35,
+    5,
+    img.ColorRgba8(255, 255, 255, 200),
+  );
+  _circle(
+    full,
+    cx0 + 124 * 1.35,
+    cy0 + 124 * 1.35,
+    4,
+    img.ColorRgba8(255, 255, 255, 150),
+  );
+  _circle(
+    full,
+    cx0 - 136 * 1.35,
+    cy0 + 134 * 1.35,
+    4,
+    img.ColorRgba8(255, 255, 255, 130),
+  );
+  _circle(
+    full,
+    cx0 + 134 * 1.35,
+    cy0 - 136 * 1.35,
+    5,
+    img.ColorRgba8(255, 255, 255, 180),
+  );
   final fullPng = img.encodePng(full);
   File('assets/icons/weekend_logo.png').writeAsBytesSync(fullPng);
   print('Generated assets/icons/weekend_logo.png');
 }
 
-void _annulus(img.Image image, double cx, double cy, int radius, int width,
-    img.Color color) {
+void _annulus(
+  img.Image image,
+  double cx,
+  double cy,
+  int radius,
+  int width,
+  img.Color color,
+) {
   for (int y = -radius; y <= radius; y++) {
     for (int x = -radius; x <= radius; x++) {
       final distSq = (x * x + y * y).toDouble();
@@ -122,8 +161,14 @@ void _annulus(img.Image image, double cx, double cy, int radius, int width,
 }
 
 void _line(
-    img.Image image, double x1, double y1, double x2, double y2,
-    img.Color color, int width) {
+  img.Image image,
+  double x1,
+  double y1,
+  double x2,
+  double y2,
+  img.Color color,
+  int width,
+) {
   final dx = (x2 - x1).abs();
   final dy = (y2 - y1).abs();
   final sx = x1 < x2 ? 1 : -1;
@@ -146,8 +191,17 @@ void _line(
   }
 }
 
-void _quad(img.Image image, double x1, double y1, double cx, double cy,
-    double x2, double y2, img.Color color, int width) {
+void _quad(
+  img.Image image,
+  double x1,
+  double y1,
+  double cx,
+  double cy,
+  double x2,
+  double y2,
+  img.Color color,
+  int width,
+) {
   for (int i = 0; i <= 120; i++) {
     final t = i / 120;
     final mt = 1 - t;
@@ -157,7 +211,13 @@ void _quad(img.Image image, double x1, double y1, double cx, double cy,
   }
 }
 
-void _circle(img.Image image, double cx, double cy, int radius, img.Color color) {
+void _circle(
+  img.Image image,
+  double cx,
+  double cy,
+  int radius,
+  img.Color color,
+) {
   for (int y = -radius; y <= radius; y++) {
     for (int x = -radius; x <= radius; x++) {
       if (x * x + y * y <= radius * radius) {

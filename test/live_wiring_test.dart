@@ -24,8 +24,11 @@ void main() {
       // Guards the rest of the suite: if a real URL were compiled in, the
       // "throws when unavailable" expectations below would be meaningless and
       // the tests would be talking to production.
-      expect(SupabaseConfig.isConfigured, isFalse,
-          reason: 'dart-defines must not be present when running unit tests');
+      expect(
+        SupabaseConfig.isConfigured,
+        isFalse,
+        reason: 'dart-defines must not be present when running unit tests',
+      );
       expect(SupabaseConfig.client, isNull);
     });
 
@@ -35,26 +38,28 @@ void main() {
   });
 
   group('ProfileRepository.updateProfile', () {
-    test('throws instead of silently returning when no backend is configured',
-        () async {
-      final repo = ProfileRepository();
-      // The previous implementation did `if (client == null) return;`, so a
-      // save with no backend reported success and the user was told their
-      // profile was updated when nothing was written.
-      expect(
-        () => repo.updateProfile(
-          const UserProfile(
-            id: 'me',
-            name: '',
-            age: 18,
-            gender: 'Man',
-            photos: [],
-            city: '',
+    test(
+      'throws instead of silently returning when no backend is configured',
+      () async {
+        final repo = ProfileRepository();
+        // The previous implementation did `if (client == null) return;`, so a
+        // save with no backend reported success and the user was told their
+        // profile was updated when nothing was written.
+        expect(
+          () => repo.updateProfile(
+            const UserProfile(
+              id: 'me',
+              name: '',
+              age: 18,
+              gender: 'Man',
+              photos: [],
+              city: '',
+            ),
           ),
-        ),
-        throwsA(isA<StateError>()),
-      );
-    });
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
   });
 
   group('ProfileRepository.uploadProfilePhoto', () {
@@ -92,31 +97,24 @@ void main() {
   group('SafetyRepository write paths report failures', () {
     test('blockUser throws without a backend', () async {
       final repo = SafetyRepository();
-      expect(
-        () => repo.blockUser('a', 'b'),
-        throwsA(isA<StateError>()),
-      );
+      expect(() => repo.blockUser('a', 'b'), throwsA(isA<StateError>()));
     });
 
-    test('unblockUser throws without a backend instead of silently succeeding',
-        () async {
-      final repo = SafetyRepository();
-      // This used to swallow the error, and the UI then showed a green
-      // "Unblocked: <id>" while the person remained blocked.
-      expect(
-        () => repo.unblockUser('a', 'b'),
-        throwsA(isA<StateError>()),
-      );
-    });
+    test(
+      'unblockUser throws without a backend instead of silently succeeding',
+      () async {
+        final repo = SafetyRepository();
+        // This used to swallow the error, and the UI then showed a green
+        // "Unblocked: <id>" while the person remained blocked.
+        expect(() => repo.unblockUser('a', 'b'), throwsA(isA<StateError>()));
+      },
+    );
 
     test('fetchBlockedUserIds throws without a backend', () async {
       final repo = SafetyRepository();
       // An empty list here would render as "you have not blocked anyone",
       // which is indistinguishable from a successful empty read.
-      expect(
-        () => repo.fetchBlockedUserIds('a'),
-        throwsA(isA<StateError>()),
-      );
+      expect(() => repo.fetchBlockedUserIds('a'), throwsA(isA<StateError>()));
     });
 
     test('reportUser throws without a backend', () async {
@@ -129,12 +127,14 @@ void main() {
   });
 
   group('MatchRepository', () {
-    test('fetchMatches returns an empty list, never fabricated matches',
-        () async {
-      final repo = MatchRepository();
-      final matches = await repo.fetchMatches('some-user');
-      expect(matches, isEmpty);
-    });
+    test(
+      'fetchMatches returns an empty list, never fabricated matches',
+      () async {
+        final repo = MatchRepository();
+        final matches = await repo.fetchMatches('some-user');
+        expect(matches, isEmpty);
+      },
+    );
   });
 }
 

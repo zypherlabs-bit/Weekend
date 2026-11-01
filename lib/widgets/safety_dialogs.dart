@@ -40,7 +40,10 @@ class SafetyCenterDialog extends ConsumerWidget {
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close_rounded, color: Theme.of(context).colorScheme.onSurface),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ],
               ),
@@ -119,77 +122,86 @@ class SafetyCenterDialog extends ConsumerWidget {
             ),
             content: switch (snapshot.connectionState) {
               ConnectionState.waiting => Center(
-                  child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
+                child: CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.primary,
                 ),
+              ),
               _ when snapshot.hasError => Text(
-                  'Could not load your blocked users. Please try again.',
-                  style: TextStyle(color: Colors.redAccent),
-                ),
+                'Could not load your blocked users. Please try again.',
+                style: TextStyle(color: Colors.redAccent),
+              ),
               _ when blocked.isEmpty => Text(
-                  'You have not blocked anyone yet.',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                'You have not blocked anyone yet.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+              ),
               _ => Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${blocked.length} blocked',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${blocked.length} blocked',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
-                    SizedBox(height: 8),
-                    ...blocked.map(
-                      (id) => ListTile(
-                        title: Text(
-                          id,
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                        ),
-                        trailing: IconButton(
-                          tooltip: 'Unblock',
-                          icon: Icon(
-                            Icons.lock_open_rounded,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                          onPressed: () async {
-                            final messenger =
-                                ScaffoldMessenger.of(dialogContext);
-                            try {
-                              await ref
-                                  .read(weekendProvider.notifier)
-                                  .unblockUser(id);
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Unblocked: $id'),
-                                  backgroundColor: AppTheme.onlineGreen,
-                                ),
-                              );
-                              if (dialogContext.mounted) {
-                                Navigator.pop(dialogContext);
-                              }
-                            } catch (e) {
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Could not unblock this user. '
-                                    'Please try again.',
-                                  ),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
+                  ),
+                  SizedBox(height: 8),
+                  ...blocked.map(
+                    (id) => ListTile(
+                      title: Text(
+                        id,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
+                      trailing: IconButton(
+                        tooltip: 'Unblock',
+                        icon: Icon(
+                          Icons.lock_open_rounded,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(dialogContext);
+                          try {
+                            await ref
+                                .read(weekendProvider.notifier)
+                                .unblockUser(id);
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Unblocked: $id'),
+                                backgroundColor: AppTheme.onlineGreen,
+                              ),
+                            );
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                            }
+                          } catch (e) {
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Could not unblock this user. '
+                                  'Please try again.',
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
             },
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: Text(
                   'Close',
-                  style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ),
             ],
@@ -225,27 +237,39 @@ class SafetyCenterDialog extends ConsumerWidget {
                 controller: contactCtrl,
                 decoration: InputDecoration(
                   labelText: 'Contact Name',
-                  labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  labelStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: venueCtrl,
                 decoration: InputDecoration(
                   labelText: 'Venue',
-                  labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  labelStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: timeCtrl,
                 decoration: InputDecoration(
                   labelText: 'Time',
-                  labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  labelStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ],
           ),
@@ -254,7 +278,9 @@ class SafetyCenterDialog extends ConsumerWidget {
               onPressed: isSharing ? null : () => Navigator.pop(dialogContext),
               child: Text(
                 'Cancel',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
             ElevatedButton(
@@ -278,14 +304,15 @@ class SafetyCenterDialog extends ConsumerWidget {
                         return;
                       }
                       setDialogState(() => isSharing = true);
-                      final messenger =
-                          ScaffoldMessenger.of(context);
+                      final messenger = ScaffoldMessenger.of(context);
                       try {
                         final result = await Share.share(text);
                         if (result.status != ShareResultStatus.success) {
                           // Dismissed: say so instead of claiming it was
                           // shared.
-                          if (dialogContext.mounted) Navigator.pop(dialogContext);
+                          if (dialogContext.mounted) {
+                            Navigator.pop(dialogContext);
+                          }
                           messenger.showSnackBar(
                             const SnackBar(
                               content: Text('Sharing was cancelled.'),
@@ -305,9 +332,7 @@ class SafetyCenterDialog extends ConsumerWidget {
                         if (dialogContext.mounted) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
                             const SnackBar(
-                              content: Text(
-                                'Could not open the share sheet.',
-                              ),
+                              content: Text('Could not open the share sheet.'),
                               backgroundColor: Colors.red,
                             ),
                           );
@@ -319,7 +344,9 @@ class SafetyCenterDialog extends ConsumerWidget {
               ),
               child: Text(
                 'Share',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ),
           ],
@@ -358,14 +385,18 @@ class SafetyCenterDialog extends ConsumerWidget {
           'Open the Safety Center to submit a selfie for photo verification. '
           'Your selfie is uploaded to your private profile-photos bucket and '
           'reviewed by the moderation service.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               'Cancel',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           ElevatedButton(
@@ -414,10 +445,16 @@ class _SafetyOption extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 22),
+              child: Icon(
+                icon,
+                color: Theme.of(context).colorScheme.primary,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -436,14 +473,19 @@ class _SafetyOption extends StatelessWidget {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                       fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ],
         ),
       ),

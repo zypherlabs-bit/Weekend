@@ -1,4 +1,4 @@
-﻿import 'package:credential_manager/credential_manager.dart';
+import 'package:credential_manager/credential_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:weekend/services/passkey_service.dart';
 
@@ -131,13 +131,11 @@ void main() {
       final credential = PublicKeyCredential.fromJson({
         'id': 'abc',
         'type': 'public-key',
-        'response': {
-          'clientDataJSON': 'x',
-          'attestationObject': 'YXR0',
-        },
+        'response': {'clientDataJSON': 'x', 'attestationObject': 'YXR0'},
       });
-      final response = PasskeyService.credentialToJson(credential)['response']
-          as Map<String, dynamic>;
+      final response =
+          PasskeyService.credentialToJson(credential)['response']
+              as Map<String, dynamic>;
       expect(response['attestationObject'], 'YXR0');
     });
   });

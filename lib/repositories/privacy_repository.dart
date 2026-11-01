@@ -23,11 +23,14 @@ class PrivacyRepository {
     if (client == null) return false;
 
     try {
-      final result = await client.rpc('set_privacy_mode', params: {
-        'p_mode': mode,
-        'p_enabled': enabled,
-        'p_snooze_hours': snoozeHours,
-      });
+      final result = await client.rpc(
+        'set_privacy_mode',
+        params: {
+          'p_mode': mode,
+          'p_enabled': enabled,
+          'p_snooze_hours': snoozeHours,
+        },
+      );
       return result is Map && result['mode'] == mode;
     } catch (_) {
       return false;
@@ -44,10 +47,10 @@ class PrivacyRepository {
     if (client == null) return null;
 
     try {
-      final result = await client.rpc('set_away_status', params: {
-        'p_message': message,
-        'p_hours': hours,
-      });
+      final result = await client.rpc(
+        'set_away_status',
+        params: {'p_message': message, 'p_hours': hours},
+      );
       if (result is Map && result['away'] == true) {
         return result['message'] as String? ?? '';
       }
@@ -71,11 +74,10 @@ class PrivacyRepository {
     if (client == null) return false;
 
     try {
-      final result = await client.rpc('set_travel_location', params: {
-        'p_city': city,
-        'p_lat': latitude,
-        'p_lon': longitude,
-      });
+      final result = await client.rpc(
+        'set_travel_location',
+        params: {'p_city': city, 'p_lat': latitude, 'p_lon': longitude},
+      );
       if (result is Map) {
         return result['travel_enabled'] == true ||
             ((city == null || city.trim().isEmpty) &&
@@ -149,7 +151,8 @@ class PrivacyRepository {
       final row = await client
           .from('user_settings')
           .select(
-              'travel_mode_enabled, travel_city, travel_lat, travel_lon, travel_started_at')
+            'travel_mode_enabled, travel_city, travel_lat, travel_lon, travel_started_at',
+          )
           .eq('user_id', me)
           .maybeSingle();
       return row;
@@ -167,8 +170,7 @@ class PrivacyRepository {
       if (me.isEmpty) return null;
       final row = await client
           .from('user_settings')
-          .select(
-              'incognito_mode, snooze_mode, snooze_until, show_online_now')
+          .select('incognito_mode, snooze_mode, snooze_until, show_online_now')
           .eq('user_id', me)
           .maybeSingle();
       return row;

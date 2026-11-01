@@ -852,6 +852,7 @@ class ReferralData {
   final String badgeTitle;
   final String achievementTier;
   final String linkUrl;
+
   /// Counts, badge and link all come from the live `get_referral_stats`
   /// RPC — defaults are neutral so nothing fabricated can ever render.
   const ReferralData({
@@ -1009,7 +1010,9 @@ class WeekendAuthState {
       isPasswordRecovery: isPasswordRecovery ?? this.isPasswordRecovery,
       awaitingEmailConfirmation:
           awaitingEmailConfirmation ?? this.awaitingEmailConfirmation,
-      pendingEmail: clearPendingEmail ? null : (pendingEmail ?? this.pendingEmail),
+      pendingEmail: clearPendingEmail
+          ? null
+          : (pendingEmail ?? this.pendingEmail),
       pendingPassword: clearPendingPassword
           ? null
           : (pendingPassword ?? this.pendingPassword),
@@ -1017,18 +1020,18 @@ class WeekendAuthState {
   }
 
   WeekendAuthState clearError() => WeekendAuthState(
-        isAuthenticated: isAuthenticated,
-        isLoading: isLoading,
-        user: user,
-        session: session,
-        emailVerified: emailVerified,
-        needsMfaChallenge: needsMfaChallenge,
-        mfaEnabled: mfaEnabled,
-        needsProfileSetup: needsProfileSetup,
-        awaitingEmailConfirmation: awaitingEmailConfirmation,
-        pendingEmail: pendingEmail,
-        pendingPassword: pendingPassword,
-      );
+    isAuthenticated: isAuthenticated,
+    isLoading: isLoading,
+    user: user,
+    session: session,
+    emailVerified: emailVerified,
+    needsMfaChallenge: needsMfaChallenge,
+    mfaEnabled: mfaEnabled,
+    needsProfileSetup: needsProfileSetup,
+    awaitingEmailConfirmation: awaitingEmailConfirmation,
+    pendingEmail: pendingEmail,
+    pendingPassword: pendingPassword,
+  );
 }
 
 class Advertisement {
@@ -1213,6 +1216,7 @@ class LocationPreferences {
   final String? travelModeCity;
   final double? travelModeLat;
   final double? travelModeLon;
+
   /// Gender preferences for discovery filtering.
   /// Empty list means no preference filter (show all genders).
   /// Values must match the gender options in the profiles table:
@@ -1283,7 +1287,8 @@ class LocationPreferences {
         travelModeCity: json['travel_mode_city'] as String?,
         travelModeLat: (json['travel_mode_lat'] as num?)?.toDouble(),
         travelModeLon: (json['travel_mode_lon'] as num?)?.toDouble(),
-        preferredGenders: (json['preferred_genders'] as List?)
+        preferredGenders:
+            (json['preferred_genders'] as List?)
                 ?.map((g) => g.toString())
                 .toList() ??
             [],
@@ -1391,13 +1396,13 @@ class SurgeState {
     this.threshold = 30,
   });
   factory SurgeState.fromJson(Map<String, dynamic> json) => SurgeState(
-        active: json['active'] == true,
-        endsAt: json['ends_at'] is String
-            ? DateTime.tryParse(json['ends_at'] as String)
-            : null,
-        city: (json['city'] as String?) ?? '',
-        threshold: (json['threshold'] as num?)?.toInt() ?? 30,
-      );
+    active: json['active'] == true,
+    endsAt: json['ends_at'] is String
+        ? DateTime.tryParse(json['ends_at'] as String)
+        : null,
+    city: (json['city'] as String?) ?? '',
+    threshold: (json['threshold'] as num?)?.toInt() ?? 30,
+  );
 }
 
 /// The signed-in user's Spotlight window state (their own row only).
@@ -1467,18 +1472,22 @@ class SupportTicket {
     required this.updatedAtMs,
   });
   factory SupportTicket.fromJson(Map<String, dynamic> json) => SupportTicket(
-        id: json['id'] as String? ?? '',
-        subject: json['subject'] as String? ?? '',
-        category: json['category'] as String? ?? 'other',
-        status: json['status'] as String? ?? 'open',
-        priority: json['priority'] as String? ?? 'normal',
-        createdAtMs: DateTime.tryParse(json['created_at'] as String? ?? '')
-                ?.millisecondsSinceEpoch ??
-            0,
-        updatedAtMs: DateTime.tryParse(json['updated_at'] as String? ?? '')
-                ?.millisecondsSinceEpoch ??
-            0,
-      );
+    id: json['id'] as String? ?? '',
+    subject: json['subject'] as String? ?? '',
+    category: json['category'] as String? ?? 'other',
+    status: json['status'] as String? ?? 'open',
+    priority: json['priority'] as String? ?? 'normal',
+    createdAtMs:
+        DateTime.tryParse(
+          json['created_at'] as String? ?? '',
+        )?.millisecondsSinceEpoch ??
+        0,
+    updatedAtMs:
+        DateTime.tryParse(
+          json['updated_at'] as String? ?? '',
+        )?.millisecondsSinceEpoch ??
+        0,
+  );
 }
 
 /// A user-authored conversation-opening prompt (Opening Move).
@@ -1498,11 +1507,11 @@ class OpeningMove {
     this.photoId = '',
   });
   factory OpeningMove.fromJson(Map<String, dynamic> json) => OpeningMove(
-        id: json['id'] as String? ?? '',
-        sortOrder: (json['sort_order'] as num?)?.toInt() ?? 1,
-        prompt: json['prompt'] as String? ?? '',
-        photoId: json['photo_id'] as String? ?? '',
-      );
+    id: json['id'] as String? ?? '',
+    sortOrder: (json['sort_order'] as num?)?.toInt() ?? 1,
+    prompt: json['prompt'] as String? ?? '',
+    photoId: json['photo_id'] as String? ?? '',
+  );
 }
 
 /// Aggregate photo insight for one of the user's own photos. The server
@@ -1546,12 +1555,12 @@ class PhotoInsights {
     required this.photos,
   });
   factory PhotoInsights.fromJson(Map<String, dynamic> json) => PhotoInsights(
-        windowDays: (json['window_days'] as num?)?.toInt() ?? 30,
-        minimumRequiredImpressions:
-            (json['minimum_required_impressions'] as num?)?.toInt() ?? 30,
-        photos: ((json['photos'] as List?) ?? const [])
-            .whereType<Map>()
-            .map((e) => PhotoInsightEntry.fromJson(Map<String, dynamic>.from(e)))
-            .toList(),
-      );
+    windowDays: (json['window_days'] as num?)?.toInt() ?? 30,
+    minimumRequiredImpressions:
+        (json['minimum_required_impressions'] as num?)?.toInt() ?? 30,
+    photos: ((json['photos'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((e) => PhotoInsightEntry.fromJson(Map<String, dynamic>.from(e)))
+        .toList(),
+  );
 }

@@ -54,15 +54,17 @@ void main() {
       expect(restored.state, ThemeMode.system);
     });
 
-    test('a future or corrupt value falls back to Auto instead of throwing',
-        () async {
-      SharedPreferences.setMockInitialValues({
-        'weekend.theme_mode.v1': 'sepia',
-      });
-      final controller = ThemeModeController();
-      await controller.load();
-      expect(controller.state, ThemeMode.system);
-    });
+    test(
+      'a future or corrupt value falls back to Auto instead of throwing',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'weekend.theme_mode.v1': 'sepia',
+        });
+        final controller = ThemeModeController();
+        await controller.load();
+        expect(controller.state, ThemeMode.system);
+      },
+    );
   });
 
   group('reactivity', () {

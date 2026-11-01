@@ -11,9 +11,11 @@ import 'package:weekend/repositories/date_ideas_repository.dart';
 void main() {
   group('SupabaseConfig live-only guarantee', () {
     test('is unconfigured in the test environment', () {
-      expect(SupabaseConfig.isConfigured, isFalse,
-          reason:
-              'dart-defines must not be present when running unit tests');
+      expect(
+        SupabaseConfig.isConfigured,
+        isFalse,
+        reason: 'dart-defines must not be present when running unit tests',
+      );
       expect(SupabaseConfig.client, isNull);
     });
   });
@@ -27,16 +29,17 @@ void main() {
         partnerInterests: ['Art', 'Travel'],
       );
 
-      expect(ideas, isEmpty,
-          reason: 'A missing backend must never fabricate date ideas');
+      expect(
+        ideas,
+        isEmpty,
+        reason: 'A missing backend must never fabricate date ideas',
+      );
       expect(source, 'fallback');
     });
 
     test('returns empty fallback with empty interests', () async {
       final repo = DateIdeasRepository();
-      final (ideas, source) = await repo.fetchDateIdeas(
-        city: '',
-      );
+      final (ideas, source) = await repo.fetchDateIdeas(city: '');
 
       expect(ideas, isEmpty);
       expect(source, 'fallback');

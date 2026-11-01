@@ -12,7 +12,8 @@ handful of conventions that are worth stating once:
 
 ## [Unreleased]
 
-Nothing yet.
+### Added - v2.8.4
+- **Forgot password flow** on the sign-in screen: "Forgot password?" link, dedicated reset-request screen with neutral confirmation messaging, new-password screen, and Supabase Auth `resetPasswordForEmail` integration.
 
 ## [2.8.2] - 2026-10-20
 

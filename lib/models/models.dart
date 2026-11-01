@@ -937,6 +937,11 @@ class WeekendAuthState {
   final bool mfaEnabled;
   final bool needsProfileSetup;
 
+  /// True when the current session was established by a password-recovery
+  /// link. In that state the user must set a new password before the app
+  /// treats them as signed in.
+  final bool isPasswordRecovery;
+
   /// True when Supabase accepted the signup but the account still has to be
   /// confirmed through the emailed link before a session is issued.
   ///
@@ -968,6 +973,7 @@ class WeekendAuthState {
     this.needsMfaChallenge = false,
     this.mfaEnabled = false,
     this.needsProfileSetup = false,
+    this.isPasswordRecovery = false,
     this.awaitingEmailConfirmation = false,
     this.pendingEmail,
     this.pendingPassword,
@@ -983,6 +989,7 @@ class WeekendAuthState {
     bool? needsMfaChallenge,
     bool? mfaEnabled,
     bool? needsProfileSetup,
+    bool? isPasswordRecovery,
     bool? awaitingEmailConfirmation,
     String? pendingEmail,
     bool clearPendingEmail = false,
@@ -999,6 +1006,7 @@ class WeekendAuthState {
       needsMfaChallenge: needsMfaChallenge ?? this.needsMfaChallenge,
       mfaEnabled: mfaEnabled ?? this.mfaEnabled,
       needsProfileSetup: needsProfileSetup ?? this.needsProfileSetup,
+      isPasswordRecovery: isPasswordRecovery ?? this.isPasswordRecovery,
       awaitingEmailConfirmation:
           awaitingEmailConfirmation ?? this.awaitingEmailConfirmation,
       pendingEmail: clearPendingEmail ? null : (pendingEmail ?? this.pendingEmail),

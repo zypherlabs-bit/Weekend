@@ -207,6 +207,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             },
                           ),
                           const SizedBox(height: 18),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: (authState.isLoading || _submitting)
+                                  ? null
+                                  : () {
+                                      ref
+                                          .read(authStateProvider.notifier)
+                                          .dismissError();
+                                      context.go('/forgot-password');
+                                    },
+                              child: const Text('Forgot password?'),
+                            ),
+                          ),
                           if (authState.error != null) ...[
                             Container(
                               padding: const EdgeInsets.all(12),

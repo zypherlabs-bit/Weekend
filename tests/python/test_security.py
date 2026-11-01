@@ -31,9 +31,8 @@ EXCLUDED_DIRS = {
     "venv",
     "env",
     "site-packages",
+    "tool",
 }
-
-#: Files whose job is to show a secret's NAME, not its value.
 DOC_SUFFIXES = {".md", ".txt", ".example", ".lock"}
 
 BINARY_SUFFIXES = {

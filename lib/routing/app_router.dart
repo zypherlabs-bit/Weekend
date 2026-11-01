@@ -8,6 +8,8 @@ import '../models/models.dart';
 
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/auth/auth_screen.dart';
+import '../features/auth/forgot_password_screen.dart';
+import '../features/auth/reset_password_screen.dart';
 import '../features/auth/confirm_email_screen.dart';
 import '../features/auth/mfa_challenge_screen.dart';
 import '../features/auth/mfa_enrollment_screen.dart';
@@ -88,6 +90,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isConfirmEmail = location == '/confirm-email';
       final isPersonalDetails = location == '/edit-profile';
       final isSecuritySetup = location == '/security-setup';
+      final isResetPassword = location == '/reset-password';
 
       // A pending 2FA step-up stays on the challenge screen; nowhere else.
       if (authState.needsMfaChallenge && !isMfa) return '/mfa-challenge';
@@ -142,6 +145,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       );
       if (vpnTarget != null) return vpnTarget;
 
+      // Password-recovery sessions must set a new password first.
+      if (authState.isPasswordRecovery && !isResetPassword) {
+        return '/reset-password';
+      }
+
       // Authenticated users with an incomplete profile finish Personal
       // Details first (except anonymous guests, who skip onboarding).
       // `/security-setup` is exempt for the same reason `/edit-profile` is:
@@ -174,6 +182,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         // Sign-in only: email/password or a passkey. Sign-up lives on its own
         // Tinder-style wizard at /signup.
         builder: (context, state) => const AuthScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) => const ResetPasswordScreen(),
       ),
       GoRoute(
         path: '/signup',

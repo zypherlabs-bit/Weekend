@@ -102,10 +102,29 @@ class AuthRepository {
     await client.auth.signOut(scope: SignOutScope.global);
   }
 
-  Future<void> resetPassword(String email) async {
+  /// Request a password-reset email for [email].
+  ///
+  /// Uses Supabase Auth's real `resetPasswordForEmail`. [emailRedirectTo] is
+  /// forwarded so the link lands back in the app via the configured deep link;
+  /// GoTrue only honours it when the URL is in the project's Redirect URLs
+  /// allow-list.
+  ///
+  /// LIVE-ONLY: throws [StateError] when no backend is configured.
+  Future<void> resetPassword(
+    String email, {
+    String? emailRedirectTo,
+  }) async {
     final client = _client;
-    if (client == null) return;
-    await client.auth.resetPasswordForEmail(email);
+    if (client == null) {
+      throw StateError(
+        'Weekend is not connected to a backend. '
+        'Build with SUPABASE_URL and SUPABASE_ANON_KEY to enable accounts.',
+      );
+    }
+    await client.auth.resetPasswordForEmail(
+      email,
+      redirectTo: emailRedirectTo ?? SupabaseConfig.emailRedirectOrNull,
+    );
   }
 
   Future<void> updatePassword(String newPassword) async {

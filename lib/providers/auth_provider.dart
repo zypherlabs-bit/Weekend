@@ -116,6 +116,21 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
       return;
     }
 
+    // Password-recovery link established a session: route the user to set a
+    // new password instead of treating them as fully signed in.
+    if (data.event == AuthChangeEvent.passwordRecovery) {
+      state = state.copyWith(
+        isAuthenticated: true,
+        isLoading: false,
+        user: _profileFromAuth(user, 'User'),
+        session: session!.accessToken,
+        emailVerified: user.emailConfirmedAt != null,
+        isPasswordRecovery: true,
+        clearError: true,
+      );
+      return;
+    }
+
     final confirmed = user.emailConfirmedAt != null;
 
     // First time this app instance sees the session: adopt it, then let the
@@ -773,20 +788,28 @@ class AuthNotifier extends StateNotifier<WeekendAuthState> {
     state = const WeekendAuthState(isAuthenticated: false, isLoading: false);
   }
 
-  Future<void> resetPassword(String email) async {
-    final client = _client;
-
-    if (client == null) {
-      // Unconfigured mode: no backend to contact.
-      return;
-    }
+  /// Request a password-reset email. Returns after the provider accepts the
+  /// request; the caller should always show a neutral confirmation that does
+  /// not reveal whether an account exists.
+  Future<void> requestPasswordReset(String email) async {
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
-      await client.auth.resetPasswordForEmail(
-        email,
-        redirectTo: SupabaseConfig.emailRedirectOrNull,
-      );
+      await _repo.resetPassword(email, emailRedirectTo: SupabaseConfig.emailRedirectOrNull);
     } catch (e) {
-      state = state.copyWith(error: _readableAuthError(e));
+      state = state.copyWith(
+        isLoading: false,
+        error: _readableAuthError(e),
+      );
+      rethrow;
+    }
+    state = state.copyWith(isLoading: false, clearError: true);
+  }
+
+  Future<void> resetPassword(String email) async {
+    try {
+      await requestPasswordReset(email);
+    } catch (_) {
+      // Preserve the legacy void contract; state.error already populated.
     }
   }
 

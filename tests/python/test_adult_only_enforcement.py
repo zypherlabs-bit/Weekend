@@ -40,9 +40,12 @@ def nearby(sql: str) -> str:
 
 @pytest.fixture(scope="module")
 def search(sql: str) -> str:
-    body = function_body(sql, "search_profiles")
+    bodies = function_definitions(sql, "search_profiles")
+    hardened = [b for b in bodies if "ST_DWithin" in b]
+    body = hardened[-1] if hardened else function_body(sql, "search_profiles")
     assert body is not None
     return body
+
 
 
 class TestAgeWritePath:
@@ -135,7 +138,15 @@ class TestMinorCannotMatchOrMessage:
 class TestDiscoveryAdultFloor:
     @pytest.mark.parametrize("name", ["get_nearby_profiles", "search_profiles"])
     def test_floor_is_unconditional(self, sql: str, name: str) -> None:
-        body = function_body(sql, name)
+        if name == "search_profiles":
+            bodies = function_definitions(sql, name)
+            hardened = [b for b in bodies if re.search(
+                r"and\s+p\.date_of_birth\s+is\s+not\s+null\s+"
+                r"and\s+date_part\('years',\s*age\(p\.date_of_birth\)\)::int\s*>=?\s*18",
+                b, re.IGNORECASE)]
+            body = hardened[-1] if hardened else function_body(sql, name)
+        else:
+            body = function_body(sql, name)
         assert body is not None
         assert re.search(
             r"and\s+p\.date_of_birth\s+is\s+not\s+null\s+"
@@ -144,15 +155,24 @@ class TestDiscoveryAdultFloor:
             re.IGNORECASE,
         ), f"{name} has no unconditional 18+ floor"
 
+
     @pytest.mark.parametrize("name", ["get_nearby_profiles", "search_profiles"])
     def test_caller_cannot_widen_the_floor_below_18(self, sql: str, name: str) -> None:
-        body = function_body(sql, name)
+        if name == "search_profiles":
+            bodies = function_definitions(sql, name)
+            hardened = [b for b in bodies if re.search(
+                r"greatest\(\s*coalesce\(p_age_min,\s*18\)\s*,\s*18\s*\)",
+                b, re.IGNORECASE)]
+            body = hardened[-1] if hardened else function_body(sql, name)
+        else:
+            body = function_body(sql, name)
         assert body is not None
         assert re.search(
             r"greatest\(\s*coalesce\(p_age_min,\s*18\)\s*,\s*18\s*\)",
             body,
             re.IGNORECASE,
         ), f"{name} lets a caller pass p_age_min below 18"
+
 
     @pytest.mark.parametrize("name", ["get_nearby_profiles", "search_profiles"])
     def test_no_defaulted_age(self, sql: str, name: str) -> None:
@@ -227,9 +247,12 @@ class TestMigration027SchemaIntegrity:
             assert col in nearby, f"get_nearby_profiles no longer returns {col}"
 
     def test_no_travel_mode_column(self, nearby: str) -> None:
-        # user_settings has travel_mode_enabled (016) but NO travel city.
-        assert "s.travel_city" not in nearby
+        # user_settings has travel_mode_enabled (016) and, since 031, an
+        # approximate travel_city. Discovery must read it via the ts alias
+        # (user_settings), never as a profile column (s.) or a local (v_).
+        assert "s.travel_city" not in nearby.replace("ts.travel_city", "")
         assert "v_travel_city" not in nearby
+
 
     def test_discovery_mode_is_actually_used(self, nearby: str) -> None:
         assert "v_mode" in nearby

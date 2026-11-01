@@ -28,9 +28,14 @@ def sql() -> str:
 
 @pytest.fixture(scope="module")
 def search_body(sql: str) -> str:
-    raw = function_body(sql, "search_profiles")
+    # The 13-argument overload is now a delegating wrapper (035); the
+    # filters live in the hardened implementation. Pick that one.
+    bodies = function_definitions(sql, "search_profiles")
+    hardened = [b for b in bodies if "ST_DWithin" in b]
+    raw = hardened[-1] if hardened else function_body(sql, "search_profiles")
     assert raw is not None, "search_profiles RPC not found in any migration"
     return strip_sql_comments(raw)
+
 
 
 @pytest.fixture(scope="module")
@@ -277,7 +282,10 @@ class TestPhotoMinimumRule:
         assert "assert_self" in body
 
     def test_discovery_filters_on_the_activation_flag(self, sql: str) -> None:
-        body = function_body(sql, "search_profiles")
+        bodies = function_definitions(sql, "search_profiles")
+        hardened = [b for b in bodies if "ST_DWithin" in b]
+        body = hardened[-1] if hardened else function_body(sql, "search_profiles")
         assert body is not None
         assert "p.dating_profile_activated" in strip_sql_comments(body)
+
 

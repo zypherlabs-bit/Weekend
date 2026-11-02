@@ -2,13 +2,13 @@
   "schema_version": 1,
   "timezone": "UTC",
   "tracking_started": "2026-09-23",
-  "generated_at": "2026-11-01T04:26:04Z",
+  "generated_at": "2026-11-02T04:27:16Z",
   "apk": {
-    "live_downloads": 112,
+    "live_downloads": 116,
     "archived_downloads": 3,
-    "total_downloads": 115,
+    "total_downloads": 119,
     "asset_counts": {
-      "app-release.apk": 24,
+      "app-release.apk": 28,
       "Weekend-v2.8.2-fullscreen-photo.apk": 2,
       "Weekend-v2.8.2-release.apk": 14,
       "Weekend-v2.8.1-release.apk": 5,
@@ -25,11 +25,11 @@
     "archived_note": "Weekend-v2.2.0-supabase.apk had download_count=3 when it was removed from release v2.2.0 on 2026-09-23; the count is kept here so cumulative totals stay accurate."
   },
   "release": {
-    "tag": "v2.8.4",
-    "version": "2.8.4",
-    "published_at": "2026-11-01T04:08:19Z",
+    "tag": "v2.8.5",
+    "version": "2.8.5",
+    "published_at": "2026-11-01T05:43:01Z",
     "apk_asset": "app-release.apk",
-    "apk_downloads": 1,
+    "apk_downloads": 4,
     "sha256": null
   },
   "days": [
@@ -512,8 +512,8 @@
     },
     {
       "date": "2026-10-31",
-      "repository_views": null,
-      "repository_unique_visitors": null,
+      "repository_views": 5,
+      "repository_unique_visitors": 4,
       "repository_clones": null,
       "repository_unique_cloners": null,
       "apk_downloads_daily": 3,
@@ -527,11 +527,20 @@
       "repository_unique_cloners": null,
       "apk_downloads_daily": 15,
       "apk_downloads_cumulative": 115
+    },
+    {
+      "date": "2026-11-02",
+      "repository_views": null,
+      "repository_unique_visitors": null,
+      "repository_clones": null,
+      "repository_unique_cloners": null,
+      "apk_downloads_daily": 4,
+      "apk_downloads_cumulative": 119
     }
   ],
   "traffic_window_totals": {
-    "views": 157,
-    "unique_visitors": 59
+    "views": 150,
+    "unique_visitors": 58
   },
-  "traffic_fetched_at": "2026-11-01T04:26:04Z"
+  "traffic_fetched_at": "2026-11-02T04:27:14Z"
 }

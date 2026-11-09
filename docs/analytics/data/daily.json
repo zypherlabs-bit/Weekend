@@ -2,13 +2,13 @@
   "schema_version": 1,
   "timezone": "UTC",
   "tracking_started": "2026-09-23",
-  "generated_at": "2026-11-08T04:28:01Z",
+  "generated_at": "2026-11-09T04:40:56Z",
   "apk": {
-    "live_downloads": 131,
+    "live_downloads": 135,
     "archived_downloads": 3,
-    "total_downloads": 134,
+    "total_downloads": 138,
     "asset_counts": {
-      "app-release.apk": 41,
+      "app-release.apk": 45,
       "Weekend-v2.8.2-fullscreen-photo.apk": 2,
       "Weekend-v2.8.2-release.apk": 16,
       "Weekend-v2.8.1-release.apk": 5,
@@ -29,7 +29,7 @@
     "version": "2.8.5",
     "published_at": "2026-11-01T05:43:01Z",
     "apk_asset": "app-release.apk",
-    "apk_downloads": 17,
+    "apk_downloads": 21,
     "sha256": null
   },
   "days": [
@@ -575,8 +575,8 @@
     },
     {
       "date": "2026-11-07",
-      "repository_views": null,
-      "repository_unique_visitors": null,
+      "repository_views": 16,
+      "repository_unique_visitors": 5,
       "repository_clones": null,
       "repository_unique_cloners": null,
       "apk_downloads_daily": 3,
@@ -590,11 +590,20 @@
       "repository_unique_cloners": null,
       "apk_downloads_daily": 3,
       "apk_downloads_cumulative": 134
+    },
+    {
+      "date": "2026-11-09",
+      "repository_views": null,
+      "repository_unique_visitors": null,
+      "repository_clones": null,
+      "repository_unique_cloners": null,
+      "apk_downloads_daily": 4,
+      "apk_downloads_cumulative": 138
     }
   ],
   "traffic_window_totals": {
-    "views": 219,
-    "unique_visitors": 73
+    "views": 216,
+    "unique_visitors": 76
   },
-  "traffic_fetched_at": "2026-11-08T04:28:00Z"
+  "traffic_fetched_at": "2026-11-09T04:40:56Z"
 }

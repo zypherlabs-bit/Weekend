@@ -76,3 +76,7 @@ replay_pid*.log
 # in assets/videos/ are what ships.
 assets/videos/source/
 
+# Local README preview. Regenerate with
+#   python tool/readme_capture/render_readme_preview.py
+docs/readme/_preview.html
+

@@ -26,36 +26,40 @@ are only used for the features that need them.
 ## 2. Download
 
 1. Open the [latest release](https://github.com/zypherlabs-bit/Weekend/releases/latest).
-2. Download the current APK asset, for example
-   [`Weekend-v2.8.2-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.8.2/Weekend-v2.8.2-release.apk) (~125 MB).
-3. Optionally download the matching checksum file
-   `Weekend-v2.8.2-release.apk.sha256`.
+2. Download the current APK asset — for the current release that is
+   [`app-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.8.5/app-release.apk) (~125 MB).
+3. Optionally download the matching checksum file, if the release page lists
+   one (`<asset>.sha256`).
 
-> The asset file name embeds the version (`Weekend-v<version>-release.apk`), so it
-> changes with every release. The release page always lists the newest one.
+> The asset file name is chosen by the publishing workflow, so it changes with
+> every release. The release page always lists the newest one, and
+> `releases/latest` always resolves to the current version.
 
 ---
 
 ## 3. Verify the download (recommended)
 
 Compare the SHA-256 hash of the file you downloaded with the published checksum.
+Some releases ship a `<asset>.sha256` file next to the APK; when one is
+present, compare against it.
 
 **Windows (PowerShell)**
 
 ```powershell
-Get-FileHash .\Weekend-v2.8.2-release.apk -Algorithm SHA256
+Get-FileHash .\app-release.apk -Algorithm SHA256
 ```
 
 **macOS / Linux**
 
 ```bash
-shasum -a 256 Weekend-v2.8.2-release.apk
+shasum -a 256 app-release.apk
 # or:
-sha256sum Weekend-v2.8.2-release.apk
+sha256sum app-release.apk
 ```
 
-The output must match the contents of `Weekend-v2.8.2-release.apk.sha256` in the
-release. If it does not match, do not install the file and download it again.
+The output must match the contents of the `.sha256` file in the release, if one
+was published. If it does not match, do not install the file and download it
+again.
 
 Hash verification confirms the file was not corrupted or modified in transit. It
 does not replace verifying the signature of the APK issuer.
@@ -87,7 +91,7 @@ file manager, and confirm you downloaded it from
 
 Download the newest APK from the [releases page](https://github.com/zypherlabs-bit/Weekend/releases)
 and install it over the existing app. Android keeps your data as long as the
-package (`com.weekend.app`) and signing key are unchanged.
+package (`com.zypherlabs.weekend`) and signing key are unchanged.
 
 ---
 

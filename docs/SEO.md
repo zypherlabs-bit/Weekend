@@ -31,22 +31,30 @@ is currently enforced or currently true.
 
 ## 2. README structure (user-first, in this order)
 
-1. **Hero** — logo, single H1, tagline, badges, primary CTA links.
-2. **Screenshots** — visual proof; images must be honest (see §3).
-3. **Why Weekend?** — benefit table (scannable).
-4. **How it works** — numbered onboarding steps.
-5. **Features** — one `###` per feature, stable anchors.
-6. **Free dating on Weekend** — the no-paywall value proposition.
-7. **Download Weekend** — CTA to the current release (version-matched).
-8. **FAQ** — ≥ 10 question-form `###` headings (`What/Is/Does/How/Where`).
-9. **Open source**, **Known limitations**, **Roadmap** — trust signals.
-10. **Developer documentation last** — stack, architecture, setup, testing.
+The README is a landing page, not a manual. It answers "what is this, does it
+work, how do I get it" in a single scroll and links out for everything else.
+
+1. **Hero** — logo, single H1, tagline, one-line description, badges, primary CTA links.
+2. **App preview** — wide banner plus a gallery of device mockups.
+3. **Why Weekend** — four-row benefit table (scannable).
+4. **Key features** — one row per verified feature, plus a `###` block for the
+   features that have their own documentation page.
+5. **Privacy and safety** — protection table, then the extra protections that
+   do not fit a table row.
+6. **Quick start** — four numbered steps that end at "discover and connect".
+7. **Technology** — badges and a compact layer table.
+8. **Known limitations** — the honest gaps, linked from `SECURITY.md`.
+9. **Roadmap** — available / in progress / planned.
+10. **Community** — bug, feature, contribute, security reporting.
+11. **Footer** — branding, license, repository and documentation links.
 
 Rules:
 
 - Exactly **one H1**. Every other heading is `##` or `###`.
-- The table of contents must link to real anchors (the audit resolves every
-  `#anchor` against the actual headings).
+- Long answers live in `docs/`, not in the README. The page links to
+  `docs/README.md` so every question still has a home.
+- Internal `#anchor` links must resolve to real headings (the audit resolves
+  every `#anchor` against the actual headings).
 - Anchors that other documents link to are **frozen**:
   `#known-limitations`, `#roadmap`, `#qr-invitations` (referenced from
   `SECURITY.md`, `docs/location-discovery.md`, `docs/qr-invitations.md`).
@@ -57,11 +65,11 @@ Rules:
 - Every `<img>` needs meaningful **alt text** containing the keyword context
   (for example: *"Weekend artwork — friends meeting, free dating app for Android"*).
 - Images must be **honest**: artwork is labelled artwork; only captures of the
-  running app may be called screenshots. The README's Screenshots section
-  contains only real captures — onboarding and the sign-up wizard from the
-  shipped client, plus signed-in captures from a synthetic test account on a
-  live backend — and carries an explicit honesty note explaining the
-  provenance of each.
+  running app may be called screenshots. Every screenshot in the README is
+  produced by the capture harness in `tool/readme_capture/`, which renders the
+  production screens with synthetic data — see
+  [docs/readme/redesign_report.md](readme/redesign_report.md) for the method
+  and for the provenance of each image.
 - **No duplicate files.** The audit hashes every image in `docs/screenshots/`
   and `docs/assets/` and fails on identical bytes stored twice. One image = one
   file; reference it, don't copy it.
@@ -69,9 +77,9 @@ Rules:
 
 ## 4. Download links and version drift
 
-- The README names the current APK exactly as published:
-  `Weekend-v<version>-release.apk` with `<version>` equal to the
-  `version:` field in `pubspec.yaml`.
+- The README names the current release exactly as published: the version must
+  equal the `version:` field in `pubspec.yaml`, and the asset name must match
+  the file attached to that release (the publishing workflow chooses it).
 - Always link `releases/latest` for the "always current" path **and** a direct
   versioned asset for the "download now" path.
 - Never write `releases/latest/download/Weekend-vX.Y.Z-…` — `latest` resolves
@@ -92,7 +100,8 @@ Suggested topics: `dating-app`, `flutter`, `supabase`, `android`,
 (Competitor names as topics are rejected by
 `tests/python/test_release.py::test_github_topics_legitimate`.)
 
-Social preview image: `docs/assets/weekend-logo.jpg`.
+Social preview image: `assets/readme/weekend-hero.png` (1280 × 640, the
+repository banner).
 
 ## 6. The audit
 
@@ -109,7 +118,7 @@ summary. Exit code is `1` if any check FAILs, `0` otherwise. The tool is
 |-------|----------------|
 | Structure | single H1, required sections in required order, TOC anchors resolve |
 | Keywords | primary/secondary keyword presence, stuffing threshold |
-| FAQ | ≥ 10 question-form headings |
+| Concision | README points at the documentation index, heading budget |
 | Download | versioned APK matches pubspec, no `latest/download` pins, CTA present |
 | Links | every relative README link resolves to a file or an anchor |
 | Images | exist, have alt text, ≤ 1.5 MB, no duplicate bytes |

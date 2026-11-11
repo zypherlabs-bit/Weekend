@@ -20,12 +20,13 @@ than shipped, it is marked as such.
 | [verification-2fa-deletion.md](verification-2fa-deletion.md) | Operators / QA | Executable live-project verification plan for TOTP 2FA and account deletion |
 | [privacy.md](privacy.md) | Users / developers | What data Weekend handles and the privacy controls available |
 | [SEO.md](SEO.md) | Maintainers | SEO strategy: keywords, README structure, audit tooling (`tool/seo_audit.py`) |
+| [readme/redesign_report.md](readme/redesign_report.md) | Maintainers | The GitHub landing page redesign: assets, capture method, verified links, open findings |
 | [testing.md](testing.md) | Contributors | Test suites, commands, conventions |
 | [contributing.md](contributing.md) | Contributors | Workflow, standards, review expectations |
 
 Related project files:
 
-- [../README.md](../README.md) — project overview and FAQ
+- [../README.md](../README.md) — project overview and download links
 - [../SECURITY.md](../SECURITY.md) — vulnerability disclosure policy
 - [../CONTRIBUTING.md](../CONTRIBUTING.md) — contribution guide
 - [../CHANGELOG.md](../CHANGELOG.md) — release history
@@ -38,9 +39,9 @@ Related project files:
 | | |
 |---|---|
 | Project | Weekend — free, open-source dating & social discovery app |
-| Platform | Android 7.0+ (API 24), `targetSdk` 36, `com.weekend.app` |
+| Platform | Android 7.0+ (API 24), `targetSdk` 36, `com.zypherlabs.weekend` |
 | App stack | Flutter 3.41.9, Dart 3.11.5, Riverpod 2.6.1, GoRouter 14.8.1 |
-| Android host | Kotlin `FlutterActivity`, Gradle Kotlin DSL, JDK 17 |
+| Android host | Kotlin `FlutterFragmentActivity`, Gradle Kotlin DSL, JDK 17 |
 | Backend | Supabase — PostgreSQL + PostGIS, Auth, Storage, Realtime, Edge Functions (Deno) |
 | Licence | MIT |
 | Latest release | <https://github.com/zypherlabs-bit/Weekend/releases/latest> |

@@ -39,35 +39,32 @@ ALT_RE = re.compile(r'alt="([^"]*)"')
 
 #: Sections that must exist, in this relative order (user-first landing page).
 REQUIRED_ORDER = (
-    "screenshots",
+    "app-preview",
     "why-weekend",
-    "how-it-works",
-    "features",
-    "free-dating-on-weekend",
-    "download-weekend",
-    "faq",
-    "open-source",
+    "key-features",
+    "privacy-and-safety",
+    "quick-start",
+    "technology",
     "known-limitations",
     "roadmap",
-    "developer-documentation",
-    "license",
+    "community",
 )
 
 #: Keywords that must appear somewhere in the README (case-insensitive).
 REQUIRED_PHRASES = (
-    "free dating app",
+    "dating app",
     "location-based",
     "open source",
     "android",
     "real-time",
-    "paywall",
     "privacy",
     "flutter",
     "supabase",
     "passkey",
+    "qr",
 )
 
-PRIMARY_KEYWORD = "free dating app"
+PRIMARY_KEYWORD = "dating app"
 STUFFING_THRESHOLD = 15  # occurrences of the primary keyword before WARNING
 FAQ_MIN_QUESTIONS = 10
 IMAGE_MAX_BYTES = 1_500_000
@@ -126,12 +123,14 @@ def check_structure(readme: str, headings: list[tuple[int, str, str]]) -> None:
         record("FAIL", "structure.h1", f"expected 1 H1, found {len(h1s)}")
 
     if h1s:
+        # The landing page keeps a single, memorable H1 ("Weekend"); the
+        # search terms live in the hero line underneath it.
         low = h1s[0].lower()
-        missing = [k for k in ("weekend", "dating app", "open source") if k not in low]
+        missing = [k for k in ("weekend",) if k not in low]
         if missing:
             record("FAIL", "structure.h1_keywords", f"H1 missing: {missing}")
         else:
-            record("PASS", "structure.h1_keywords", "H1 carries product + keyword")
+            record("PASS", "structure.h1_keywords", "H1 carries the product name")
 
     slugs = [s for _, _, s in headings]
     positions: list[int] = []
@@ -182,27 +181,21 @@ def check_keywords(readme: str) -> None:
 
 
 def check_faq(readme: str) -> None:
-    lines = readme.splitlines()
-    start = end = None
-    for i, line in enumerate(lines):
-        if line.startswith("## FAQ"):
-            start = i
-        elif start is not None and line.startswith("## ") and i > start:
-            end = i
-            break
-    if start is None:
-        record("FAIL", "faq.section", "no '## FAQ' section")
-        return
-    body = lines[start : end if end is not None else len(lines)]
-    questions = [
-        h
-        for _, h, _ in extract_headings("\n".join(body))
-        if h.lower().startswith(QUESTION_STARTERS)
-    ]
-    if len(questions) >= FAQ_MIN_QUESTIONS:
-        record("PASS", "faq.questions", f"{len(questions)} question headings")
+    """The landing page stays short; the long answers live in docs/.
+
+    Instead of an inline FAQ the README has to point at the documentation
+    index, so every question still has a home without bloating the page.
+    """
+    if "docs/README.md" in readme:
+        record("PASS", "faq.docs_index", "README points at the documentation index")
     else:
-        record("FAIL", "faq.questions", f"{len(questions)} < {FAQ_MIN_QUESTIONS} required")
+        record("FAIL", "faq.docs_index", "README does not link docs/README.md")
+
+    headings = extract_headings(readme)
+    if len(headings) <= 24:
+        record("PASS", "faq.concise", f"{len(headings)} headings")
+    else:
+        record("WARNING", "faq.concise", f"{len(headings)} headings (>24) - consider trimming")
 
 
 def check_download(readme: str) -> None:
@@ -226,7 +219,7 @@ def check_download(readme: str) -> None:
     else:
         record("PASS", "download.version_match", f"all marketing docs name v{version}")
 
-    m = re.search(r"Current version:\s*(\d+\.\d+\.\d+)", readme)
+    m = re.search(r"Current version:\s*v?(\d+\.\d+\.\d+)", readme)
     if m and m.group(1) == version:
         record("PASS", "download.headline_version", f"headline states {version}")
     elif m:
@@ -239,7 +232,9 @@ def check_download(readme: str) -> None:
     else:
         record("FAIL", "download.latest_link", "no releases/latest link")
 
-    if f"/releases/download/v{version}/Weekend-v{version}-release.apk" in readme:
+    # The asset name on a release is chosen by the publishing workflow, so
+    # any direct versioned APK download link counts.
+    if re.search(rf"/releases/download/v{re.escape(version)}/\S+\.apk", readme):
         record("PASS", "download.direct_link", f"direct v{version} APK link present")
     else:
         record("FAIL", "download.direct_link", "no direct versioned APK link")

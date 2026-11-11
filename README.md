@@ -17,12 +17,7 @@ A free, open source dating app for Android, with social discovery built in.
 · [Source code](https://github.com/zypherlabs-bit/Weekend/tree/master/lib)
 · [Report a bug](https://github.com/zypherlabs-bit/Weekend/issues/new?template=bug_report.md)
 
-![Android 7.0+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)
-![Flutter](https://img.shields.io/badge/Flutter-3.41.9-02569B?logo=flutter&logoColor=white)
-![Open Source](https://img.shields.io/badge/open%20source-MIT-8B5CF6)
-![Privacy Focused](https://img.shields.io/badge/privacy%20focused-FF4B72)
-![Free Download](https://img.shields.io/badge/download-free-2E9E6B)
-[![Latest release](https://img.shields.io/github/v/release/zypherlabs-bit/Weekend)](https://github.com/zypherlabs-bit/Weekend/releases/latest)
+![Android 7.0+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white) ![Flutter](https://img.shields.io/badge/Flutter-3.41.9-02569B?logo=flutter&logoColor=white) ![Open Source](https://img.shields.io/badge/open%20source-MIT-8B5CF6) ![Privacy Focused](https://img.shields.io/badge/privacy%20focused-FF4B72) ![Free Download](https://img.shields.io/badge/download-free-2E9E6B) [![Latest release](https://img.shields.io/github/v/release/zypherlabs-bit/Weekend)](https://github.com/zypherlabs-bit/Weekend/releases/latest)
 
 </div>
 
@@ -111,13 +106,7 @@ Full setup, permissions and troubleshooting: [docs/installation.md](docs/install
 
 ## Technology
 
-<img src="https://img.shields.io/badge/Flutter-3.41.9-02569B?logo=flutter&logoColor=white" alt="Flutter 3.41.9" width="96" />
-<img src="https://img.shields.io/badge/Dart-3.11.5-0175C2?logo=dart&logoColor=white" alt="Dart 3.11.5" width="86" />
-<img src="https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin" width="82" />
-<img src="https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white" alt="Supabase" width="98" />
-<img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" width="110" />
-<img src="https://img.shields.io/badge/PostGIS-4B8B3B?logo=postgresql&logoColor=white" alt="PostGIS" width="92" />
-<img src="https://img.shields.io/badge/GitHub%20Actions-2088FF?logo=github-actions&logoColor=white" alt="GitHub Actions" width="132" />
+<img src="https://img.shields.io/badge/Flutter-3.41.9-02569B?logo=flutter&logoColor=white" alt="Flutter 3.41.9" /><img src="https://img.shields.io/badge/Dart-3.11.5-0175C2?logo=dart&logoColor=white" alt="Dart 3.11.5" /><img src="https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin" /><img src="https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white" alt="Supabase" /><img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" /><img src="https://img.shields.io/badge/PostGIS-4B8B3B?logo=postgresql&logoColor=white" alt="PostGIS" /><img src="https://img.shields.io/badge/GitHub%20Actions-2088FF?logo=github-actions&logoColor=white" alt="GitHub Actions" />
 
 | Layer | Technology |
 |-------|------------|

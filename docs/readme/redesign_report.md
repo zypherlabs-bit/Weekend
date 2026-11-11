@@ -175,6 +175,19 @@ Other documents deep-link into the README, so these headings were kept exactly:
   `applicationId`, the signing configuration and the release workflow are
   untouched, as the brief requires.
 
+### A GitHub rendering gotcha worth knowing
+
+GitHub starts a new HTML block for every line that begins with a tag. The
+technology badges were originally written one `<img>` per line, so GitHub
+rendered them as a **vertical stack** even though the source looked like a
+row. Putting the badges on a single line restores the horizontal run; the
+rendered HTML now contains no `<br>` between them.
+
+The fixed `width` attributes were dropped at the same time — they scaled each
+shield to a different height and left the row with a ragged baseline. At their
+natural size every badge is the same height and lines up. The rule is now
+recorded in `docs/SEO.md` so it is not reintroduced.
+
 ---
 
 ## 5. Verified links

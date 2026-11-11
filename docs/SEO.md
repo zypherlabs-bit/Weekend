@@ -64,6 +64,11 @@ Rules:
 
 - Every `<img>` needs meaningful **alt text** containing the keyword context
   (for example: *"Weekend artwork — friends meeting, free dating app for Android"*).
+- **Keep a run of badges on a single line.** GitHub starts a new HTML block
+  for every line that begins with a tag, so one `<img>` per line renders as a
+  vertical stack. Put them all on one line and the row stays horizontal. Leave
+  the `width` attribute off shields.io badges too — a fixed width scales each
+  badge to a different height and leaves the row with a ragged baseline.
 - Images must be **honest**: artwork is labelled artwork; only captures of the
   running app may be called screenshots. Every screenshot in the README is
   produced by the capture harness in `tool/readme_capture/`, which renders the

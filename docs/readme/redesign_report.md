@@ -171,9 +171,9 @@ Other documents deep-link into the README, so these headings were kept exactly:
   file already holds uncommitted edits belonging to a different work item, and
   the brief asked for the README and asset changes only. Add the entry when
   that other change lands.
-- **No repository metadata update.** The description, the topics and the
-  social preview image are set through the GitHub API, which needs an
-  authenticated CLI. See limitation 7.6.
+- **No change to the repository name, package name or release pipeline.** The
+  `applicationId`, the signing configuration and the release workflow are
+  untouched, as the brief requires.
 
 ---
 
@@ -213,6 +213,25 @@ matches pubspec".
 | Static analysis | `flutter analyze` | no issues in the whole package |
 | Unit and widget tests | `flutter test` | see §8 |
 | Capture harness | `flutter test tool/readme_capture/` | 7 screens, all pass |
+
+---
+
+## 6.1 Published
+
+| Item | Where |
+|------|-------|
+| Commit | `docs: rebuild the GitHub landing page as a premium product page`, on `master` |
+| README | https://github.com/zypherlabs-bit/Weekend |
+| Assets | https://github.com/zypherlabs-bit/Weekend/tree/master/assets/readme |
+| Repository description | updated through the REST API |
+| Repository topics | 14 focused topics, updated through the REST API |
+| Social preview | still to be set by a maintainer — see limitation 7.6 |
+
+The commit was rebased onto `origin/master` before pushing; the nine upstream
+`chore(analytics): daily snapshot` commits touched only
+`docs/analytics/data/daily.json`. Unrelated in-progress work in the working
+tree (the VPN security channel and the Android package rename) was left
+unstaged and byte-for-byte unchanged.
 
 ---
 
@@ -259,13 +278,32 @@ Play Store badge is shown for the same reason.
 current release. The security policy itself was not changed, per the brief;
 this is a documentation follow-up.
 
-### 7.6 Repository metadata could not be updated automatically
+### 7.6 Repository metadata: published, with one manual step left
 
-The GitHub CLI is not authenticated in this environment. The repository
-description and topics are already accurate and were left unchanged. The
-social preview image has to be set by a maintainer:
+The GitHub repository settings were updated through the REST API:
 
-- Recommended: `assets/readme/weekend-hero.png` (1280 × 640)
+- **Description** — now
+  *"An open-source Android dating and social discovery app. Discover nearby
+  people, match, chat and make real-world plans."*
+- **Topics** — 14 focused tags, down from 20 with duplicates:
+  `android`, `dart`, `dating-app`, `flutter`, `kotlin`, `location-based`,
+  `matchmaking`, `open-source`, `postgis`, `postgresql`, `privacy`,
+  `real-time-chat`, `social-discovery`, `supabase`.
+  Removed as redundant or filler: `dating` (duplicated `dating-app`),
+  `open-source-app` (duplicated `open-source`), `mobile-app`,
+  `social-network` (duplicated `social-discovery`), `weekend` (brand term, not
+  a search term) and `ai-moderation`.
+
+**The custom social preview image still has to be set by a maintainer.** GitHub
+exposes no public API for it — `PATCH /repos/{owner}/{repo}` silently ignores a
+`social_preview` field and there is no `PUT /social-preview` route. Set it in
+the browser:
+
+> Repository → Settings → General → Social preview → Upload
+> `assets/readme/weekend-hero.png` (1280 × 640)
+
+Until that is done, shared links use the repository's default preview rather
+than the Weekend banner.
 
 ### 7.7 Passkeys remain disabled server-side
 

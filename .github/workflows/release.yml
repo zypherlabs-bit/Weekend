@@ -90,6 +90,14 @@ jobs:
           ALLOW_DEBUG_SIGNING: "true"
 
       - name: Log passkey configuration
+        env:
+          # Same reason as the build step above: this is a diagnostic task that
+          # only prints the relying-party ID and the signing-certificate
+          # digest. The release-signing guard is evaluated when Gradle
+          # configures the project, so it rejects the invocation before the
+          # task body ever runs unless the opt-in is set - and CI has no
+          # keystore. Nothing is signed or published by this step.
+          ALLOW_DEBUG_SIGNING: "true"
         run: |
           cd android
           ./gradlew :app:logPasskeyConfig --console=plain

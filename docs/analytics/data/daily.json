@@ -2,13 +2,13 @@
   "schema_version": 1,
   "timezone": "UTC",
   "tracking_started": "2026-09-23",
-  "generated_at": "2026-11-11T04:43:17Z",
+  "generated_at": "2026-11-12T05:45:49Z",
   "apk": {
-    "live_downloads": 137,
+    "live_downloads": 140,
     "archived_downloads": 3,
-    "total_downloads": 140,
+    "total_downloads": 143,
     "asset_counts": {
-      "app-release.apk": 47,
+      "app-release.apk": 50,
       "Weekend-v2.8.2-fullscreen-photo.apk": 2,
       "Weekend-v2.8.2-release.apk": 16,
       "Weekend-v2.8.1-release.apk": 5,
@@ -29,7 +29,7 @@
     "version": "2.8.5",
     "published_at": "2026-11-01T05:43:01Z",
     "apk_asset": "app-release.apk",
-    "apk_downloads": 23,
+    "apk_downloads": 26,
     "sha256": null
   },
   "days": [
@@ -602,8 +602,8 @@
     },
     {
       "date": "2026-11-10",
-      "repository_views": null,
-      "repository_unique_visitors": null,
+      "repository_views": 2,
+      "repository_unique_visitors": 2,
       "repository_clones": null,
       "repository_unique_cloners": null,
       "apk_downloads_daily": 0,
@@ -611,17 +611,26 @@
     },
     {
       "date": "2026-11-11",
-      "repository_views": null,
-      "repository_unique_visitors": null,
+      "repository_views": 29,
+      "repository_unique_visitors": 12,
       "repository_clones": null,
       "repository_unique_cloners": null,
       "apk_downloads_daily": 2,
       "apk_downloads_cumulative": 140
+    },
+    {
+      "date": "2026-11-12",
+      "repository_views": null,
+      "repository_unique_visitors": null,
+      "repository_clones": null,
+      "repository_unique_cloners": null,
+      "apk_downloads_daily": 3,
+      "apk_downloads_cumulative": 143
     }
   ],
   "traffic_window_totals": {
-    "views": 187,
-    "unique_visitors": 61
+    "views": 176,
+    "unique_visitors": 57
   },
-  "traffic_fetched_at": "2026-11-11T04:43:16Z"
+  "traffic_fetched_at": "2026-11-12T05:45:48Z"
 }

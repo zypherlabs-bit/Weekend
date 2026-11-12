@@ -10,7 +10,7 @@
 
 A free, open source dating app for Android, with social discovery built in.
 
-[Download APK](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.8.5/app-release.apk)
+[Download APK](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.8.6/app-release.apk)
 · [Test builds](https://github.com/zypherlabs-bit/Weekend/releases/latest)
 · [Screenshots](#app-preview)
 · [Documentation](docs/README.md)
@@ -95,7 +95,7 @@ Privacy details: [docs/privacy.md](docs/privacy.md) · Security model: [docs/sec
 
 ## Quick start
 
-1. **Download** the APK from the [latest release](https://github.com/zypherlabs-bit/Weekend/releases/latest). Current version: v2.8.5
+1. **Download** the APK from the [latest release](https://github.com/zypherlabs-bit/Weekend/releases/latest). Current version: v2.8.6
 2. **Install** it — allow installs from unknown sources the first time.
 3. **Create a profile** — add photos, a few interests and how you describe yourself.
 4. **Discover and connect** — nearby people appear first; like, match, chat and make a plan.

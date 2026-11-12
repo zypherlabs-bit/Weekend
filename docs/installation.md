@@ -27,7 +27,7 @@ are only used for the features that need them.
 
 1. Open the [latest release](https://github.com/zypherlabs-bit/Weekend/releases/latest).
 2. Download the current APK asset — for the current release that is
-   [`app-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.8.5/app-release.apk) (~125 MB).
+   [`app-release.apk`](https://github.com/zypherlabs-bit/Weekend/releases/download/v2.8.6/app-release.apk) (~125 MB).
 3. Optionally download the matching checksum file, if the release page lists
    one (`<asset>.sha256`).
 
@@ -92,6 +92,15 @@ file manager, and confirm you downloaded it from
 Download the newest APK from the [releases page](https://github.com/zypherlabs-bit/Weekend/releases)
 and install it over the existing app. Android keeps your data as long as the
 package (`com.zypherlabs.weekend`) and signing key are unchanged.
+
+> **Upgrading from v2.8.5 or earlier?** Those builds were published under the
+> package `com.weekend.app`. v2.8.6 is the first build published as
+> `com.zypherlabs.weekend`, and Android treats a different package name as a
+> **different app**. Installing it will therefore **not** upgrade the previous
+> one: both will be present on the device. Uninstall `com.weekend.app` first
+> if you want only the new one, then install the new APK. Your account lives
+> on the server, so signing in again with the same email and password restores
+> everything.
 
 ---
 

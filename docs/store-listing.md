@@ -2,8 +2,8 @@
 
 **App:** Weekend — Dating & Matchmaking
 **Package:** `com.zypherlabs.weekend`
-**Version:** 2.7.0 (`versionCode` 12)
-**Date:** 2026-10-02
+**Version:** 2.8.6 (`versionCode` 19)
+**Date:** 2026-11-12
 
 Every feature claimed below exists in `lib/features/` and was checked against the
 source. No invented statistics, no fabricated reviews, no competitor

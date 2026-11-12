@@ -13,6 +13,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Pin the JDK before anything else runs Gradle.
+      #
+      # The `ubuntu-latest` runner image moved to Ubuntu 26.04 on 2026-11-01
+      # (image 20261101.186.1), and its default JDK changed from 17 to 25.0.5.
+      # AGP 8.11.1 does not support Java 25, so the build fails during
+      # configuration with the bare version string as the whole error message:
+      #
+      #   FAILURE: Build failed with an exception.
+      #   * What went wrong:
+      #   25.0.5
+      #
+      # Nothing in this repository changed at that point - it is the runner
+      # image moving underneath us. Pinning the JDK keeps the build
+      # reproducible regardless of which image `ubuntu-latest` points at, and
+      # matches the JDK the project actually builds with (JDK 17, see
+      # `android/app/build.gradle.kts`).
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:

@@ -12,6 +12,12 @@ handful of conventions that are worth stating once:
 
 ## [Unreleased]
 
+## [2.8.6] - 2026-11-12
+
+Android identity release. The package name moved from `com.weekend.app` to
+`com.zypherlabs.weekend` because Google Play Console reported the old name as
+already in use, so this is the first build published under the new name.
+
 ### Changed
 - **Android package name migrated to `com.zypherlabs.weekend`** (was
   `com.weekend.app`), because Google Play Console reported the old package
@@ -24,8 +30,19 @@ handful of conventions that are worth stating once:
   [docs/android/package_migration_report.md](docs/android/package_migration_report.md);
   manual Play Console steps:
   [docs/android/google_play_setup.md](docs/android/google_play_setup.md).
+
+  **This is a different Android app, not an update.** The previous
+  `com.weekend.app` build is not replaced by this one; it installs alongside
+  it. Moving existing users across requires Play's own app-bundle migration
+  or credential-transfer process, which is out of scope here.
 - **R8 keep rules extended for the new Android package** so the native
   VPN-detection channel handlers survive minification.
+- **CI and release workflows pin JDK 17.** The `ubuntu-latest` runner image
+  moved to Ubuntu 26.04 on 2026-11-01 and its default JDK changed from 17 to
+  25.0.5, which AGP 8.11.1 rejects; the build failed with the bare string
+  `25.0.5` as the entire error message. Nothing in the repository changed at
+  that point. The workflows now set the JDK explicitly so the build does not
+  depend on which image `ubuntu-latest` points at.
 
 ### Added - v2.8.4
 - **Forgot password flow** on the sign-in screen: "Forgot password?" link, dedicated reset-request screen with neutral confirmation messaging, new-password screen, and Supabase Auth `resetPasswordForEmail` integration.

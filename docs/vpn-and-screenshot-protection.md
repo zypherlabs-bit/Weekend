@@ -23,7 +23,7 @@ VPN is malicious.
 
 | Layer | File | Responsibility |
 |---|---|---|
-| Native detector | `android/app/src/main/kotlin/com/weekend/app/VpnSecurityChannel.kt` | Reads `ConnectivityManager` + `NetworkCapabilities.TRANSPORT_VPN`; exposes a `MethodChannel` (`check`) and an `EventChannel` for network changes |
+| Native detector | `android/app/src/main/kotlin/com/zypherlabs/weekend/VpnSecurityChannel.kt` | Reads `ConnectivityManager` + `NetworkCapabilities.TRANSPORT_VPN`; exposes a `MethodChannel` (`check`) and an `EventChannel` for network changes |
 | Channel client | `lib/services/vpn_security_service.dart` | Maps the native payload into `VpnDetectionResult`; returns `unsupported` on non-Android platforms |
 | Reactive state | `lib/providers/vpn_security_provider.dart` | Single source of truth, one check at a time, remembers the blocked destination |
 | Route policy | `lib/routing/vpn_route_guard.dart` | Pure allow/redirect decisions, unit-tested without GoRouter |

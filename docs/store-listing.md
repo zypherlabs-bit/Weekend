@@ -1,7 +1,7 @@
 # Store Listing — Google Play
 
 **App:** Weekend — Dating & Matchmaking
-**Package:** `com.weekend.app`
+**Package:** `com.zypherlabs.weekend`
 **Version:** 2.7.0 (`versionCode` 12)
 **Date:** 2026-10-02
 
@@ -17,7 +17,7 @@ and the limit noted.
 | Field | Value | Limit |
 |---|---|---|
 | App name | Weekend — Dating & Matchmaking | 30 chars — **fits exactly** |
-| Package | `com.weekend.app` | fixed |
+| Package | `com.zypherlabs.weekend` | fixed |
 | Default language | English | |
 | Category | Dating | |
 | Tags | Dating, Relationships, Social Networking | |

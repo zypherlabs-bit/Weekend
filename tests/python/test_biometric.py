@@ -17,6 +17,8 @@ pass.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from conftest import connected_devices
 from weekend_checks import (
     REPO_ROOT as PROJECT_ROOT,
@@ -30,18 +32,22 @@ APP_LOCK = PROJECT_ROOT / "lib" / "services" / "app_lock_service.dart"
 BIOMETRIC_SERVICE = PROJECT_ROOT / "lib" / "services" / "biometric_auth_service.dart"
 LOCK_GATE = PROJECT_ROOT / "lib" / "features" / "auth" / "biometric_lock_gate.dart"
 MAIN = PROJECT_ROOT / "lib" / "main.dart"
-MAIN_ACTIVITY = (
-    PROJECT_ROOT
-    / "android"
-    / "app"
-    / "src"
-    / "main"
-    / "kotlin"
-    / "com"
-    / "weekend"
-    / "app"
-    / "MainActivity.kt"
+# MainActivity is discovered rather than addressed by a hard-coded package
+# path. The Android package name changed to `com.zypherlabs.weekend`, and a
+# literal path here silently became an empty string (read_text returns "" for
+# a missing file), so the assertion failed with a confusing message instead of
+# pointing at the moved file. Globbing the Kotlin source root keeps this check
+# correct across any future package rename.
+KOTLIN_ROOT = (
+    PROJECT_ROOT / "android" / "app" / "src" / "main" / "kotlin"
 )
+
+
+def main_activity_sources() -> list[Path]:
+    """Every MainActivity.kt under the Android Kotlin source root."""
+    if not KOTLIN_ROOT.exists():
+        return []
+    return sorted(KOTLIN_ROOT.rglob("MainActivity.kt"))
 
 
 def strip_dart_comments(source: str) -> str:
@@ -271,11 +277,18 @@ def test_failure_paths_are_handled() -> CheckResult:
 
 def test_fragment_activity_is_preserved() -> CheckResult:
     """BiometricPrompt needs a FragmentActivity; MainActivity must stay one."""
-    src = read(MAIN_ACTIVITY)
-    assert "FlutterFragmentActivity" in src, (
-        "a plain FlutterActivity makes BiometricPrompt return "
-        "LocalAuthExceptionCode.uiUnavailable on every attempt"
+    sources = main_activity_sources()
+    assert sources, (
+        "no MainActivity.kt found under "
+        f"{KOTLIN_ROOT} - the Android entry point is missing"
     )
+    for path in sources:
+        src = read(path)
+        assert "FlutterFragmentActivity" in src, (
+            "a plain FlutterActivity makes BiometricPrompt return "
+            "LocalAuthExceptionCode.uiUnavailable on every attempt "
+            f"({path.name})"
+        )
     return CheckResult(
         name="MainActivity is a FragmentActivity",
         status=Status.PASS,

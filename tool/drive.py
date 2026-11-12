@@ -84,7 +84,7 @@ def main() -> int:
         for s in dump_text():
             print("  -", s)
     elif cmd == "launch":
-        adb("shell", "am", "start", "-n", "com.weekend.app/.MainActivity")
+        adb("shell", "am", "start", "-n", "com.zypherlabs.weekend/.MainActivity")
         time.sleep(float(sys.argv[2]) if len(sys.argv) > 2 else 8)
     else:
         print(__doc__)

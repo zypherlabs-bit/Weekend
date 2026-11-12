@@ -30,11 +30,11 @@ def _merged_manifest() -> Path:
 
 
 class TestReleaseMetadata:
-    def test_application_id_matches_com_weekend_app(self) -> None:
+    def test_application_id_matches_com_zypherlabs_weekend(self) -> None:
         m = re.search(r"applicationId\s*=\s*\"([^\"]+)\"", _read(GRADLE))
         assert m, "applicationId not found in build.gradle.kts"
         app_id = m.group(1)
-        assert app_id == "com.weekend.app", f"Application ID is {app_id}, expected com.weekend.app"
+        assert app_id == "com.zypherlabs.weekend", f"Application ID is {app_id}, expected com.zypherlabs.weekend"
 
     def test_namespace_matches_application_id(self) -> None:
         ns = re.search(r"namespace\s*=\s*\"([^\"]+)\"", _read(GRADLE))

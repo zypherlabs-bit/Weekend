@@ -1,4 +1,4 @@
-package com.weekend.app
+package com.zypherlabs.weekend
 
 import android.os.Build
 import android.os.Bundle

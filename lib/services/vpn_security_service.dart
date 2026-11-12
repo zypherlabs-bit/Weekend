@@ -121,8 +121,8 @@ class PlatformVpnDetectionService implements VpnDetectionService {
   }) : _methodChannel = methodChannel,
        _eventChannel = eventChannel;
 
-  static const _methodChannelName = 'com.weekend.app/vpn_security';
-  static const _eventChannelName = 'com.weekend.app/vpn_security_events';
+  static const _methodChannelName = 'com.zypherlabs.weekend/vpn_security';
+  static const _eventChannelName = 'com.zypherlabs.weekend/vpn_security_events';
 
   final MethodChannel _methodChannel;
   final EventChannel _eventChannel;

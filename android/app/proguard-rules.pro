@@ -53,6 +53,19 @@
 # Don't obfuscate model classes
 -keep class weekend.models.** { *; }
 
+# Weekend's own Android host classes (com.zypherlabs.weekend).
+#
+# MainActivity is referenced from AndroidManifest.xml, but VpnSecurityChannel is
+# instantiated from Kotlin and its MethodChannel / EventChannel names are
+# matched by string on the Dart side. R8 cannot see those string matches, so
+# the channel name constants and the handler methods must survive shrinking
+# and renaming - otherwise the Dart side waits forever on a channel whose
+# handler was renamed away.
+-keep class com.zypherlabs.weekend.** { *; }
+-keepclassmembers class com.zypherlabs.weekend.** {
+    public static final java.lang.String *;
+}
+
 # OkHttp
 -keep class okhttp3.** { *; }
 -keep class okio.** { *; }

@@ -29,9 +29,9 @@ BUTTON_SIGN_IN = (540, 993)
 
 
 def main() -> int:
-    adb("shell", "am", "force-stop", "com.weekend.app")
+    adb("shell", "am", "force-stop", "com.zypherlabs.weekend")
     adb("logcat", "-c")
-    adb("shell", "am", "start", "-n", "com.weekend.app/.MainActivity")
+    adb("shell", "am", "start", "-n", "com.zypherlabs.weekend/.MainActivity")
     time.sleep(12)
     screenshot("si_0_launch")
 

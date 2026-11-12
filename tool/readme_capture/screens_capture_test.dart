@@ -198,7 +198,9 @@ void main() {
       await tester.pumpWidget(
         host(
           const Scaffold(body: ExploreScreen()),
-          overrides: [weekendProvider.overrideWith((ref) => _FakeNotifier(state))],
+          overrides: [
+            weekendProvider.overrideWith((ref) => _FakeNotifier(state)),
+          ],
         ),
       );
       await settle(tester);
@@ -239,7 +241,9 @@ void main() {
       await tester.pumpWidget(
         host(
           const Scaffold(body: MatchesScreen()),
-          overrides: [weekendProvider.overrideWith((ref) => _FakeNotifier(state))],
+          overrides: [
+            weekendProvider.overrideWith((ref) => _FakeNotifier(state)),
+          ],
         ),
       );
       await settle(tester);
@@ -271,7 +275,9 @@ void main() {
       await tester.pumpWidget(
         host(
           const Scaffold(body: ProfileScreen()),
-          overrides: [weekendProvider.overrideWith((ref) => _FakeNotifier(state))],
+          overrides: [
+            weekendProvider.overrideWith((ref) => _FakeNotifier(state)),
+          ],
         ),
       );
       await settle(tester);
@@ -293,12 +299,7 @@ void main() {
 
       final state = WeekendState(
         currentUser: demoCurrentUser(),
-        plans: [
-          demoPlan(0),
-          demoPlan(1),
-          demoPlan(2),
-          demoPlan(3),
-        ],
+        plans: [demoPlan(0), demoPlan(1), demoPlan(2), demoPlan(3)],
         referralData: const ReferralData(code: 'WEEKEND-ALEX'),
         selectedMode: DiscoveryMode.forYou,
       );
@@ -306,7 +307,9 @@ void main() {
       await tester.pumpWidget(
         host(
           const Scaffold(body: PlansScreen()),
-          overrides: [weekendProvider.overrideWith((ref) => _FakeNotifier(state))],
+          overrides: [
+            weekendProvider.overrideWith((ref) => _FakeNotifier(state)),
+          ],
         ),
       );
       await settle(tester);
@@ -337,7 +340,9 @@ void main() {
       await tester.pumpWidget(
         host(
           const Scaffold(body: SafetyCenterScreen()),
-          overrides: [weekendProvider.overrideWith((ref) => _FakeNotifier(state))],
+          overrides: [
+            weekendProvider.overrideWith((ref) => _FakeNotifier(state)),
+          ],
         ),
       );
       await settle(tester);
@@ -355,16 +360,16 @@ void main() {
 /// A notifier that holds the fixture state and never talks to a backend.
 class _FakeNotifier extends WeekendNotifier {
   _FakeNotifier(WeekendState state)
-      : super(
-          discoveryRepository: DiscoveryRepository(),
-          profileRepository: ProfileRepository(),
-          matchRepository: MatchRepository(),
-          messageRepository: MessageRepository(),
-          planRepository: PlanRepository(),
-          safetyRepository: SafetyRepository(),
-          dateIdeasRepository: DateIdeasRepository(),
-          initialState: state,
-        );
+    : super(
+        discoveryRepository: DiscoveryRepository(),
+        profileRepository: ProfileRepository(),
+        matchRepository: MatchRepository(),
+        messageRepository: MessageRepository(),
+        planRepository: PlanRepository(),
+        safetyRepository: SafetyRepository(),
+        dateIdeasRepository: DateIdeasRepository(),
+        initialState: state,
+      );
 }
 
 /// The Discover header shows the surge banner when the server reports an

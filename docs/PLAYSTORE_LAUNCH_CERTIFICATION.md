@@ -1,6 +1,6 @@
 ﻿# WEEKEND — GOOGLE PLAY LAUNCH CERTIFICATION
 
-**App:** Weekend — Dating & Matchmaking (`com.weekend.app`)
+**App:** Weekend — Dating & Matchmaking (`com.zypherlabs.weekend`)
 **Version:** 2.7.0 (`versionCode` 12)
 **Date:** 2026-10-02
 **Base commit:** `8d01432` on `master`
@@ -114,7 +114,7 @@ targetSdk              36   (aapt2 badging)
 minSdk                 24
 versionName            2.7.0
 versionCode            12
-package ID             com.weekend.app
+package ID             com.zypherlabs.weekend
 ```
 
 Artifacts produced 2026-10-02:

@@ -12,6 +12,21 @@ handful of conventions that are worth stating once:
 
 ## [Unreleased]
 
+### Changed
+- **Android package name migrated to `com.zypherlabs.weekend`** (was
+  `com.weekend.app`), because Google Play Console reported the old package
+  name as already in use. The Gradle `namespace` and `applicationId`, the
+  Kotlin source package and directory layout, the native VPN-detection
+  platform-channel names, the generated Digital Asset Links statement, the
+  `adb` helpers and the documentation were all updated together. The release
+  signing key, the Supabase project, the database, the RLS policies and the
+  app name `Weekend` are unchanged. Full report:
+  [docs/android/package_migration_report.md](docs/android/package_migration_report.md);
+  manual Play Console steps:
+  [docs/android/google_play_setup.md](docs/android/google_play_setup.md).
+- **R8 keep rules extended for the new Android package** so the native
+  VPN-detection channel handlers survive minification.
+
 ### Added - v2.8.4
 - **Forgot password flow** on the sign-in screen: "Forgot password?" link, dedicated reset-request screen with neutral confirmation messaging, new-password screen, and Supabase Auth `resetPasswordForEmail` integration.
 
@@ -228,7 +243,7 @@ Client side:
 - `flutter analyze`: no issues.
 - `flutter test`: 310/310 passing (295 existing + 15 new contract tests).
 - Release APK built locally with the dedicated `weekend-release-key`
-  keystore (RSA-4096, valid to 2054) and verified: package `com.weekend.app`,
+  keystore (RSA-4096, valid to 2054) and verified: package `com.zypherlabs.weekend`,
   version 2.8.0 (code 13), V2 signature fingerprint matching the documented
   SHA-256.
 
@@ -1024,7 +1039,7 @@ confirmation can complete on a phone:
 
 - All 94 automated tests pass.
 - Flutter analyze reports no issues.
-- APK signed and verified: package `com.weekend.app`, version 2.2.0 (code 4),
+- APK signed and verified: package `com.zypherlabs.weekend`, version 2.2.0 (code 4),
   minSdk 24, targetSdk 36.
 - SHA-256: `592BFAD4772B37E5C01144C11854D84AD14774734DDF31F65FC80701B602F4FB`
 

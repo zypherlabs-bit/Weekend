@@ -334,7 +334,11 @@ class FixtureServer {
             ..headers.contentType = ContentType.json
             ..write(
               jsonEncode([
-                {'id': 'conv_0', 'match_id': 'match_0', 'created_at': '2026-11-01'},
+                {
+                  'id': 'conv_0',
+                  'match_id': 'match_0',
+                  'created_at': '2026-11-01',
+                },
               ]),
             );
           await request.response.close();
@@ -407,10 +411,7 @@ class FixtureServer {
 /// during a build never completes. Warming the image cache from the real
 /// async zone means the screen finds every image already resolved and paints
 /// it on the first frame.
-Future<void> precacheFixtures(
-  BuildContext context,
-  List<String> urls,
-) async {
+Future<void> precacheFixtures(BuildContext context, List<String> urls) async {
   final configuration = createLocalImageConfiguration(context);
   for (final url in urls) {
     await _precache(NetworkImage(url), configuration);
@@ -424,18 +425,20 @@ Future<void> _precache(
 ) async {
   try {
     final completer = Completer<void>();
-    provider.resolve(configuration).addListener(
-      ImageStreamListener(
-        (ImageInfo image, bool synchronous) {
-          if (!completer.isCompleted) completer.complete();
-        },
-        onError: (Object error, StackTrace? stackTrace) {
-          // ignore: avoid_print
-          print('[precache] ${provider.runtimeType} failed: $error');
-          if (!completer.isCompleted) completer.complete();
-        },
-      ),
-    );
+    provider
+        .resolve(configuration)
+        .addListener(
+          ImageStreamListener(
+            (ImageInfo image, bool synchronous) {
+              if (!completer.isCompleted) completer.complete();
+            },
+            onError: (Object error, StackTrace? stackTrace) {
+              // ignore: avoid_print
+              print('[precache] ${provider.runtimeType} failed: $error');
+              if (!completer.isCompleted) completer.complete();
+            },
+          ),
+        );
     await completer.future;
   } catch (error) {
     // ignore: avoid_print
@@ -473,9 +476,7 @@ Future<void> loadRealFonts() async {
 }
 
 ByteData? _readFont(Directory directory, String name) {
-  final file = File(
-    '${directory.path}${Platform.pathSeparator}$name',
-  );
+  final file = File('${directory.path}${Platform.pathSeparator}$name');
   if (!file.existsSync()) return null;
   return ByteData.sublistView(file.readAsBytesSync());
 }

@@ -1,6 +1,6 @@
 # WEEKEND — GOOGLE PLAY FINAL CERTIFICATION
 
-**App:** Weekend — Dating & Matchmaking (`com.weekend.app`)
+**App:** Weekend — Dating & Matchmaking (`com.zypherlabs.weekend`)
 **Version:** 2.7.0 · `versionCode` 12
 **Date:** 2026-10-02
 **Audit baseline:** `8d01432` on `master`

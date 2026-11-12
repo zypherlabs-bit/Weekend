@@ -153,10 +153,10 @@ for operational setup.
 
 ## 5. Android host layer
 
-- `android/app/src/main/kotlin/com/weekend/app/MainActivity.kt` — a
+- `android/app/src/main/kotlin/com/zypherlabs/weekend/MainActivity.kt` — a
   `FlutterActivity`, i.e. the Kotlin entry point that hosts the Flutter engine.
 - `android/app/build.gradle.kts` — Gradle Kotlin DSL, JDK 17, `applicationId`
-  `com.weekend.app`, release signing read from an untracked `key.properties`.
+  `com.zypherlabs.weekend`, release signing read from an untracked `key.properties`.
 - `android/app/src/main/AndroidManifest.xml` — declares only the permissions the
   features need (internet, network state, camera, location, notifications), sets
   `usesCleartextTraffic="false"`, `allowBackup="false"` and a network security

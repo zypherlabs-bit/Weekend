@@ -23,6 +23,8 @@ than shipped, it is marked as such.
 | [readme/redesign_report.md](readme/redesign_report.md) | Maintainers | The GitHub landing page redesign: assets, capture method, verified links, open findings |
 | [testing.md](testing.md) | Contributors | Test suites, commands, conventions |
 | [contributing.md](contributing.md) | Contributors | Workflow, standards, review expectations |
+| [android/package_migration_report.md](android/package_migration_report.md) | Maintainers / release engineers | The `com.weekend.app` → `com.zypherlabs.weekend` package migration: files changed, external services, build and test results, remaining manual steps |
+| [android/google_play_setup.md](android/google_play_setup.md) | Release engineers | Manual Google Play Console checklist for publishing under the new package name |
 
 Related project files:
 

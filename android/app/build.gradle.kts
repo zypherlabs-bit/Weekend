@@ -122,7 +122,7 @@ tasks.register("logPasskeyConfig") {
                 "Serve this at https://$rpId/.well-known/assetlinks.json:",
             )
             logger.lifecycle(
-                """[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.weekend.app","sha256_cert_fingerprints":["$digest"]}}]""",
+                """[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"android_app","package_name":"com.zypherlabs.weekend","sha256_cert_fingerprints":["$digest"]}}]""",
             )
         }
         logger.lifecycle("------------------------------------------------")
@@ -130,7 +130,7 @@ tasks.register("logPasskeyConfig") {
 }
 
 android {
-    namespace = "com.weekend.app"
+    namespace = "com.zypherlabs.weekend"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -146,7 +146,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.weekend.app"
+        applicationId = "com.zypherlabs.weekend"
         minSdk = 24  // Required for Credential Manager / Passkeys
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

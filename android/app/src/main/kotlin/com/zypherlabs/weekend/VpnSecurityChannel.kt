@@ -1,4 +1,4 @@
-package com.weekend.app
+package com.zypherlabs.weekend
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -192,7 +192,7 @@ class VpnSecurityChannel(
     )
 
     companion object {
-        const val METHOD_CHANNEL = "com.weekend.app/vpn_security"
-        const val EVENT_CHANNEL = "com.weekend.app/vpn_security_events"
+        const val METHOD_CHANNEL = "com.zypherlabs.weekend/vpn_security"
+        const val EVENT_CHANNEL = "com.zypherlabs.weekend/vpn_security_events"
     }
 }

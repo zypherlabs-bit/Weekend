@@ -6,7 +6,7 @@ Audited **28 Sep 2026** against the **live** Supabase project
 | | |
 |---|---|
 | Build | `app-release.apk`, 75.6 MB, SHA-256 `f9ff4f8a…265606` |
-| Package | `com.weekend.app` — versionName `2.3.1`, versionCode `6` |
+| Package | `com.zypherlabs.weekend` — versionName `2.3.1`, versionCode `6` |
 | Device | Android emulator `emulator-5554`, 1080x2400 @ 420 dpi (API 35) |
 | Branch | `fix/edit-profile-save-recovery` (base `master`) |
 | Host | Windows 11 25H2 (build 26200) |

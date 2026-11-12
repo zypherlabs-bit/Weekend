@@ -2,7 +2,7 @@
 
 | Requirement | Source | Evidence | Result |
 |---|---|---|---|
-| Application ID | AndroidManifest/Gradle | com.weekend.app | PASS |
+| Application ID | AndroidManifest/Gradle | com.zypherlabs.weekend | PASS |
 | Version name/code | pubspec/AAB | 2.8.4 / 17 | PASS |
 | Target SDK | AAB manifest | 36 | PASS |
 | Min SDK | AAB manifest | 24 | PASS |

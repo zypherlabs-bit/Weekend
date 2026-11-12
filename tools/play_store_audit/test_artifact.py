@@ -13,15 +13,29 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-ARTIFACTS = ROOT / "build" / "release"
+
+# Where release artifacts actually land.
+#
+# `flutter build apk --release` writes to build/app/outputs/flutter-apk/ and
+# `flutter build appbundle --release` writes to
+# build/app/outputs/bundle/release/. Older layouts used build/release/, and a
+# copy step may still place artifacts there, so every known location is
+# searched rather than a single hard-coded one. Searching only build/release
+# made these checks fail on a freshly built tree, because `flutter clean`
+# removes build/ entirely and no build recreates that directory.
+ARTIFACT_DIRS = (
+    ROOT / "build" / "app" / "outputs",
+    ROOT / "build" / "release",
+)
 
 
 def _find_artifact(extension: str) -> Path | None:
-    if not ARTIFACTS.exists():
-        return None
-    for p in ARTIFACTS.rglob(f"*{extension}"):
-        if p.is_file() and p.stat().st_size > 0:
-            return p
+    for directory in ARTIFACT_DIRS:
+        if not directory.exists():
+            continue
+        for p in directory.rglob(f"*{extension}"):
+            if p.is_file() and p.stat().st_size > 0:
+                return p
     return None
 
 
@@ -53,12 +67,16 @@ class TestArtifactExistence:
 
     def test_release_apk_exists(self) -> None:
         apk = _find_artifact("-release.apk")
-        assert apk is not None, "No release APK found under build/release"
+        assert apk is not None, (
+            "No release APK found; run `flutter build apk --release` first"
+        )
         assert apk.stat().st_size > 0, f"release APK is empty: {apk}"
 
     def test_release_aab_exists(self) -> None:
         aab = _find_artifact("-release.aab")
-        assert aab is not None, "No release AAB found under build/release"
+        assert aab is not None, (
+            "No release AAB found; run `flutter build appbundle --release` first"
+        )
         assert aab.stat().st_size > 0, f"release AAB is empty: {aab}"
 
     def test_artifact_not_empty(self) -> None:

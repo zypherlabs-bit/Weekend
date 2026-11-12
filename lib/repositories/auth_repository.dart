@@ -386,7 +386,7 @@ class AuthRepository {
   //   * Authentication -> Passkeys -> Enable Passkey authentication
   //   * a WebAuthn relying-party ID (`webauthn_rp_id`)
   //   * Digital Asset Links at https://<rp-id>/.well-known/assetlinks.json
-  //     naming `com.weekend.app` plus the SHA-256 of the signing certificate.
+  //     naming `com.zypherlabs.weekend` plus the SHA-256 of the signing certificate.
   //     Android Credential Manager refuses a passkey whose RP cannot be
   //     associated with this app, which surfaces as an opaque provider error.
 

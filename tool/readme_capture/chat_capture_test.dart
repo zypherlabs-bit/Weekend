@@ -145,16 +145,16 @@ void main() {
 /// A notifier that holds the fixture state and never talks to a backend.
 class _FakeNotifier extends WeekendNotifier {
   _FakeNotifier(WeekendState state)
-      : super(
-          discoveryRepository: DiscoveryRepository(),
-          profileRepository: ProfileRepository(),
-          matchRepository: MatchRepository(),
-          messageRepository: MessageRepository(),
-          planRepository: PlanRepository(),
-          safetyRepository: SafetyRepository(),
-          dateIdeasRepository: DateIdeasRepository(),
-          initialState: state,
-        );
+    : super(
+        discoveryRepository: DiscoveryRepository(),
+        profileRepository: ProfileRepository(),
+        matchRepository: MatchRepository(),
+        messageRepository: MessageRepository(),
+        planRepository: PlanRepository(),
+        safetyRepository: SafetyRepository(),
+        dateIdeasRepository: DateIdeasRepository(),
+        initialState: state,
+      );
 }
 
 /// `cached_network_image` asks the platform for a cache directory before it

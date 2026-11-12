@@ -34,7 +34,7 @@ from urllib.parse import urlparse
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ANDROID = ROOT / "android"
-PACKAGE = "com.weekend.app"
+PACKAGE = "com.zypherlabs.weekend"
 MISSING = "MISSING"
 
 

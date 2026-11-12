@@ -661,7 +661,7 @@ Continue with Passkey
 ```
 
 Then sign in again after **logout**, after **app restart**, and after **process
-death** (`adb shell am kill com.weekend.app`).
+death** (`adb shell am kill com.zypherlabs.weekend`).
 
 > Passkeys on a **release** build require `assetlinks.json` to list the release
 > certificate SHA-256. If this fails while the debug build works, the cause is

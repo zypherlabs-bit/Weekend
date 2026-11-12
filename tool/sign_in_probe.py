@@ -46,9 +46,9 @@ def main() -> int:
     e = env()
     email, password = e["PROBE_EMAIL"], e["PROBE_PASSWORD"]
 
-    adb("shell", "am", "force-stop", "com.weekend.app")
+    adb("shell", "am", "force-stop", "com.zypherlabs.weekend")
     adb("logcat", "-c")
-    adb("shell", "am", "start", "-n", "com.weekend.app/.MainActivity")
+    adb("shell", "am", "start", "-n", "com.zypherlabs.weekend/.MainActivity")
     time.sleep(10)
     screenshot("si_0_launch")
 

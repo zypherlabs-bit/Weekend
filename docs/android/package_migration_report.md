@@ -1,7 +1,7 @@
 # Android Package Migration Report — Weekend
 
 **Migration:** `com.weekend.app` → `com.zypherlabs.weekend`
-**Date:** 2026-11-11
+**Date:** 2026-11-11 (release v2.8.6 prepared 2026-11-12)
 **Status:** **CONDITIONALLY COMPLETE** — every locally verifiable check passed; Google Play Console and Firebase registration still require manual action.
 **App name (unchanged):** `Weekend`
 **Toolchain:** Flutter 3.41.9 / Dart 3.11.5, AGP 8.11.1, Kotlin 2.2.20, JDK 17.0.21
@@ -17,6 +17,7 @@
 | Android namespace | `com.zypherlabs.weekend` |
 | Launcher activity | `com.zypherlabs.weekend.MainActivity` |
 | Application label | `Weekend` (unchanged) |
+| Release version | 2.8.6 (`versionCode` 19) |
 | iOS bundle identifier | `com.aistudio.weekend.appwk.weekend` (unchanged — outside the scope of an Android package migration) |
 
 ### What the migration is, and is not
@@ -27,8 +28,19 @@ application ID when a Play listing is created and **it cannot be changed
 afterwards** for that listing. `com.zypherlabs.weekend` therefore requires its
 own Play Console listing, its own upload, and its own release track.
 
-The Android **signing key is unchanged** (see §7), so the uploaded AAB is
-signed by the same certificate the project already used.
+This was confirmed against the published artifacts rather than assumed: the
+v2.8.5 release APK on GitHub carries `com.weekend.app` / `versionCode` 18,
+while the v2.8.6 build carries `com.zypherlabs.weekend` / `versionCode` 19.
+**Both are signed by the same production certificate**
+(`CN=Weekend, O=ZypherLabs`, SHA-256
+`15b2f91aebc85bb26b647e94f9b3223689410b8ecf29dde798f9c5b0cc8c2594`), so the
+signing identity is continuous even though the package identity is not.
+
+Because the package name changed, Android treats v2.8.6 as a **different app**:
+installing it does **not** upgrade v2.8.5, and both can be present on one
+device. Moving existing users across requires Play's own app-bundle migration
+or credential-transfer process, which is out of scope here and is documented in
+`docs/android/google_play_setup.md` §0.
 
 ---
 
@@ -300,26 +312,32 @@ WebAuthn relying-party ID was resolved rather than left empty.
 | Test | `flutter test` | **All 386 tests passed** |
 | Release APK | `flutter build apk --release` | **OK** — `build/app/outputs/flutter-apk/app-release.apk`, 125.0 MB, 686.4 s |
 | Release AAB | `flutter build appbundle --release` | **OK** — `build/app/outputs/bundle/release/app-release.aab`, 104.8 MB, 86.3 s |
+| AAB validation | `bundletool validate` | **exit 0** |
+
+The suite was re-run after the release version bump to 2.8.6+19 with the same
+results: `flutter analyze` clean, 386 Flutter tests pass, 65 Play Store audit
+tests pass, and both release artifacts build and validate.
 
 ### Build metadata actually read back from the artifacts
 
 The application ID was confirmed from the **built binaries**, not from the
 Gradle configuration alone.
 
-`aapt2 dump badging` on the APK:
+`aapt2 dump badging` on the v2.8.6 APK:
 
 ```
-package: name='com.zypherlabs.weekend' versionCode='18' versionName='2.8.5'
+package: name='com.zypherlabs.weekend' versionCode='19' versionName='2.8.6'
          compileSdkVersion='36' targetSdkVersion='36'
 minSdkVersion:'24'
 application-label:'Weekend'
 launchable-activity: name='com.zypherlabs.weekend.MainActivity'
 ```
 
-`bundletool dump manifest` on the AAB:
+`bundletool dump manifest` on the v2.8.6 AAB:
 
 ```xml
-<manifest ... package="com.zypherlabs.weekend" ...>
+<manifest ... package="com.zypherlabs.weekend" android:versionCode="19"
+          android:versionName="2.8.6" ...>
   <activity android:name="com.zypherlabs.weekend.MainActivity" ...>
   <intent-filter android:autoVerify="true">
     <data android:host="ocypgybqfushqfzisnvs.supabase.co" android:scheme="https"/>
@@ -338,12 +356,15 @@ Byte-level check of the shipped APK's DEX and resources:
 | `com.zypherlabs.weekend/vpn_security_events` present | PASS |
 | `com.weekend.app` absent from the shipped binary | PASS |
 
+This check is now a permanent regression guard in
+`tools/play_store_audit/test_shipped_artifact.py`.
+
 ### Artifact identity
 
-| Artifact | Size | SHA-256 |
-|---|---|---|
-| `app-release.apk` | 125.0 MB | `127AB9EBCBCF7BC7E7C8F4FE423AA4037E73A88D23660D51372E5557BB8215FA` |
-| `app-release.aab` | 104.8 MB | `5B7720994E7D67584F8FC9ADA54318A05DBF6D366385D64D8A6F43020E7204E2` |
+| Artifact | Version | Size | SHA-256 |
+|---|---|---|---|
+| `app-release.apk` | 2.8.6 (19) | 125.0 MB | `CA28CE73F73F46AD3FE7A74FAA9D4F8C63A798C2B05F766992B0C1074F26C4E0` |
+| `app-release.aab` | 2.8.6 (19) | 104.8 MB | `FD6F67A487D79F7326B4FE34D1825998870F24DF10CB125287E0B8A6158D87A3` |
 
 ### Release signing
 
@@ -510,6 +531,31 @@ Weekend-controlled domain is required (this limitation predates the migration).
 The migration is complete in the working tree but **not committed**. Review and
 commit the changes, including the two Kotlin files under
 `android/app/src/main/kotlin/com/zypherlabs/weekend/` (currently untracked).
+
+### CI (fixed, but worth knowing why)
+
+Both GitHub workflows were failing on **every commit from 2026-11-01 until the
+v2.8.6 release**, including the package-migration commit. This was **not**
+caused by the migration: the last successful CI run was 2026-10-24 and the
+first failure was 2026-11-01, with no change to `android/`, `pubspec.yaml` or
+the workflows in between.
+
+The cause is the GitHub-hosted runner image. `ubuntu-latest` moved to Ubuntu
+26.04 on 2026-11-01 (image `20261101.186.1`) and its **default JDK changed
+from 17 to 25.0.5**. AGP 8.11.1 does not support Java 25, so the build failed
+during configuration with the bare version string as the entire error message:
+
+```
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+25.0.5
+```
+
+Both workflows now pin JDK 17 with `actions/setup-java`, so the build no longer
+depends on whichever image `ubuntu-latest` points at. This also unblocked the
+`release.yml` workflow, which had been failing since 2026-11-01 and therefore
+had not produced a release since v2.8.2.
 
 ---
 

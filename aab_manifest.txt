@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:compileSdkVersion="36" android:compileSdkVersionCodename="16" android:versionCode="18" android:versionName="2.8.5" package="com.zypherlabs.weekend" platformBuildVersionCode="36" platformBuildVersionName="16">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:compileSdkVersion="36" android:compileSdkVersionCodename="16" android:versionCode="19" android:versionName="2.8.6" package="com.zypherlabs.weekend" platformBuildVersionCode="36" platformBuildVersionName="16">
       
   <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="36"/>
       

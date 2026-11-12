@@ -135,10 +135,11 @@ uploaded.
 |---|---|
 | File | `build/app/outputs/bundle/release/app-release.aab` |
 | Size | 104.8 MB |
-| SHA-256 | `5B7720994E7D67584F8FC9ADA54318A05DBF6D366385D64D8A6F43020E7204E2` |
-| versionName / versionCode | 2.8.5 / 18 |
+| SHA-256 | `FD6F67A487D79F7326B4FE34D1825998870F24DF10CB125287E0B8A6158D87A3` |
+| versionName / versionCode | 2.8.6 / 19 |
 | Application ID | `com.zypherlabs.weekend` |
 | minSdk / targetSdk | 24 / 36 |
+| Signing certificate | `CN=Weekend, O=ZypherLabs` (RSA-4096), SHA-256 `15b2f91a…c2594` — the **same** key the previous releases used |
 
 Steps:
 

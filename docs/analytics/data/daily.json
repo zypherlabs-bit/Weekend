@@ -2,16 +2,16 @@
   "schema_version": 1,
   "timezone": "UTC",
   "tracking_started": "2026-09-23",
-  "generated_at": "2026-11-24T08:24:22Z",
+  "generated_at": "2026-11-25T06:59:53Z",
   "apk": {
-    "live_downloads": 158,
+    "live_downloads": 159,
     "archived_downloads": 3,
-    "total_downloads": 161,
+    "total_downloads": 162,
     "asset_counts": {
       "app-release.apk": 65,
       "Weekend-v2.8.2-fullscreen-photo.apk": 2,
       "Weekend-v2.8.2-release.apk": 16,
-      "Weekend-v2.8.1-release.apk": 5,
+      "Weekend-v2.8.1-release.apk": 6,
       "Weekend-v2.8.0-release.apk": 3,
       "Weekend-v2.7.0-release.apk": 25,
       "Weekend-v2.6.0-release.apk": 12,
@@ -734,11 +734,20 @@
       "repository_unique_cloners": null,
       "apk_downloads_daily": 6,
       "apk_downloads_cumulative": 161
+    },
+    {
+      "date": "2026-11-25",
+      "repository_views": null,
+      "repository_unique_visitors": null,
+      "repository_clones": null,
+      "repository_unique_cloners": null,
+      "apk_downloads_daily": 1,
+      "apk_downloads_cumulative": 162
     }
   ],
   "traffic_window_totals": {
     "views": 70,
     "unique_visitors": 31
   },
-  "traffic_fetched_at": "2026-11-24T08:24:21Z"
+  "traffic_fetched_at": "2026-11-25T06:59:52Z"
 }
